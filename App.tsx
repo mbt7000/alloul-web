@@ -6,12 +6,16 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./src/i18n";
-import { AuthProvider, useAuth } from "./src/lib/AuthContext";
-import { CompanyProvider } from "./src/lib/CompanyContext";
-import AppNavigator from "./src/navigation/AppNavigator";
-import LoginScreen from "./src/screens/auth/LoginScreen";
-import LanguageSync from "./src/components/LanguageSync";
+import { AuthProvider, useAuth } from "./src/state/auth/AuthContext";
+import { NotificationsProvider } from "./src/state/notifications/NotificationsContext";
+import { CompanyProvider } from "./src/state/company/CompanyContext";
+import { HomeModeProvider } from "./src/state/mode/HomeModeContext";
+import LanguageSync from "./src/shared/LanguageSync";
 import { colors } from "./src/theme/colors";
+import OnboardingScreen from "./src/features/onboarding/screens/OnboardingScreen";
+import { getOnboardingCompleted, setOnboardingCompleted } from "./src/storage/session";
+import RootNavigation from "./src/navigation/RootNavigator";
+import AuthNavigator from "./src/navigation/auth/AuthNavigator";
 
 const DarkTheme = {
   ...DefaultTheme,
@@ -29,8 +33,30 @@ const DarkTheme = {
 
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const [onboarded, setOnboarded] = React.useState<boolean | null>(null);
+  const [startupTimedOut, setStartupTimedOut] = React.useState(false);
 
-  if (loading) {
+  React.useEffect(() => {
+    let on = true;
+    const watchdog = setTimeout(() => {
+      if (on) setOnboarded(false);
+    }, 3500);
+    void (async () => {
+      const done = await getOnboardingCompleted();
+      if (on) setOnboarded(done);
+    })();
+    return () => {
+      on = false;
+      clearTimeout(watchdog);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setStartupTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if ((loading && !startupTimedOut) || onboarded == null) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg }}>
         <ActivityIndicator size="large" color={colors.accentCyan} />
@@ -38,7 +64,20 @@ function RootNavigator() {
     );
   }
 
-  return user ? <AppNavigator /> : <LoginScreen />;
+  if (!onboarded) {
+    return (
+      <OnboardingScreen
+        onDone={() => {
+          void (async () => {
+            await setOnboardingCompleted();
+            setOnboarded(true);
+          })();
+        }}
+      />
+    );
+  }
+
+  return user ? <RootNavigation /> : <AuthNavigator />;
 }
 
 export default function App() {
@@ -48,12 +87,16 @@ export default function App() {
         <SafeAreaProvider>
           <LanguageSync />
           <AuthProvider>
-            <CompanyProvider>
-              <NavigationContainer theme={DarkTheme}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
-                <RootNavigator />
-              </NavigationContainer>
-            </CompanyProvider>
+            <NotificationsProvider>
+              <CompanyProvider>
+                <HomeModeProvider>
+                  <NavigationContainer theme={DarkTheme}>
+                    <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+                    <RootNavigator />
+                  </NavigationContainer>
+                </HomeModeProvider>
+              </CompanyProvider>
+            </NotificationsProvider>
           </AuthProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

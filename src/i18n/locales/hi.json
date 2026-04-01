@@ -79,8 +79,11 @@
     "googleTokenMissing": "Google टोकन गायब",
     "microsoftTokenMissing": "Microsoft id_token गायब",
     "networkError": "सर्वर तक नहीं पहुँच सके। इंटरनेट और EAS में EXPO_PUBLIC_API_URL जाँचें।",
+    "serverError": "सर्वर त्रुटि (जैसे पंजीकरण)। बाद में कोशिश करें या API टीम से नया बैकएंड डिप्लॉय करवाएँ।",
     "socialPaused": "इस बिल्ड में Google और Microsoft बंद हैं। ईमेल और पासवर्ड उपयोग करें।",
     "emailLoginActive": "साइन-इन: ईमेल और पासवर्ड (सक्रिय)।",
+    "diagOAuthKeysPresent": "Google/Microsoft: बिल्ड में कुंजियाँ हैं, लेकिन इस संस्करण में सामाजिक साइन-इन बटन बंद हैं (ऊपर ईमेल उपयोग करें)।",
+    "diagOAuthKeysMissing": "Google/Microsoft: बिल्ड कुंजियाँ अधूरी; बाद में चालू करने पर EAS रीबिल्ड + EXPO_PUBLIC_* चाहिए।",
     "googleNotInBuild": "Google के लिए Firebase और EXPO_PUBLIC_* कुंजियाँ बिल्ड में चाहिए। पुनः बिल्ड करें।"
   },
   "feed": {

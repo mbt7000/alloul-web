@@ -79,8 +79,11 @@
     "googleTokenMissing": "رمز Google مفقود",
     "microsoftTokenMissing": "رمز Microsoft مفقود",
     "networkError": "تعذر الاتصال بالخادم. تحقق من الإنترنت ومن ضبط EXPO_PUBLIC_API_URL في بناء EAS.",
+    "serverError": "الخادم يواجه خطأ مؤقتاً (مثل فشل التسجيل). جرّب لاحقاً أو أبلِ فريق الـ API لإعادة نشر التحديث.",
     "socialPaused": "تسجيل Google وMicrosoft متوقف مؤقتاً في هذا البناء. استخدم البريد وكلمة المرور.",
     "emailLoginActive": "تسجيل الدخول: البريد وكلمة المرور (مفعّل).",
+    "diagOAuthKeysPresent": "Google/Microsoft: المفاتيح موجودة في البناء، لكن أزرار الدخول الاجتماعي معطّلة في هذا الإصدار (استخدم البريد أعلاه).",
+    "diagOAuthKeysMissing": "Google/Microsoft: مفاتيح البناء ناقصة؛ حتى عند التفعيل لاحقاً تحتاج إعادة بناء مع EXPO_PUBLIC_*.",
     "googleNotInBuild": "دخول Google يحتاج Firebase ومفاتيح Google في البناء (EXPO_PUBLIC_*). أعد بناء التطبيق بعد ضبط الأسرار."
   },
   "feed": {

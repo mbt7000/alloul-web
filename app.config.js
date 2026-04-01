@@ -19,6 +19,19 @@ function pickEnv(envKey, fallback) {
   return String(raw).replace(/^["']|["']$/g, "").trim();
 }
 
+function normalizeApiUrl(raw, fallback = "https://api.alloul.app") {
+  const candidate = String(raw || "").trim().replace(/\/+$/, "");
+  if (!candidate) return fallback;
+  if (candidate === "https://api" || candidate === "http://api") return fallback;
+  try {
+    const parsed = new URL(candidate);
+    if (!parsed.hostname || !parsed.hostname.includes(".")) return fallback;
+    return candidate;
+  } catch {
+    return fallback;
+  }
+}
+
 module.exports = ({ config }) => {
     const ios = config.ios ? { ...config.ios } : config.ios;
     const android = config.android ? { ...config.android } : config.android;
@@ -34,7 +47,8 @@ module.exports = ({ config }) => {
         android,
         extra: {
             ...(config.extra || {}),
-            apiUrl: pickEnv("EXPO_PUBLIC_API_URL", config.extra?.apiUrl),
+            debugAuthVersion: "oauth-debug-v10",
+            apiUrl: normalizeApiUrl(pickEnv("EXPO_PUBLIC_API_URL", config.extra?.apiUrl)),
             apiDocsUrl: pickEnv("EXPO_PUBLIC_API_DOCS_URL", config.extra?.apiDocsUrl),
             apiOpenapiUrl: pickEnv("EXPO_PUBLIC_API_OPENAPI_URL", config.extra?.apiOpenapiUrl),
             firebase: {

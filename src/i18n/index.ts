@@ -8,7 +8,7 @@ import ar from "./locales/ar.json";
 import fr from "./locales/fr.json";
 import es from "./locales/es.json";
 import hi from "./locales/hi.json";
-import { applyRtlForLanguage } from "../lib/rtl";
+import { applyRtlForLanguage } from "../shared/utils/rtl";
 
 export const SUPPORTED_LANGUAGES = ["en", "ar", "fr", "es", "hi"] as const;
 export type AppLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -31,8 +31,8 @@ void i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: "en",
-    fallbackLng: "en",
+    lng: "ar",
+    fallbackLng: "ar",
     supportedLngs: [...SUPPORTED_LANGUAGES],
     interpolation: { escapeValue: false },
     react: { useSuspense: false },
@@ -43,14 +43,14 @@ void (async function hydrateLanguage() {
   try {
     const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
     const devicePrimary = Localization.getLocales()[0]?.languageCode ?? undefined;
-    let lng: AppLanguage = "en";
+    let lng: AppLanguage = "ar";
     if (saved && isSupported(saved)) lng = saved;
     else if (devicePrimary && isSupported(devicePrimary)) lng = devicePrimary;
     await i18n.changeLanguage(lng);
     applyRtlForLanguage(lng);
   } catch {
-    await i18n.changeLanguage("en");
-    applyRtlForLanguage("en");
+    await i18n.changeLanguage("ar");
+    applyRtlForLanguage("ar");
   }
 })();
 

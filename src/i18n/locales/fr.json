@@ -79,8 +79,11 @@
     "googleTokenMissing": "Jeton Google manquant",
     "microsoftTokenMissing": "id_token Microsoft manquant",
     "networkError": "Impossible de joindre le serveur. Vérifiez le réseau et EXPO_PUBLIC_API_URL dans le build EAS.",
+    "serverError": "Erreur serveur (ex. inscription). Réessayez plus tard ou demandez le déploiement du correctif API.",
     "socialPaused": "Google et Microsoft sont désactivés dans ce build. Utilisez e-mail et mot de passe.",
     "emailLoginActive": "Connexion : e-mail et mot de passe (actif).",
+    "diagOAuthKeysPresent": "Google/Microsoft : clés présentes dans le build, mais les boutons sociaux sont désactivés dans cette version (utilisez l’e-mail ci-dessus).",
+    "diagOAuthKeysMissing": "Google/Microsoft : clés de build incomplètes ; une activation ultérieure exigera un rebuild EAS avec EXPO_PUBLIC_*.",
     "googleNotInBuild": "Google nécessite Firebase + clés client dans le build EAS. Reconstruisez l’app."
   },
   "feed": {

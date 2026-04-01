@@ -2,6 +2,7 @@
   "expo": {
     "name": "Alloul One",
     "slug": "alloul-one",
+    "owner": "mbtalm1",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,7 +24,7 @@
         "NSPhotoLibraryUsageDescription": "Share photos in posts",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "2"
+      "buildNumber": "32"
     },
     "android": {
       "package": "com.alloul.one",
@@ -59,6 +60,10 @@
       "eas": {
         "projectId": "17794375-d9c2-403a-890a-9c6037cb9990"
       }
+    },
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/17794375-d9c2-403a-890a-9c6037cb9990"
     }
   }
 }
