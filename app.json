@@ -36,7 +36,8 @@
       "versionCode": 2
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-apple-authentication"
     ],
     "extra": {
       "apiUrl": "https://api.alloul.app",

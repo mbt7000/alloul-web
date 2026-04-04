@@ -15,13 +15,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import { login, register, loginWithFirebase, getApiBaseUrl, pingApiHealth } from "../../../api";
 import MicrosoftSignInButton from "../components/MicrosoftSignInButton";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import Constants from "expo-constants";
 import { useTranslation } from "react-i18next";
-import { exchangeGoogleIdTokenForFirebaseIdToken } from "../../../shared/utils/firebaseAuth";
+import {
+  exchangeAppleIdTokenForFirebaseIdToken,
+  exchangeGoogleIdTokenForFirebaseIdToken,
+} from "../../../shared/utils/firebaseAuth";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -44,6 +49,7 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [oauthDebug, setOauthDebug] = useState("");
+  const [appleAvailableOnDevice, setAppleAvailableOnDevice] = useState(false);
 
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
   const debugAuthVersion = typeof extra?.debugAuthVersion === "string" ? extra.debugAuthVersion : "unknown";
@@ -76,6 +82,9 @@ export default function LoginScreen() {
   const googleReady = Boolean(googleClientId);
   const canUseGoogle = firebaseReady && googleReady;
   const canUseMicrosoft = Boolean(msClientId && msTenantId);
+  /** Sign in with Apple لا يعمل داخل Expo Go — يحتاج EAS build / TestFlight. */
+  const canUseApple =
+    Platform.OS === "ios" && appleAvailableOnDevice && firebaseReady && Constants.appOwnership !== "expo";
   const projectNameForProxy = expoOwner && expoSlug ? `@${expoOwner}/${expoSlug}` : undefined;
   const generatedRedirectUri = AuthSession.makeRedirectUri({ useProxy: true } as never);
   const expoProxyRedirectUri = projectNameForProxy ? `https://auth.expo.io/${projectNameForProxy}` : generatedRedirectUri;
@@ -97,7 +106,6 @@ export default function LoginScreen() {
     usePKCE: true,
     extraParams: {
       access_type: "offline",
-      prompt: "consent",
     },
   } as never);
   const debugRunIdRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
@@ -108,6 +116,17 @@ export default function LoginScreen() {
       return next.length > 3500 ? next.slice(next.length - 3500) : next;
     });
   };
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    let alive = true;
+    void AppleAuthentication.isAvailableAsync().then((ok) => {
+      if (alive) setAppleAvailableOnDevice(ok);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     setOauthDebug(
@@ -123,9 +142,10 @@ export default function LoginScreen() {
             : "android_or_web(standalone)"
       }\ncanUseGoogle=${canUseGoogle ? "true" : "false"}\ncanUseMicrosoft=${
         canUseMicrosoft ? "true" : "false"
-      }`
+      }\ncanUseApple=${canUseApple ? "true" : "false"}`
     );
   }, [
+    canUseApple,
     canUseGoogle,
     canUseMicrosoft,
     debugAuthVersion,
@@ -201,6 +221,56 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setError("");
+    if (Platform.OS !== "ios") return;
+    if (!firebaseReady) {
+      setError(t("auth.firebaseNotConfiguredShort"));
+      return;
+    }
+    if (Constants.appOwnership === "expo") {
+      setError(t("auth.appleNeedsDevBuild"));
+      return;
+    }
+    if (!appleAvailableOnDevice) {
+      setError(t("auth.appleNotAvailable"));
+      return;
+    }
+    setLoading(true);
+    try {
+      const rawNonce = [...Array(32)].map(() => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("");
+      const nonceSha256 = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce, {
+        encoding: Crypto.CryptoEncoding.HEX,
+      });
+      const appleCred = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: nonceSha256,
+      });
+      if (!appleCred.identityToken) {
+        setError(t("auth.appleTokenMissing"));
+        return;
+      }
+      const firebaseIdToken = await exchangeAppleIdTokenForFirebaseIdToken(appleCred.identityToken, rawNonce);
+      await loginWithFirebase(firebaseIdToken);
+      await refresh();
+    } catch (e: unknown) {
+      const coded = e as { code?: string };
+      if (coded?.code === "ERR_REQUEST_CANCELED") {
+        appendOauthDebug("[A0] apple_cancel");
+        setError("");
+      } else {
+        const msg = e instanceof Error ? e.message : String(e ?? "unknown");
+        appendOauthDebug(`[A1] apple_err=${msg}`);
+        setError(`${t("auth.appleFailed")}${msg ? `: ${msg}` : ""}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!googleResponse) return;
 
@@ -264,14 +334,16 @@ export default function LoginScreen() {
           return;
         }
 
-        const firebaseIdToken = await exchangeGoogleIdTokenForFirebaseIdToken(googleIdToken);
+        const firebaseIdToken = await exchangeGoogleIdTokenForFirebaseIdToken(googleIdToken, accessToken);
         await loginWithFirebase(firebaseIdToken);
         await refresh();
       } catch (err: unknown) {
-        const payload = err as { message?: string; status?: number };
-        const msg = typeof payload?.message === "string" ? payload.message : "";
+        const payload = err as { message?: string; status?: number; code?: string };
+        const msg = typeof payload?.message === "string" ? payload.message : err instanceof Error ? err.message : "";
+        const code = typeof payload?.code === "string" ? payload.code : "";
+        const detail = [code, msg].filter(Boolean).join(" — ");
         appendOauthDebug(
-          `[G6] catch message=${msg || "-"} status=${typeof payload?.status === "number" ? payload.status : "-"}`
+          `[G6] catch detail=${detail || "-"} status=${typeof payload?.status === "number" ? payload.status : "-"}`
         );
         if (msg === "FIREBASE_NOT_CONFIGURED") {
           setError(t("auth.googleNotInBuild"));
@@ -282,9 +354,12 @@ export default function LoginScreen() {
         } else if (msg === "SESSION_STORAGE_FAILED") {
           setError(t("auth.sessionStorageFailed"));
         } else if (typeof payload?.status === "number" && payload.status >= 500) {
-          setError(t("auth.serverError"));
+          const detail = msg.trim();
+          const generic =
+            !detail || detail === "Internal Server Error" || detail === "Request failed";
+          setError(generic ? t("auth.serverError") : `${t("auth.serverError")}\n${detail}`);
         } else {
-          setError(t("auth.googleFailed"));
+          setError(detail ? `${t("auth.googleFailed")}\n${detail}` : t("auth.googleFailed"));
         }
       } finally {
         setLoading(false);
@@ -483,7 +558,9 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {!canUseGoogle && !canUseMicrosoft ? <Text style={styles.socialPaused}>{t("auth.socialPaused")}</Text> : null}
+          {!canUseGoogle && !canUseMicrosoft && !canUseApple ? (
+            <Text style={styles.socialPaused}>{t("auth.socialPaused")}</Text>
+          ) : null}
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
@@ -504,6 +581,26 @@ export default function LoginScreen() {
               <Text style={[styles.socialText, !canUseGoogle && styles.socialTextMuted]}>{t("auth.continueGoogle")}</Text>
             )}
           </TouchableOpacity>
+
+          {Platform.OS === "ios" && firebaseReady ? (
+            <TouchableOpacity
+              style={[styles.socialBtn, !canUseApple && styles.socialBtnOff]}
+              disabled={loading || !canUseApple}
+              onPress={() => void handleAppleSignIn()}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.textPrimary} />
+              ) : (
+                <Text style={[styles.socialText, !canUseApple && styles.socialTextMuted]}>
+                  {Constants.appOwnership === "expo"
+                    ? t("auth.continueAppleExpoGo")
+                    : !appleAvailableOnDevice
+                      ? t("auth.appleNotAvailable")
+                      : t("auth.continueApple")}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
 
           {canUseMicrosoft && msClientId && msTenantId ? (
             <MicrosoftSignInButton
@@ -550,6 +647,11 @@ export default function LoginScreen() {
           <Text style={styles.diagLabel}>
             {canUseMicrosoft ? t("auth.diagMicrosoftOk") : t("auth.diagMicrosoftNo")}
           </Text>
+          {Platform.OS === "ios" ? (
+            <Text style={styles.diagLabel}>
+              {canUseApple ? t("auth.diagAppleOk") : t("auth.diagAppleNo")}
+            </Text>
+          ) : null}
           <TouchableOpacity
             style={styles.diagBtn}
             onPress={async () => {

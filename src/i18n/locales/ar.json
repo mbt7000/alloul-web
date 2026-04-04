@@ -58,6 +58,8 @@
     "createAccount": "إنشاء حساب",
     "continueGoogle": "المتابعة مع Google",
     "continueMicrosoft": "المتابعة مع Microsoft",
+    "continueApple": "المتابعة مع Apple",
+    "continueAppleExpoGo": "Apple — يتطلب بناء من EAS أو TestFlight (لا يعمل في Expo Go)",
     "switchRegister": "ليس لديك حساب؟ سجّل",
     "switchSignIn": "لديك حساب؟ سجّل الدخول",
     "googleNotConfigured": "لم يتم ضبط معرّفات عميل Google بعد.",
@@ -89,6 +91,12 @@
     "diagGoogleNo": "Google: ناقص Firebase أو معرّفات العميل في البناء.",
     "diagMicrosoftOk": "Microsoft: مفعّل (Azure: أضف redirect مثل alloul://oauth/microsoft + تدفق عميل عام).",
     "diagMicrosoftNo": "Microsoft: أضف EXPO_PUBLIC_MICROSOFT_CLIENT_ID و EXPO_PUBLIC_MICROSOFT_TENANT_ID في EAS ثم أعد البناء.",
+    "diagAppleOk": "Apple: مفعّل (فعّل مزوّد Apple في Firebase + Sign in with Apple في App ID).",
+    "diagAppleNo": "Apple: غير متاح (Expo Go أو الجهاز لا يدعم، أو Firebase غير مضبوط).",
+    "appleNeedsDevBuild": "دخول Apple لا يعمل داخل Expo Go. ثبّت نسخة من EAS أو TestFlight.",
+    "appleNotAvailable": "تسجيل الدخول عبر Apple غير متاح على هذا الجهاز.",
+    "appleTokenMissing": "لم يُرجَع رمز من Apple.",
+    "appleFailed": "فشل دخول Apple",
     "googleNotInBuild": "دخول Google يحتاج Firebase ومفاتيح Google في البناء (EXPO_PUBLIC_*). أعد بناء التطبيق بعد ضبط الأسرار."
   },
   "feed": {

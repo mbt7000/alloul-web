@@ -19,6 +19,23 @@ Mobile and web clients can send **`Accept-Language`** (e.g. `ar`, `en`, `fr`, `e
 - **PATCH /auth/me** — Body: `{ "name", "avatar_url" }` → update profile
 - **POST /upload/image** — multipart file → `{ "url" }` (Azure Blob); **POST /upload/file** — same for generic files
 
+## Authentication: how the app ties to this backend
+
+| Method | Mobile does | Backend does | Required on server |
+|--------|-------------|--------------|--------------------|
+| **Email + password** | `POST /auth/login` or `/auth/register` | Validates password, issues JWT | `SECRET_KEY`, DB |
+| **Google / Apple (via Firebase)** | User signs in with Google/Apple → Firebase **ID token** → `POST /auth/firebase` with `{ "id_token" }` | **Firebase Admin** verifies token, creates/updates user, issues JWT | **`GOOGLE_APPLICATION_CREDENTIALS`** = path to Firebase **service account JSON** (same Firebase project as the app). Without this file, `/auth/firebase` returns **503** or rejects tokens — this is the usual “Google works in app but login fails” cause. |
+| **Microsoft** | Azure AD id_token → `POST /auth/azure-ad` | Validates JWT with Microsoft JWKS | `MICROSOFT_CLIENT_ID`, `MICROSOFT_TENANT_ID` |
+
+So **Google is not “OAuth to the backend directly”**: the backend trusts **Firebase only**. The app must obtain a **Firebase ID token** first, then the API verifies it.
+
+### Not implemented yet (security roadmap)
+
+- **Email verification after register** — today `/auth/register` returns a JWT immediately; there is **no** confirmation link or code sent by email.
+- **Phone OTP when adding/updating a phone number** — `users.phone` can exist, but there is **no** SMS verification flow in this API.
+
+To add production-grade verification you typically need: an email provider (Resend, SendGrid, SES, …) and/or an SMS provider (Twilio Verify, …), new tables or columns (`email_verified_at`, challenge codes), and guarded routes until verified. Placeholders for future env vars are commented in **`.env.example`**.
+
 ## Setup
 
 ```bash
@@ -46,6 +63,8 @@ API: `http://localhost:8000` — OpenAPI: `http://localhost:8000/docs`
 The app reads **`EXPO_PUBLIC_API_URL`** at **build time**. It must be a **public HTTPS URL** (not `localhost`) for real devices. See **`docs/connect-backend-mobile-ar.md`**.
 
 Tables are created on startup. For Firebase OAuth, set `GOOGLE_APPLICATION_CREDENTIALS` to the path of your Firebase service account JSON.
+
+**Sign in with Apple (mobile):** In [Firebase Console](https://console.firebase.google.com/) → Authentication → Sign-in method → enable **Apple**. In Apple Developer → Identifiers → your App ID (`com.alloul.one`) → enable **Sign In with Apple**. The app exchanges the Apple identity token for a Firebase ID token, then calls **POST /auth/firebase** like Google.
 
 ### QA: grant company membership (test company workspace)
 

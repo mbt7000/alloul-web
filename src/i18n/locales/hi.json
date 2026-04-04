@@ -58,6 +58,8 @@
     "createAccount": "खाता बनाएँ",
     "continueGoogle": "Google से जारी रखें",
     "continueMicrosoft": "Microsoft से जारी रखें",
+    "continueApple": "Apple से जारी रखें",
+    "continueAppleExpoGo": "Apple — EAS build या TestFlight चाहिए (Expo Go में नहीं)",
     "switchRegister": "खाता नहीं? रजिस्टर करें",
     "switchSignIn": "पहले से खाता? साइन इन",
     "googleNotConfigured": "Google OAuth सेट नहीं है।",
@@ -89,6 +91,12 @@
     "diagGoogleNo": "Google: इस बिल्ड में Firebase या client IDs नहीं.",
     "diagMicrosoftOk": "Microsoft: चालू (Azure: redirect जैसे alloul://oauth/microsoft + public client).",
     "diagMicrosoftNo": "Microsoft: EAS में EXPO_PUBLIC_MICROSOFT_CLIENT_ID और TENANT_ID सेट करके rebuild करें.",
+    "diagAppleOk": "Apple: चालू (Firebase में Apple + App ID पर Sign in with Apple).",
+    "diagAppleNo": "Apple: उपलब्ध नहीं (Expo Go, डिवाइस या Firebase).",
+    "appleNeedsDevBuild": "Expo Go में Apple साइन-इन नहीं. EAS या TestFlight बिल्ड इंस्टॉल करें.",
+    "appleNotAvailable": "इस डिवाइस पर Apple साइन-इन नहीं.",
+    "appleTokenMissing": "Apple से टोकन नहीं मिला.",
+    "appleFailed": "Apple साइन-इन विफल",
     "googleNotInBuild": "Google के लिए Firebase और EXPO_PUBLIC_* कुंजियाँ बिल्ड में चाहिए। पुनः बिल्ड करें।"
   },
   "feed": {

@@ -58,6 +58,8 @@
     "createAccount": "Create account",
     "continueGoogle": "Continue with Google",
     "continueMicrosoft": "Continue with Microsoft",
+    "continueApple": "Continue with Apple",
+    "continueAppleExpoGo": "Apple — requires EAS build or TestFlight (not in Expo Go)",
     "switchRegister": "Don't have an account? Register",
     "switchSignIn": "Already have an account? Sign in",
     "googleNotConfigured": "Google OAuth client IDs are not configured yet.",
@@ -89,6 +91,12 @@
     "diagGoogleNo": "Google: missing Firebase or client IDs in this build.",
     "diagMicrosoftOk": "Microsoft: enabled (Azure: add redirect e.g. alloul://oauth/microsoft + public client).",
     "diagMicrosoftNo": "Microsoft: set EXPO_PUBLIC_MICROSOFT_CLIENT_ID and TENANT_ID in EAS, then rebuild.",
+    "diagAppleOk": "Apple: enabled (enable Apple provider in Firebase + Sign in with Apple on App ID).",
+    "diagAppleNo": "Apple: unavailable (Expo Go, device, or Firebase not configured).",
+    "appleNeedsDevBuild": "Apple Sign-In does not run in Expo Go. Install an EAS or TestFlight build.",
+    "appleNotAvailable": "Sign in with Apple is not available on this device.",
+    "appleTokenMissing": "Apple did not return an identity token.",
+    "appleFailed": "Apple sign-in failed",
     "googleNotInBuild": "Google sign-in needs Firebase + Google client IDs in the EAS build (EXPO_PUBLIC_*). Rebuild the app after setting secrets."
   },
   "feed": {

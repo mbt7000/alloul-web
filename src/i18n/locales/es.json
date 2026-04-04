@@ -58,6 +58,8 @@
     "createAccount": "Crear cuenta",
     "continueGoogle": "Continuar con Google",
     "continueMicrosoft": "Continuar con Microsoft",
+    "continueApple": "Continuar con Apple",
+    "continueAppleExpoGo": "Apple — requiere build EAS o TestFlight (no en Expo Go)",
     "switchRegister": "¿Sin cuenta? Regístrate",
     "switchSignIn": "¿Ya tienes cuenta? Entra",
     "googleNotConfigured": "OAuth de Google no está configurado.",
@@ -89,6 +91,12 @@
     "diagGoogleNo": "Google: faltan Firebase o IDs de cliente en este build.",
     "diagMicrosoftOk": "Microsoft: activo (Azure: redirect ej. alloul://oauth/microsoft + cliente público).",
     "diagMicrosoftNo": "Microsoft: define EXPO_PUBLIC_MICROSOFT_CLIENT_ID y TENANT_ID en EAS y rebuild.",
+    "diagAppleOk": "Apple: activo (habilita Apple en Firebase + Sign in with Apple en App ID).",
+    "diagAppleNo": "Apple: no disponible (Expo Go, dispositivo o Firebase).",
+    "appleNeedsDevBuild": "Apple no funciona en Expo Go. Instala build EAS o TestFlight.",
+    "appleNotAvailable": "Sign in with Apple no disponible en este dispositivo.",
+    "appleTokenMissing": "Apple no devolvió token.",
+    "appleFailed": "Falló inicio de sesión con Apple",
     "googleNotInBuild": "Google requiere Firebase y claves en el build. Vuelve a compilar con EXPO_PUBLIC_*."
   },
   "feed": {
