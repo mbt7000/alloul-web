@@ -1,15 +1,25 @@
 import React from "react";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { useHomeMode } from "../../state/mode/HomeModeContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 
 export default function SearchGateway() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { mode, canUseCompanyMode } = useHomeMode();
   const params = route.params ?? {};
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: {
+      flex: 1,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: c.bg,
+    },
+  }));
 
   useFocusEffect(
     React.useCallback(() => {
@@ -30,7 +40,3 @@ export default function SearchGateway() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
-});

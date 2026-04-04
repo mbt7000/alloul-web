@@ -15,6 +15,7 @@ class User(Base):
     username = Column(String(128), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=True)
     name = Column(String(255), nullable=True)
+    phone = Column(String(32), nullable=True)
     avatar_url = Column(String(512), nullable=True)
     bio = Column(Text, nullable=True)
     i_code = Column(String(6), unique=True, index=True, nullable=True)

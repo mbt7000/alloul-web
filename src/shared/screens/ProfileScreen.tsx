@@ -13,7 +13,8 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import GlassCard from "../components/GlassCard";
 import { useAuth } from "../../state/auth/AuthContext";
 import { useCompany } from "../../state/company/CompanyContext";
@@ -133,6 +134,368 @@ export default function ProfileScreen() {
       setProfilePosts((prev) => prev.map((item) => (item.id === postId ? post : item)));
     }
   };
+
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    centerText: { marginTop: 12, textAlign: "center" },
+    centerTextSmall: { marginTop: 4, textAlign: "center" },
+    cover: { height: 120, position: "relative" },
+    coverGradient: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(76,111,255,0.35)",
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+    },
+    coverTopRow: {
+      flexDirection: "row" as const,
+      justifyContent: "flex-end" as const,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      gap: 10,
+    },
+    roundIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      backgroundColor: "rgba(0,0,0,0.25)",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.15)",
+    },
+    identityBlock: { alignItems: "center" as const, marginTop: -48, paddingHorizontal: 16 },
+    mediaCover: { height: 180, position: "relative" },
+    mediaCoverGradient: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(56,232,255,0.12)",
+      borderBottomLeftRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    mediaCoverTopRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    avatarWrap: {
+      borderRadius: 32,
+      padding: 4,
+      backgroundColor: c.mediaCanvas,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    avatarWrapMedia: {
+      borderRadius: 36,
+      padding: 4,
+      backgroundColor: c.mediaCanvas,
+      borderWidth: 1,
+      borderColor: "rgba(56,232,255,0.22)",
+    },
+    avatar: { width: 96, height: 96, borderRadius: 28 },
+    avatarMedia: { width: 108, height: 108, borderRadius: 32 },
+    avatarFallback: {
+      width: 96,
+      height: 96,
+      borderRadius: 28,
+      backgroundColor: c.accent,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    avatarFallbackMedia: {
+      width: 108,
+      height: 108,
+      borderRadius: 32,
+      backgroundColor: c.accentBlue,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    handleRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      marginTop: 6,
+    },
+    mediaHeadline: {
+      marginTop: 10,
+      textAlign: "center" as const,
+      paddingHorizontal: 20,
+      lineHeight: 22,
+    },
+    companyHeadline: {
+      marginTop: 10,
+      textAlign: "center" as const,
+      paddingHorizontal: 20,
+    },
+    badgeRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, justifyContent: "center" as const, gap: 8, marginTop: 12 },
+    modePill: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    modePillPub: {
+      borderColor: "rgba(76,111,255,0.35)",
+      backgroundColor: "rgba(76,111,255,0.12)",
+    },
+    mediaInfoPill: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+    },
+    modePillCo: {
+      borderColor: "rgba(45,226,199,0.35)",
+      backgroundColor: "rgba(45,226,199,0.10)",
+    },
+    coPill: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+      maxWidth: "90%",
+    },
+    mediaActionRow: {
+      flexDirection: "row" as const,
+      paddingHorizontal: 16,
+      paddingVertical: 18,
+      gap: 8,
+    },
+    quickActions: {
+      flexDirection: "row" as const,
+      justifyContent: "space-around" as const,
+      paddingHorizontal: 12,
+      paddingVertical: 16,
+      marginTop: 8,
+    },
+    qaBtn: {
+      alignItems: "center" as const,
+      minWidth: 72,
+      paddingVertical: 10,
+      borderRadius: 16,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+      flex: 1,
+      marginHorizontal: 4,
+    },
+    mediaStatsCard: {
+      marginHorizontal: 16,
+      marginTop: 4,
+    },
+    mediaStatsHeader: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      marginBottom: 14,
+    },
+    mediaTabRow: {
+      flexDirection: "row" as const,
+      gap: 8,
+    },
+    mediaTabChip: {
+      flex: 1,
+      minHeight: 62,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: 4,
+    },
+    mediaTabChipActive: {
+      borderColor: "rgba(56,232,255,0.35)",
+      backgroundColor: "rgba(56,232,255,0.10)",
+    },
+    segScroll: { paddingHorizontal: 16, gap: 8, paddingBottom: 12 },
+    segChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 999,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    segChipOn: {
+      backgroundColor: "rgba(76,111,255,0.16)",
+      borderColor: "rgba(76,111,255,0.35)",
+    },
+    pad: { paddingHorizontal: 16, marginTop: 8 },
+    card: { padding: 16, borderRadius: 20 },
+    mediaBioCard: { marginBottom: 12 },
+    mediaPromptCard: { marginBottom: 12 },
+    mediaPromptRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+    },
+    mediaPromptCopy: {
+      flex: 1,
+    },
+    mediaPromptBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: c.accentBlue,
+    },
+    postList: {
+      marginTop: 4,
+    },
+    loadingBlock: {
+      paddingVertical: 32,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    mediaGrid: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      justifyContent: "space-between" as const,
+      gap: 12,
+    },
+    mediaTile: {
+      width: "48%",
+      aspectRatio: 0.86,
+      borderRadius: 22,
+      overflow: "hidden",
+      backgroundColor: c.bgCard,
+    },
+    mediaTileImage: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    mediaTileOverlay: {
+      flex: 1,
+      justifyContent: "flex-end" as const,
+      padding: 12,
+      backgroundColor: "rgba(7,10,18,0.34)",
+      gap: 4,
+    },
+    emptyStateCard: {
+      alignItems: "center" as const,
+      marginTop: 4,
+    },
+    emptyStateBody: {
+      textAlign: "center" as const,
+      marginTop: 8,
+      lineHeight: 20,
+    },
+    kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
+    profileBrandTop: { textAlign: "center" as const, marginTop: 8, letterSpacing: 1 },
+    mediaTopDock: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 12,
+    },
+    globeCircleSm: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: c.accentBlue,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    followRow: { flexDirection: "row" as const, justifyContent: "center" as const, gap: 20, marginTop: 12 },
+    editProfileBtn: {
+      alignSelf: "center",
+      marginTop: 14,
+      paddingHorizontal: 28,
+      paddingVertical: 12,
+      borderRadius: 999,
+      backgroundColor: c.white,
+    },
+    postsSectionHead: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 8,
+      paddingHorizontal: 16,
+      marginTop: 20,
+      marginBottom: 4,
+    },
+    emptyPlusBox: {
+      width: 88,
+      height: 88,
+      borderRadius: 20,
+      borderWidth: 2,
+      borderColor: c.border,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: "rgba(255,255,255,0.04)",
+    },
+    statsRow: { flexDirection: "row" as const, justifyContent: "space-around" as const, marginTop: 14 },
+    stat: { alignItems: "center" },
+    bioText: { marginTop: 8, lineHeight: 22 },
+    iCode: {
+      marginTop: 12,
+      alignSelf: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 10,
+      backgroundColor: "rgba(76,111,255,0.15)",
+    },
+  }));
+
+  function Stat({ n, label }: { n: number; label: string }) {
+    return (
+      <View style={styles.stat}>
+        <AppText variant="title" weight="bold">
+          {n}
+        </AppText>
+        <AppText variant="micro" tone="muted" weight="bold" style={{ marginTop: 4 }}>
+          {label}
+        </AppText>
+      </View>
+    );
+  }
+
+  function ProfileAction({
+    icon,
+    label,
+    color,
+    onPress,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    color: string;
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable style={styles.qaBtn} onPress={onPress}>
+        <Ionicons name={icon} size={18} color={color} />
+        <AppText variant="micro" weight="bold" style={{ marginTop: 6 }}>
+          {label}
+        </AppText>
+      </Pressable>
+    );
+  }
+
+  function PlaceholderBlock({ title, body }: { title: string; body: string }) {
+    return (
+      <>
+        <AppText variant="bodySm" weight="bold">
+          {title}
+        </AppText>
+        <AppText variant="caption" tone="muted" style={{ marginTop: 8 }}>
+          {body}
+        </AppText>
+      </>
+    );
+  }
 
   return (
     <Screen edges={["top", "left", "right"]} style={homeMode === "public" ? { backgroundColor: colors.mediaCanvas } : undefined}>
@@ -571,364 +934,3 @@ export default function ProfileScreen() {
     </Screen>
   );
 }
-
-function Stat({ n, label }: { n: number; label: string }) {
-  return (
-    <View style={styles.stat}>
-      <AppText variant="title" weight="bold">
-        {n}
-      </AppText>
-      <AppText variant="micro" tone="muted" weight="bold" style={{ marginTop: 4 }}>
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
-function ProfileAction({
-  icon,
-  label,
-  color,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  color: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={styles.qaBtn} onPress={onPress}>
-      <Ionicons name={icon} size={18} color={color} />
-      <AppText variant="micro" weight="bold" style={{ marginTop: 6 }}>
-        {label}
-      </AppText>
-    </Pressable>
-  );
-}
-
-function PlaceholderBlock({ title, body }: { title: string; body: string }) {
-  return (
-    <>
-      <AppText variant="bodySm" weight="bold">
-        {title}
-      </AppText>
-      <AppText variant="caption" tone="muted" style={{ marginTop: 8 }}>
-        {body}
-      </AppText>
-    </>
-  );
-}
-
-const styles = StyleSheet.create({
-  centerText: { marginTop: 12, textAlign: "center" },
-  centerTextSmall: { marginTop: 4, textAlign: "center" },
-  cover: { height: 120, position: "relative" },
-  coverGradient: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(76,111,255,0.35)",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  coverTopRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    gap: 10,
-  },
-  roundIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: "rgba(0,0,0,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-  },
-  identityBlock: { alignItems: "center", marginTop: -48, paddingHorizontal: 16 },
-  mediaCover: { height: 180, position: "relative" },
-  mediaCoverGradient: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(56,232,255,0.12)",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  mediaCoverTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  avatarWrap: {
-    borderRadius: 32,
-    padding: 4,
-    backgroundColor: colors.mediaCanvas,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatarWrapMedia: {
-    borderRadius: 36,
-    padding: 4,
-    backgroundColor: colors.mediaCanvas,
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.22)",
-  },
-  avatar: { width: 96, height: 96, borderRadius: 28 },
-  avatarMedia: { width: 108, height: 108, borderRadius: 32 },
-  avatarFallback: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarFallbackMedia: {
-    width: 108,
-    height: 108,
-    borderRadius: 32,
-    backgroundColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  handleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 6,
-  },
-  mediaHeadline: {
-    marginTop: 10,
-    textAlign: "center",
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-  companyHeadline: {
-    marginTop: 10,
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  badgeRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 12 },
-  modePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  modePillPub: {
-    borderColor: "rgba(76,111,255,0.35)",
-    backgroundColor: "rgba(76,111,255,0.12)",
-  },
-  mediaInfoPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-  },
-  modePillCo: {
-    borderColor: "rgba(45,226,199,0.35)",
-    backgroundColor: "rgba(45,226,199,0.10)",
-  },
-  coPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-    maxWidth: "90%",
-  },
-  mediaActionRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    gap: 8,
-  },
-  quickActions: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    marginTop: 8,
-  },
-  qaBtn: {
-    alignItems: "center",
-    minWidth: 72,
-    paddingVertical: 10,
-    borderRadius: 16,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  mediaStatsCard: {
-    marginHorizontal: 16,
-    marginTop: 4,
-  },
-  mediaStatsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  mediaTabRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  mediaTabChip: {
-    flex: 1,
-    minHeight: 62,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
-  mediaTabChipActive: {
-    borderColor: "rgba(56,232,255,0.35)",
-    backgroundColor: "rgba(56,232,255,0.10)",
-  },
-  segScroll: { paddingHorizontal: 16, gap: 8, paddingBottom: 12 },
-  segChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  segChipOn: {
-    backgroundColor: "rgba(76,111,255,0.16)",
-    borderColor: "rgba(76,111,255,0.35)",
-  },
-  pad: { paddingHorizontal: 16, marginTop: 8 },
-  card: { padding: 16, borderRadius: 20 },
-  mediaBioCard: { marginBottom: 12 },
-  mediaPromptCard: { marginBottom: 12 },
-  mediaPromptRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  mediaPromptCopy: {
-    flex: 1,
-  },
-  mediaPromptBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.accentBlue,
-  },
-  postList: {
-    marginTop: 4,
-  },
-  loadingBlock: {
-    paddingVertical: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mediaGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  mediaTile: {
-    width: "48%",
-    aspectRatio: 0.86,
-    borderRadius: 22,
-    overflow: "hidden",
-    backgroundColor: colors.bgCard,
-  },
-  mediaTileImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  mediaTileOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 12,
-    backgroundColor: "rgba(7,10,18,0.34)",
-    gap: 4,
-  },
-  emptyStateCard: {
-    alignItems: "center",
-    marginTop: 4,
-  },
-  emptyStateBody: {
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
-  profileBrandTop: { textAlign: "center", marginTop: 8, letterSpacing: 1 },
-  mediaTopDock: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 12,
-  },
-  globeCircleSm: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  followRow: { flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 12 },
-  editProfileBtn: {
-    alignSelf: "center",
-    marginTop: 14,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: colors.white,
-  },
-  postsSectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 4,
-  },
-  emptyPlusBox: {
-    width: 88,
-    height: 88,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  statsRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 14 },
-  stat: { alignItems: "center" },
-  bioText: { marginTop: 8, lineHeight: 22 },
-  iCode: {
-    marginTop: 12,
-    alignSelf: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: "rgba(76,111,255,0.15)",
-  },
-});

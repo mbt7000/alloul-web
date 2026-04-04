@@ -4,6 +4,7 @@ import random
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from auth import create_access_token, get_current_user, get_password_hash, verify_password
@@ -11,6 +12,7 @@ from database import get_db
 from firebase_verify import verify_firebase_token, is_firebase_configured
 from azure_ad_verify import verify_azure_ad_token
 from config import settings
+from admin_access import user_is_admin
 from models import User
 from schemas import (
     AzureAdRequest,
@@ -59,6 +61,7 @@ def _user_to_response(user: User) -> UserResponse:
         following_count=user.following_count or 0,
         posts_count=user.posts_count or 0,
         created_at=user.created_at.isoformat() if user.created_at else None,
+        is_admin=user_is_admin(user),
     )
 
 
@@ -67,20 +70,32 @@ def login(
     body: LoginRequest,
     db: Annotated[Session, Depends(get_db)],
 ):
-    user = db.query(User).filter(User.email == body.email).first()
-    if not user or not user.hashed_password:
+    try:
+        user = db.query(User).filter(User.email == body.email).first()
+        if not user or not user.hashed_password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Wrong email or password",
+            )
+        if not verify_password(body.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Wrong email or password",
+            )
+        _ensure_icode(user, db)
+        token = create_access_token(data={"sub": str(user.id)})
+        return TokenResponse(access_token=token, token_type="bearer")
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Wrong email or password",
-        )
-    if not verify_password(body.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Wrong email or password",
-        )
-    _ensure_icode(user, db)
-    token = create_access_token(data={"sub": str(user.id)})
-    return TokenResponse(access_token=token, token_type="bearer")
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Database error during login. On Postgres run: "
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(32); "
+                "and align schema with models.py — see backend/README.md"
+            ),
+        ) from exc
 
 
 @router.post("/register", response_model=TokenResponse)
@@ -88,28 +103,49 @@ def register(
     body: RegisterRequest,
     db: Annotated[Session, Depends(get_db)],
 ):
-    if db.query(User).filter(User.username == body.username).first():
+    try:
+        if db.query(User).filter(User.username == body.username).first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken",
+            )
+        if db.query(User).filter(User.email == body.email).first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use",
+            )
+        user = User(
+            email=body.email,
+            username=body.username,
+            hashed_password=get_password_hash(body.password),
+            name=body.username,
+            i_code=_generate_user_icode(db),
+        )
+        db.add(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username or email already in use",
+            )
+        except OperationalError:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database unavailable; verify DATABASE_URL and that Postgres is running",
+            )
+        token = create_access_token(data={"sub": str(user.id)})
+        return TokenResponse(access_token=token, token_type="bearer")
+    except HTTPException:
+        raise
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken",
-        )
-    if db.query(User).filter(User.email == body.email).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already in use",
-        )
-    user = User(
-        email=body.email,
-        username=body.username,
-        hashed_password=get_password_hash(body.password),
-        name=body.username,
-        i_code=_generate_user_icode(db),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    token = create_access_token(data={"sub": str(user.id)})
-    return TokenResponse(access_token=token, token_type="bearer")
+            detail=str(exc) or "Invalid registration data",
+        ) from exc
 
 
 @router.get("/me", response_model=UserResponse)

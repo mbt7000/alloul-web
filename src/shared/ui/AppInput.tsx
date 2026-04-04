@@ -1,7 +1,8 @@
 import React from "react";
-import { View, TextInput, StyleSheet, TextInputProps, TouchableOpacity, I18nManager } from "react-native";
+import { View, TextInput, TextInputProps, TouchableOpacity, I18nManager } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { radii } from "../../theme/radii";
 import { spacing } from "../../theme/spacing";
 import AppText from "./AppText";
@@ -15,6 +16,35 @@ type AppInputProps = TextInputProps & {
 
 export default function AppInput({ label, rightLabel, onPressRightLabel, iconLeft, style, ...props }: AppInputProps) {
   const isRTL = I18nManager.isRTL;
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    wrap: { gap: 8 },
+    labelRow: { flexDirection: "row" as const, alignItems: "center", justifyContent: "space-between" as const },
+    inputRow: { position: "relative" as const },
+    iconLeft: {
+      position: "absolute" as const,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center" as const,
+      zIndex: 2,
+    },
+    input: {
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      color: c.textPrimary,
+      fontSize: 15,
+    },
+    inputLtr: {
+      textAlign: "left" as const,
+    },
+    inputRtl: {
+      textAlign: "right" as const,
+    },
+  }));
 
   return (
     <View style={styles.wrap}>
@@ -60,33 +90,3 @@ export default function AppInput({ label, rightLabel, onPressRightLabel, iconLef
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  inputRow: { position: "relative" },
-  iconLeft: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  input: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: colors.textPrimary,
-    fontSize: 15,
-  },
-  inputLtr: {
-    textAlign: "left",
-  },
-  inputRtl: {
-    textAlign: "right",
-  },
-});
-

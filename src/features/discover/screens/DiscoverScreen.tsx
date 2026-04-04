@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -7,7 +7,6 @@ import {
   Image,
   Pressable,
   Keyboard,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
@@ -16,7 +15,7 @@ import AppText from "../../../shared/ui/AppText";
 import UnifiedSearchField from "../../../shared/components/UnifiedSearchField";
 import GlassCard from "../../../shared/components/GlassCard";
 import InlineErrorRetry from "../../../shared/ui/InlineErrorRetry";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
 import { unifiedSearch, type SearchResultItem } from "../../../api";
 import { addRecentSearch, getRecentSearches } from "../../../storage/recentSearches";
 
@@ -78,6 +77,58 @@ export default function DiscoverScreen() {
 
   const emptyQuery = query.trim().length === 0;
 
+  const { colors, toggleMode } = useAppTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1 },
+        head: { paddingHorizontal: 16, paddingBottom: 8 },
+        headRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+        globeBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.accentBlue,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        roundGhost: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        searchWrap: { paddingHorizontal: 16, marginBottom: 12 },
+        empty: { flex: 1, alignItems: "center", paddingTop: 32 },
+        emptyIcon: { marginTop: 20 },
+        center: { flex: 1, alignItems: "center", justifyContent: "center" },
+        recentRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingVertical: 10,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border,
+        },
+        card: { padding: 14 },
+        resultTop: { flexDirection: "row", gap: 12 },
+        avatar: { width: 48, height: 48, borderRadius: 14 },
+        avatarPh: {
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          backgroundColor: "rgba(56,232,255,0.12)",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      }),
+    [colors]
+  );
+
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.mediaCanvas }]}>
       <View style={styles.head}>
@@ -94,7 +145,7 @@ export default function DiscoverScreen() {
           <Pressable style={styles.roundGhost} hitSlop={8}>
             <Ionicons name="globe-outline" size={18} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.roundGhost} hitSlop={8} onPress={() => Alert.alert("المظهر", "تبديل الوضع الفاتح قريباً.")}>
+          <Pressable style={styles.roundGhost} hitSlop={8} onPress={toggleMode}>
             <Ionicons name="sunny-outline" size={18} color={colors.textPrimary} />
           </Pressable>
         </View>
@@ -190,50 +241,3 @@ export default function DiscoverScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  head: { paddingHorizontal: 16, paddingBottom: 8 },
-  headRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  globeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  roundGhost: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchWrap: { paddingHorizontal: 16, marginBottom: 12 },
-  empty: { flex: 1, alignItems: "center", paddingTop: 32 },
-  emptyIcon: { marginTop: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  recentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  card: { padding: 14 },
-  resultTop: { flexDirection: "row", gap: 12 },
-  avatar: { width: 48, height: 48, borderRadius: 14 },
-  avatarPh: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "rgba(56,232,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

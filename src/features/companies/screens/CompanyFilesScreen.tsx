@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
@@ -10,7 +10,9 @@ import GlassCard from "../../../shared/components/GlassCard";
 import ListRow from "../../../shared/ui/ListRow";
 import { CompanyActionTile, CompanyChip, CompanyHeroCard, CompanySectionLabel, CompanyStatTile } from "../components/CompanyBlocks";
 import { useCompany } from "../../../state/company/CompanyContext";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
+import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
 const FILE_GROUPS = [
   { id: "contracts", title: "العقود", count: "18", icon: "document-text-outline" as const, tone: "blue" as const },
@@ -28,11 +30,45 @@ const RECENT_FILES = [
 export default function CompanyFilesScreen() {
   const navigation = useNavigation<any>();
   const { company } = useCompany();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: {
+      padding: 16,
+      paddingBottom: 110,
+    },
+    statRow: {
+      flexDirection: "row" as const,
+      gap: 10,
+      marginTop: 10,
+    },
+    grid: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 10,
+    },
+    listWrap: {
+      gap: 10,
+    },
+    row: {
+      minHeight: 74,
+    },
+    workflowCard: {
+      padding: 14,
+      gap: 12,
+    },
+    workflowStep: {
+      flexDirection: "row" as const,
+      alignItems: "flex-start" as const,
+      gap: 10,
+    },
+  }));
 
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={{ backgroundColor: colors.mediaCanvas }}>
+      <CompanyWorkModeTopBar />
       <AppHeader
         title="ملفات الشركة"
+        leftButton="none"
         rightActions={<AppButton label="رفع" size="sm" onPress={() => {}} />}
       />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -120,35 +156,3 @@ export default function CompanyFilesScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: 16,
-    paddingBottom: 110,
-  },
-  statRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  listWrap: {
-    gap: 10,
-  },
-  row: {
-    minHeight: 74,
-  },
-  workflowCard: {
-    padding: 14,
-    gap: 12,
-  },
-  workflowStep: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-});

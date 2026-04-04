@@ -1,7 +1,8 @@
 import React from "react";
-import { View, TouchableOpacity, StyleSheet, StyleProp, ViewStyle, I18nManager } from "react-native";
+import { View, TouchableOpacity, StyleProp, ViewStyle, I18nManager } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { radii } from "../../theme/radii";
 import { spacing } from "../../theme/spacing";
 import AppText from "./AppText";
@@ -17,6 +18,30 @@ type ListRowProps = {
 
 export default function ListRow({ title, subtitle, iconLeft, onPress, right, style }: ListRowProps) {
   const chevronName = I18nManager.isRTL ? "chevron-back" : "chevron-forward";
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    row: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 14,
+      borderRadius: radii.lg,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    iconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: "rgba(56,232,255,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(56,232,255,0.18)",
+    },
+  }));
 
   return (
     <TouchableOpacity
@@ -46,28 +71,3 @@ export default function ListRow({ title, subtitle, iconLeft, onPress, right, sty
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-    borderRadius: radii.lg,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(56,232,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.18)",
-  },
-});
-

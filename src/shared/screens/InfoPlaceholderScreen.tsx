@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import GlassCard from "../components/GlassCard";
 
 export default function InfoPlaceholderScreen() {
@@ -12,6 +13,25 @@ export default function InfoPlaceholderScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 8,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    backBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { flex: 1, color: c.textPrimary, fontSize: 18, fontWeight: "800" as const, textAlign: "center" as const },
+    scroll: { padding: 16, paddingBottom: 100 },
+    card: { padding: 20 },
+    body: { color: c.textSecondary, fontSize: 15, lineHeight: 24, textAlign: "center" as const },
+  }));
+
   const p = (route.params as { titleKey?: string; bodyKey?: string }) || {};
   const titleKey = p.titleKey || "common.soon";
   const bodyKey = p.bodyKey || "common.soon";
@@ -35,21 +55,3 @@ export default function InfoPlaceholderScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { flex: 1, color: colors.textPrimary, fontSize: 18, fontWeight: "800", textAlign: "center" },
-  scroll: { padding: 16, paddingBottom: 100 },
-  card: { padding: 20 },
-  body: { color: colors.textSecondary, fontSize: 15, lineHeight: 24, textAlign: "center" },
-});

@@ -15,6 +15,7 @@ import KnowledgeScreen from "../../shared/screens/KnowledgeScreen";
 import CRMScreen from "../../features/companies/screens/CRMScreen";
 import ReportsScreen from "../../shared/screens/ReportsScreen";
 import SettingsScreen from "../../features/settings/screens/SettingsScreen";
+import AdminHubScreen from "../../features/settings/screens/AdminHubScreen";
 import ApprovalDetailScreen from "../../features/companies/screens/ApprovalDetailScreen";
 import CompanyProfileScreen from "../../shared/screens/CompanyProfileScreen";
 import CompanyFeedScreen from "../../features/companies/screens/CompanyFeedScreen";
@@ -59,6 +60,7 @@ export default function CompanyNavigator() {
       <Stack.Screen name="CRM" component={CRMScreen} />
       <Stack.Screen name="Reports" component={ReportsScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="AdminHub" component={AdminHubScreen} />
       <Stack.Screen name="ApprovalDetail" component={ApprovalDetailScreen} />
       <Stack.Screen name="Company" component={CompanyProfileScreen} />
       <Stack.Screen name="CompanyFeed" component={CompanyFeedScreen} />

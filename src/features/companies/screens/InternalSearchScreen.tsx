@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import GlassCard from "../../../shared/components/GlassCard";
 import AppText from "../../../shared/ui/AppText";
 import AppInput from "../../../shared/ui/AppInput";
 import ListRow from "../../../shared/ui/ListRow";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 
 const INTERNAL_INDEX = [
   { title: "Handover Templates", subtitle: "قوالب التسليم المعتمدة" },
@@ -17,6 +18,12 @@ const INTERNAL_INDEX = [
 ];
 
 export default function InternalSearchScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: { padding: 16, paddingBottom: 90, gap: 12 },
+    card: { padding: 14 },
+    kicker: { letterSpacing: 0.8, textTransform: "uppercase" as const },
+  }));
   const [query, setQuery] = useState("");
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -43,9 +50,3 @@ export default function InternalSearchScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 90, gap: 12 },
-  card: { padding: 14 },
-  kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
-});

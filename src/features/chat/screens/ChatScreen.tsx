@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, ScrollView, RefreshControl, ActivityIndicator, type ViewStyle } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
@@ -8,10 +8,31 @@ import AppText from "../../../shared/ui/AppText";
 import ListRow from "../../../shared/ui/ListRow";
 import AppButton from "../../../shared/ui/AppButton";
 import { getAgentHistory, getDashboardActivity, getNotifications, type AgentMessageRow, type DashboardActivityItem, type NotificationItem } from "../../../api";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
+import CompanyWorkModeTopBar from "../../companies/components/CompanyWorkModeTopBar";
+import { useCompanyDailyRoom } from "../../../lib/useCompanyDailyRoom";
 
 export default function ChatScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useAppTheme();
+  const { openCompanyDaily, dailyLoading } = useCompanyDailyRoom();
+  const styles = useThemedStyles((c) => ({
+    body: { padding: 16, paddingBottom: 110, gap: 10 },
+    card: { padding: 18 },
+    statsRow: { flexDirection: "row" as const, gap: 8, marginTop: 12 },
+    pill: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: c.bgCard,
+    },
+    listWrap: { gap: 10 },
+    loadingWrap: { paddingVertical: 24, alignItems: "center" as const },
+  }));
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [history, setHistory] = useState<AgentMessageRow[]>([]);
   const [activity, setActivity] = useState<DashboardActivityItem[]>([]);
@@ -68,26 +89,36 @@ export default function ChatScreen() {
   }, [activity, history]);
 
   return (
-    <Screen style={{ backgroundColor: colors.mediaCanvas }}>
+    <Screen style={{ backgroundColor: colors.mediaCanvas }} edges={["top", "left", "right", "bottom"]}>
+      <CompanyWorkModeTopBar />
       <AppHeader
-        title="Chat"
-        rightActions={<AppButton label="Inbox" size="sm" onPress={() => navigation.navigate("Notifications")} />}
+        title="المحادثات"
+        leftButton="none"
+        rightActions={<AppButton label="التنبيهات" size="sm" onPress={() => navigation.navigate("Notifications")} />}
       />
       <ScrollView
         contentContainerStyle={styles.body}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={undefined} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={colors.accentCyan} />}
       >
         <GlassCard style={styles.card}>
           <AppText variant="bodySm" tone="secondary">
             Private channels, team rooms, and direct messages connected to notifications and company activity.
           </AppText>
           <View style={styles.statsRow}>
-            <MiniPill label="Unread" value={loading ? "..." : String(unread)} />
-            <MiniPill label="Threads" value={loading ? "..." : String(threads.length)} />
-            <MiniPill label="Activity" value={loading ? "..." : String(activity.length)} />
+            <MiniPill label="Unread" value={loading ? "..." : String(unread)} pillStyle={styles.pill} />
+            <MiniPill label="Threads" value={loading ? "..." : String(threads.length)} pillStyle={styles.pill} />
+            <MiniPill label="Activity" value={loading ? "..." : String(activity.length)} pillStyle={styles.pill} />
           </View>
           <View style={{ height: 12 }} />
           <View style={{ gap: 8 }}>
+            <ListRow
+              title="غرفة Daily — فيديو وشات"
+              subtitle={dailyLoading ? "جاري التحميل…" : "اجتماع الفريق عبر Daily (توكن من الخادم)"}
+              iconLeft="videocam-outline"
+              onPress={() => {
+                if (!dailyLoading) void openCompanyDaily();
+              }}
+            />
             <ListRow title="Company announcements" subtitle="General updates and leadership notes" iconLeft="megaphone-outline" onPress={() => navigation.navigate("CompanyFeed")} />
             <ListRow title="Project handover room" subtitle="Track progress between assignees" iconLeft="swap-horizontal-outline" onPress={() => navigation.navigate("Handover")} />
             <ListRow title="Direct messages" subtitle="One-to-one collaboration" iconLeft="chatbubble-ellipses-outline" onPress={() => navigation.navigate("Teams")} />
@@ -97,11 +128,11 @@ export default function ChatScreen() {
         <View style={styles.listWrap}>
           {loading && !refreshing ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator />
+              <ActivityIndicator color={colors.accentCyan} />
             </View>
           ) : error ? (
             <GlassCard style={styles.card}>
-              <AppText variant="caption" style={{ color: "#ff6f6f" }}>
+              <AppText variant="caption" style={{ color: colors.danger }}>
                 {error}
               </AppText>
               <View style={{ height: 10 }} />
@@ -130,9 +161,9 @@ export default function ChatScreen() {
   );
 }
 
-function MiniPill({ label, value }: { label: string; value: string }) {
+function MiniPill({ label, value, pillStyle }: { label: string; value: string; pillStyle: ViewStyle }) {
   return (
-    <View style={styles.pill}>
+    <View style={pillStyle}>
       <AppText variant="micro" tone="muted" weight="bold">
         {label}
       </AppText>
@@ -142,21 +173,3 @@ function MiniPill({ label, value }: { label: string; value: string }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  body: { padding: 16, paddingBottom: 110, gap: 10 },
-  card: { padding: 18 },
-  statsRow: { flexDirection: "row", gap: 8, marginTop: 12 },
-  pill: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.bgCard,
-  },
-  listWrap: { gap: 10 },
-  loadingWrap: { paddingVertical: 24, alignItems: "center" },
-});
-

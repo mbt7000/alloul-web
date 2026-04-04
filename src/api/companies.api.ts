@@ -92,6 +92,8 @@ export interface CompanyMemberRow {
   i_code: string;
   manager_id?: number | null;
   job_title?: string | null;
+  /** إن وُجد من الخادم: يُستخدم لـ `tel:` قبل مكالمة Stream */
+  phone?: string | null;
 }
 
 export const getCompanyMembers = () => apiFetch<CompanyMemberRow[]>("/companies/members");

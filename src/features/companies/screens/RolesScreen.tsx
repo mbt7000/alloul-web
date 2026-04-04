@@ -4,7 +4,9 @@ import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import GlassCard from "../../../shared/components/GlassCard";
 import AppText from "../../../shared/ui/AppText";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
+import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
 const ROLES = [
   { id: "1", name: "Owner", perms: "إدارة كاملة + السياسات + الفوترة" },
@@ -14,8 +16,16 @@ const ROLES = [
 ];
 
 export default function RolesScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: { padding: 16, paddingBottom: 90 },
+    card: { padding: 16 },
+    kicker: { letterSpacing: 0.8, textTransform: "uppercase" as const },
+    row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.12)" },
+  }));
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={{ backgroundColor: colors.mediaCanvas }}>
+      <CompanyWorkModeTopBar />
       <AppHeader title="الأدوار" leftButton="back" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.card}>
@@ -39,10 +49,3 @@ export default function RolesScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 90 },
-  card: { padding: 16 },
-  kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
-  row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.12)" },
-});

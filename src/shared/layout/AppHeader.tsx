@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, StyleProp, ViewStyle, I18nManager } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 
 type AppHeaderProps = {
   title: string;
@@ -14,6 +15,27 @@ type AppHeaderProps = {
 export default function AppHeader({ title, rightActions, leftButton = "back", style }: AppHeaderProps) {
   const navigation = useNavigation<any>();
   const isRTL = I18nManager.isRTL;
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 8,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    backBtnPlaceholder: { width: 40, height: 40 },
+    title: { flex: 1, color: c.textPrimary, fontSize: 20, fontWeight: "800" as const, textAlign: "center" as const },
+    right: { minWidth: 40, alignItems: "flex-end" as const },
+  }));
 
   return (
     <View style={[styles.header, style]}>
@@ -39,25 +61,3 @@ export default function AppHeader({ title, rightActions, leftButton = "back", st
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backBtnPlaceholder: { width: 40, height: 40 },
-  title: { flex: 1, color: colors.textPrimary, fontSize: 20, fontWeight: "800", textAlign: "center" },
-  right: { minWidth: 40, alignItems: "flex-end" },
-});
-

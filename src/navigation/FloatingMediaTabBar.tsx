@@ -1,10 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import AppText from "../shared/ui/AppText";
-import { colors } from "../theme/colors";
+import { useAppTheme } from "../theme/ThemeContext";
 import { radius } from "../theme/radius";
 import { MEDIA_TAB_ROUTES } from "../config/routes";
 
@@ -25,6 +25,90 @@ const TAB_ORDER: {
 export default function FloatingMediaTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 10);
+  const { colors, mode } = useAppTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        outer: {
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: "center",
+          pointerEvents: "box-none",
+        },
+        pill: {
+          flexDirection: "row",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          backgroundColor: colors.floatingBarBg,
+          borderRadius: radius.xxl,
+          borderWidth: 1,
+          borderColor: colors.floatingBarBorder,
+          paddingHorizontal: 6,
+          paddingTop: 10,
+          paddingBottom: 8,
+          marginHorizontal: 16,
+          maxWidth: 420,
+          width: "100%",
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.45,
+              shadowRadius: 24,
+            },
+            android: { elevation: 12 },
+          }),
+        },
+        item: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "flex-end",
+          minWidth: 48,
+          paddingBottom: 2,
+        },
+        iconWrap: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        iconWrapActive: {
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          backgroundColor: colors.floatingActiveFill,
+          borderWidth: 1,
+          borderColor: colors.floatingActiveBorder,
+        },
+        labelActive: {
+          marginTop: 4,
+          color: colors.textPrimary,
+          fontSize: 10,
+        },
+        badge: {
+          position: "absolute",
+          top: 2,
+          right: 2,
+          minWidth: 17,
+          height: 17,
+          borderRadius: 9,
+          backgroundColor: colors.danger,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 4,
+          borderWidth: 2,
+          borderColor: colors.mediaCanvas,
+        },
+        badgeText: { color: colors.white, fontSize: 9 },
+      }),
+    [colors]
+  );
+
+  const activeIconColor = mode === "light" ? colors.white : colors.black;
 
   return (
     <View style={[styles.outer, { paddingBottom: bottomPad }]}>
@@ -48,7 +132,7 @@ export default function FloatingMediaTabBar({ state, descriptors, navigation }: 
             }
           };
 
-          const iconColor = isFocused ? colors.black : colors.textSecondary;
+          const iconColor = isFocused ? activeIconColor : colors.textSecondary;
 
           return (
             <Pressable
@@ -82,80 +166,3 @@ export default function FloatingMediaTabBar({ state, descriptors, navigation }: 
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  outer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    pointerEvents: "box-none",
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    backgroundColor: colors.floatingBarBg,
-    borderRadius: radius.xxl,
-    borderWidth: 1,
-    borderColor: colors.floatingBarBorder,
-    paddingHorizontal: 6,
-    paddingTop: 10,
-    paddingBottom: 8,
-    marginHorizontal: 16,
-    maxWidth: 420,
-    width: "100%",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.45,
-        shadowRadius: 24,
-      },
-      android: { elevation: 12 },
-    }),
-  },
-  item: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    minWidth: 48,
-    paddingBottom: 2,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconWrapActive: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: colors.floatingActiveFill,
-    borderWidth: 1,
-    borderColor: colors.floatingActiveBorder,
-  },
-  labelActive: {
-    marginTop: 4,
-    color: colors.textPrimary,
-    fontSize: 10,
-  },
-  badge: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
-    backgroundColor: colors.danger,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: colors.mediaCanvas,
-  },
-  badgeText: { color: colors.white, fontSize: 9 },
-});

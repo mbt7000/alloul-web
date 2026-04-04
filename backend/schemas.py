@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     following_count: int = 0
     posts_count: int = 0
     created_at: Optional[str] = None
+    is_admin: bool = False
 
     class Config:
         from_attributes = True

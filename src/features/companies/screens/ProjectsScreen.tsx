@@ -9,17 +9,47 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import GlassCard from "../../../shared/components/GlassCard";
 import { getProjects, type ProjectRow } from "../../../api";
+import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
 export default function ProjectsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.mediaCanvas },
+    listHeaderTitle: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    title: { color: c.textPrimary, fontSize: 20, fontWeight: "800" },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, padding: 24, gap: 12 },
+    err: { color: c.danger, textAlign: "center" as const },
+    retry: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+    },
+    retryText: { color: c.accentBlue, fontWeight: "700" },
+    list: { padding: 16, paddingBottom: 100, gap: 12 },
+    card: { padding: 14, marginBottom: 4 },
+    name: { color: c.textPrimary, fontSize: 17, fontWeight: "800" },
+    row: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10, marginTop: 8 },
+    badge: { color: c.accentTeal, fontSize: 12, fontWeight: "700" },
+    meta: { color: c.textMuted, fontSize: 12 },
+    desc: { color: c.textSecondary, fontSize: 13, marginTop: 8, lineHeight: 20 },
+    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 40 },
+  }));
   const [items, setItems] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,14 +80,7 @@ export default function ProjectsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>{t("projects.title")}</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
+      <CompanyWorkModeTopBar />
       {loading && !refreshing ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.accentCyan} />
@@ -71,9 +94,15 @@ export default function ProjectsScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={items}
           keyExtractor={(it) => String(it.id)}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <View style={styles.listHeaderTitle}>
+              <Text style={styles.title}>{t("projects.title")}</Text>
+            </View>
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -106,37 +135,3 @@ export default function ProjectsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
-  err: { color: colors.danger, textAlign: "center" },
-  retry: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-  },
-  retryText: { color: colors.accentBlue, fontWeight: "700" },
-  list: { padding: 16, paddingBottom: 100, gap: 12 },
-  card: { padding: 14, marginBottom: 4 },
-  name: { color: colors.textPrimary, fontSize: 17, fontWeight: "800" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 },
-  badge: { color: colors.accentTeal, fontSize: 12, fontWeight: "700" },
-  meta: { color: colors.textMuted, fontSize: 12 },
-  desc: { color: colors.textSecondary, fontSize: 13, marginTop: 8, lineHeight: 20 },
-  empty: { color: colors.textMuted, textAlign: "center", marginTop: 40 },
-});

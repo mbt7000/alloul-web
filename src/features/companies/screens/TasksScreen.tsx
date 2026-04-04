@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, ScrollView, RefreshControl, ActivityIndicator, type ViewStyle } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
@@ -7,11 +7,33 @@ import AppText from "../../../shared/ui/AppText";
 import GlassCard from "../../../shared/components/GlassCard";
 import ListRow from "../../../shared/ui/ListRow";
 import AppButton from "../../../shared/ui/AppButton";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import { getDashboardStats, getHandoverWorkItems, getProjects, type DashboardStats, type HandoverWorkItem, type ProjectRow } from "../../../api";
+import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
 export default function TasksScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    body: { padding: 16, paddingBottom: 110, gap: 10 },
+    card: { padding: 18 },
+    statRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8, marginTop: 12 },
+    mini: {
+      width: "48%",
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: c.bgCard,
+    },
+    actions: { flexDirection: "row" as const, gap: 8, marginTop: 12 },
+    loadingWrap: { paddingVertical: 24, alignItems: "center" as const },
+    columnsWrap: { gap: 10 },
+    column: { padding: 12 },
+    columnHead: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, marginBottom: 8 },
+  }));
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [workItems, setWorkItems] = useState<HandoverWorkItem[]>([]);
@@ -61,10 +83,12 @@ export default function TasksScreen() {
   );
 
   return (
-    <Screen style={{ backgroundColor: colors.mediaCanvas }}>
+    <Screen style={{ backgroundColor: colors.mediaCanvas }} edges={["top", "left", "right", "bottom"]}>
+      <CompanyWorkModeTopBar />
       <AppHeader
-        title="Tasks"
-        rightActions={<AppButton label="Projects" size="sm" onPress={() => navigation.navigate("Projects")} />}
+        title="المهام"
+        leftButton="none"
+        rightActions={<AppButton label="المشاريع" size="sm" onPress={() => navigation.navigate("Projects")} />}
       />
       <ScrollView
         contentContainerStyle={styles.body}
@@ -75,10 +99,10 @@ export default function TasksScreen() {
             Execution board generated from projects and handover lifecycle.
           </AppText>
           <View style={styles.statRow}>
-            <Mini title="Today" value={loading ? "..." : String(dueToday.length)} />
-            <Mini title="In progress" value={loading ? "..." : String(inProgress.length)} />
-            <Mini title="Blocked" value={loading ? "..." : String(blocked.length)} />
-            <Mini title="Overdue" value={loading ? "..." : String(overdue.length)} />
+            <Mini title="Today" value={loading ? "..." : String(dueToday.length)} style={styles.mini} />
+            <Mini title="In progress" value={loading ? "..." : String(inProgress.length)} style={styles.mini} />
+            <Mini title="Blocked" value={loading ? "..." : String(blocked.length)} style={styles.mini} />
+            <Mini title="Overdue" value={loading ? "..." : String(overdue.length)} style={styles.mini} />
           </View>
           <View style={styles.actions}>
             <AppButton label="Handover" tone="glass" size="sm" onPress={() => navigation.navigate("Handover")} />
@@ -100,10 +124,10 @@ export default function TasksScreen() {
           </GlassCard>
         ) : (
           <View style={styles.columnsWrap}>
-            <TaskColumn title="Due today" items={dueToday} onPress={() => navigation.navigate("Projects")} />
-            <TaskColumn title="In progress" items={inProgress} onPress={() => navigation.navigate("Handover")} />
-            <TaskColumn title="Blocked" items={blocked} onPress={() => navigation.navigate("Reports")} />
-            <TaskColumn title="Overdue" items={overdue} onPress={() => navigation.navigate("Handover")} />
+            <TaskColumn title="Due today" items={dueToday} onPress={() => navigation.navigate("Projects")} columnStyle={styles.column} columnHeadStyle={styles.columnHead} />
+            <TaskColumn title="In progress" items={inProgress} onPress={() => navigation.navigate("Handover")} columnStyle={styles.column} columnHeadStyle={styles.columnHead} />
+            <TaskColumn title="Blocked" items={blocked} onPress={() => navigation.navigate("Reports")} columnStyle={styles.column} columnHeadStyle={styles.columnHead} />
+            <TaskColumn title="Overdue" items={overdue} onPress={() => navigation.navigate("Handover")} columnStyle={styles.column} columnHeadStyle={styles.columnHead} />
           </View>
         )}
       </ScrollView>
@@ -111,10 +135,22 @@ export default function TasksScreen() {
   );
 }
 
-function TaskColumn({ title, items, onPress }: { title: string; items: { id: string; title: string }[]; onPress: () => void }) {
+function TaskColumn({
+  title,
+  items,
+  onPress,
+  columnStyle,
+  columnHeadStyle,
+}: {
+  title: string;
+  items: { id: string; title: string }[];
+  onPress: () => void;
+  columnStyle: ViewStyle;
+  columnHeadStyle: ViewStyle;
+}) {
   return (
-    <GlassCard style={styles.column}>
-      <View style={styles.columnHead}>
+    <GlassCard style={columnStyle}>
+      <View style={columnHeadStyle}>
         <AppText variant="bodySm" weight="bold">
           {title}
         </AppText>
@@ -135,9 +171,9 @@ function TaskColumn({ title, items, onPress }: { title: string; items: { id: str
   );
 }
 
-function Mini({ title, value }: { title: string; value: string }) {
+function Mini({ title, value, style }: { title: string; value: string; style: ViewStyle }) {
   return (
-    <View style={styles.mini}>
+    <View style={style}>
       <AppText variant="micro" tone="muted" weight="bold">
         {title}
       </AppText>
@@ -147,24 +183,3 @@ function Mini({ title, value }: { title: string; value: string }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  body: { padding: 16, paddingBottom: 110, gap: 10 },
-  card: { padding: 18 },
-  statRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
-  mini: {
-    width: "48%",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.bgCard,
-  },
-  actions: { flexDirection: "row", gap: 8, marginTop: 12 },
-  loadingWrap: { paddingVertical: 24, alignItems: "center" },
-  columnsWrap: { gap: 10 },
-  column: { padding: 12 },
-  columnHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-});
-

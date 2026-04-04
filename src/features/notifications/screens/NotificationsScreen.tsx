@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -8,18 +8,21 @@ import {
   RefreshControl,
   Image,
   Pressable,
-  Alert,
+  type ImageStyle,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../../theme/colors";
+import type { AppPalette } from "../../../theme/palettes";
 import { radius } from "../../../theme/radius";
 import AppText from "../../../shared/ui/AppText";
 import InlineErrorRetry from "../../../shared/ui/InlineErrorRetry";
 import { useNotifications } from "../../../state/notifications/NotificationsContext";
 import type { NotificationItem } from "../../../api";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 const TAB_BAR_PAD = 108;
 
@@ -33,7 +36,7 @@ function timeShort(raw?: string): string {
   return `${Math.floor(hrs / 24)}ي`;
 }
 
-function badgeForType(type: string): { icon: keyof typeof Ionicons.glyphMap; bg: string } {
+function badgeForType(type: string, colors: AppPalette): { icon: keyof typeof Ionicons.glyphMap; bg: string } {
   const t = type.toLowerCase();
   if (t.includes("like") || t.includes("heart")) return { icon: "heart", bg: colors.accentRose };
   if (t.includes("follow")) return { icon: "person-add", bg: colors.accentBlue };
@@ -45,6 +48,7 @@ function badgeForType(type: string): { icon: keyof typeof Ionicons.glyphMap; bg:
 export default function NotificationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { colors, toggleMode } = useAppTheme();
   const {
     notifications: items,
     loading,
@@ -55,6 +59,83 @@ export default function NotificationsScreen() {
     markAllNotificationsReadAndSync,
     clearError,
   } = useNotifications();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1 },
+        head: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+        headRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
+        globeBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.accentBlue,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        roundGhost: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        header: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border,
+        },
+        title: { color: colors.textPrimary },
+        center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+        list: { padding: 16, gap: 0 },
+        row: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          paddingVertical: 14,
+          paddingHorizontal: 12,
+          borderRadius: radius.lg,
+          backgroundColor: colors.cardElevated,
+          borderWidth: 1,
+          borderColor: colors.border,
+          marginBottom: 10,
+        },
+        rowUnread: { borderColor: "rgba(76,111,255,0.45)" },
+        timeCol: { width: 36, textAlign: "left" },
+        avatarWrap: { position: "relative" },
+        avatar: { width: 48, height: 48, borderRadius: 24 },
+        avatarPh: {
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: "rgba(255,255,255,0.08)",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        badgeDot: {
+          position: "absolute",
+          bottom: -2,
+          right: -2,
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 2,
+          borderColor: colors.mediaCanvas,
+        },
+        empty: { textAlign: "center", marginTop: 40 },
+      }),
+    [colors]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -84,7 +165,7 @@ export default function NotificationsScreen() {
           <Pressable style={styles.roundGhost} hitSlop={8}>
             <Ionicons name="globe-outline" size={18} color={colors.textPrimary} />
           </Pressable>
-          <Pressable style={styles.roundGhost} hitSlop={8} onPress={() => Alert.alert("المظهر", "تبديل الوضع الفاتح قريباً.")}>
+          <Pressable style={styles.roundGhost} hitSlop={8} onPress={toggleMode}>
             <Ionicons name="sunny-outline" size={18} color={colors.textPrimary} />
           </Pressable>
         </View>
@@ -152,7 +233,12 @@ export default function NotificationsScreen() {
             </AppText>
           }
           renderItem={({ item }) => (
-            <NotificationListRow item={item} onPress={() => void onPressItem(item.id)} />
+            <NotificationListRow
+              item={item}
+              colors={colors}
+              styles={styles}
+              onPress={() => void onPressItem(item.id)}
+            />
           )}
         />
       )}
@@ -160,8 +246,28 @@ export default function NotificationsScreen() {
   );
 }
 
-function NotificationListRow({ item, onPress }: { item: NotificationItem; onPress: () => void }) {
-  const badge = badgeForType(item.type);
+type NotificationRowStyles = {
+  row: ViewStyle;
+  rowUnread: ViewStyle;
+  timeCol: TextStyle;
+  avatarWrap: ViewStyle;
+  avatar: ImageStyle;
+  avatarPh: ViewStyle;
+  badgeDot: ViewStyle;
+};
+
+function NotificationListRow({
+  item,
+  onPress,
+  colors,
+  styles,
+}: {
+  item: NotificationItem;
+  onPress: () => void;
+  colors: AppPalette;
+  styles: NotificationRowStyles;
+}) {
+  const badge = badgeForType(item.type, colors);
   const actor = item.actor_name || item.title;
   const action = item.body || item.type;
   const t = timeShort(item.created_at);
@@ -198,76 +304,3 @@ function NotificationListRow({ item, onPress }: { item: NotificationItem; onPres
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  head: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
-  headRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
-  globeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  roundGhost: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  title: { color: colors.textPrimary },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  list: { padding: 16, gap: 0 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: radius.lg,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 10,
-  },
-  rowUnread: { borderColor: "rgba(76,111,255,0.45)" },
-  timeCol: { width: 36, textAlign: "left" },
-  avatarWrap: { position: "relative" },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  avatarPh: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeDot: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.mediaCanvas,
-  },
-  empty: { textAlign: "center", marginTop: 40 },
-});

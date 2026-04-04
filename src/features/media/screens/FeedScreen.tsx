@@ -4,7 +4,6 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  StyleSheet,
   ActivityIndicator,
   Pressable,
 } from "react-native";
@@ -14,7 +13,8 @@ import { useAuth } from "../../../state/auth/AuthContext";
 import { getPosts, likePost, unlikePost, type ApiPost } from "../../../api";
 import { formatApiError } from "../../../shared/utils/apiErrors";
 import InlineErrorRetry from "../../../shared/ui/InlineErrorRetry";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import GlassCard from "../../../shared/components/GlassCard";
 import Screen from "../../../shared/layout/Screen";
 import AppText from "../../../shared/ui/AppText";
@@ -41,6 +41,22 @@ function FeedTabChip({
   active: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles((c) => ({
+    tabChip: {
+      flex: 1,
+      minHeight: 72,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: "rgba(255,255,255,0.03)",
+    },
+    tabChipActive: {
+      backgroundColor: "rgba(56,232,255,0.10)",
+      borderColor: "rgba(56,232,255,0.35)",
+    },
+  }));
   return (
     <Pressable onPress={onPress} style={[styles.tabChip, active && styles.tabChipActive]}>
       <AppText variant="bodySm" weight="bold" tone={active ? "primary" : "secondary"}>
@@ -56,6 +72,66 @@ function FeedTabChip({
 export default function FeedScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    headerWrap: { paddingTop: 8 },
+    list: { paddingHorizontal: 16, paddingBottom: 110 },
+    topbar: { flexDirection: "row" as const, alignItems: "flex-start" as const, justifyContent: "space-between" as const, paddingVertical: 8 },
+    titleBlock: { flex: 1, paddingRight: 12 },
+    kickerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: 10 },
+    liveDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 999,
+      backgroundColor: c.accentCyan,
+    },
+    topbarSubtitle: { marginTop: 6, maxWidth: 260 },
+    topbarActions: { flexDirection: "row" as const, gap: 8, alignItems: "center" as const },
+    iconBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    iconBtnPrimary: { backgroundColor: c.accentBlue, borderColor: "rgba(255,255,255,0.12)" },
+    composer: { padding: 14, marginTop: 12 },
+    composerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12 },
+    composerBadge: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: "rgba(56,232,255,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(56,232,255,0.22)",
+    },
+    headerAvatar: { width: 34, height: 34, borderRadius: 12 },
+    headerAvatarFallback: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      backgroundColor: c.accent,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    loadingContainer: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingVertical: 60 },
+    searchWrap: { marginTop: 12 },
+    tabsRow: { flexDirection: "row" as const, gap: 8, marginTop: 14 },
+    feedMetaRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      marginTop: 14,
+      paddingBottom: 8,
+    },
+    emptyCard: { padding: 18, marginTop: 8 },
+  }));
   const [posts, setPosts] = useState<ApiPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -264,77 +340,3 @@ export default function FeedScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  headerWrap: { paddingTop: 8 },
-  list: { paddingHorizontal: 16, paddingBottom: 110 },
-  topbar: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingVertical: 8 },
-  titleBlock: { flex: 1, paddingRight: 12 },
-  kickerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: colors.accentCyan,
-  },
-  topbarSubtitle: { marginTop: 6, maxWidth: 260 },
-  topbarActions: { flexDirection: "row", gap: 8, alignItems: "center" },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconBtnPrimary: { backgroundColor: colors.accentBlue, borderColor: "rgba(255,255,255,0.12)" },
-  composer: { padding: 14, marginTop: 12 },
-  composerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  composerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(56,232,255,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.22)",
-  },
-  headerAvatar: { width: 34, height: 34, borderRadius: 12 },
-  headerAvatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 },
-  searchWrap: { marginTop: 12 },
-  tabsRow: { flexDirection: "row", gap: 8, marginTop: 14 },
-  tabChip: {
-    flex: 1,
-    minHeight: 72,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  tabChipActive: {
-    backgroundColor: "rgba(56,232,255,0.10)",
-    borderColor: "rgba(56,232,255,0.35)",
-  },
-  feedMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 14,
-    paddingBottom: 8,
-  },
-  emptyCard: { padding: 18, marginTop: 8 },
-});

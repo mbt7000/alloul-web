@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import GlassCard from "../../../shared/components/GlassCard";
 import { getWorkspaceAds, type AdRow } from "../../../api";
 
@@ -12,6 +13,40 @@ export default function WorkspaceAdsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 8,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    backBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { color: c.textPrimary, fontSize: 20, fontWeight: "800" },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, padding: 24, gap: 12 },
+    err: { color: c.danger, textAlign: "center" as const },
+    retry: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+    },
+    retryTxt: { color: c.accentBlue, fontWeight: "700" },
+    list: { padding: 16, paddingBottom: 100 },
+    card: { padding: 14, marginBottom: 10 },
+    type: { color: c.accentCyan, fontSize: 12, fontWeight: "800", textTransform: "uppercase" as const },
+    status: { color: c.textMuted, fontSize: 12, marginTop: 4 },
+    img: { width: "100%", height: 140, borderRadius: 12, marginTop: 10 },
+    body: { color: c.textSecondary, fontSize: 14, marginTop: 10, lineHeight: 22 },
+    imp: { color: c.textMuted, fontSize: 11, marginTop: 8 },
+    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 40 },
+  }));
   const [items, setItems] = useState<AdRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,37 +117,3 @@ export default function WorkspaceAdsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
-  err: { color: colors.danger, textAlign: "center" },
-  retry: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-  },
-  retryTxt: { color: colors.accentBlue, fontWeight: "700" },
-  list: { padding: 16, paddingBottom: 100 },
-  card: { padding: 14, marginBottom: 10 },
-  type: { color: colors.accentCyan, fontSize: 12, fontWeight: "800", textTransform: "uppercase" },
-  status: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
-  img: { width: "100%", height: 140, borderRadius: 12, marginTop: 10 },
-  body: { color: colors.textSecondary, fontSize: 14, marginTop: 10, lineHeight: 22 },
-  imp: { color: colors.textMuted, fontSize: 11, marginTop: 8 },
-  empty: { color: colors.textMuted, textAlign: "center", marginTop: 40 },
-});

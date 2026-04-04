@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Text, TextProps, StyleSheet } from "react-native";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import type { AppPalette } from "../../theme/palettes";
 import { fontFamilies, lineHeights, typeScale } from "../../theme/typography";
 
 type Variant =
@@ -22,7 +23,7 @@ export type AppTextProps = TextProps & {
   weight?: "regular" | "medium" | "semibold" | "bold" | "black";
 };
 
-function toneColor(tone: Tone): string {
+function toneColor(tone: Tone, colors: AppPalette): string {
   switch (tone) {
     case "secondary":
       return colors.textSecondary;
@@ -53,13 +54,16 @@ export default function AppText({
   style,
   ...props
 }: AppTextProps) {
+  const { colors } = useAppTheme();
+  const color = useMemo(() => toneColor(tone, colors), [tone, colors]);
+
   return (
     <Text
       {...props}
       style={[
         styles.base,
         {
-          color: toneColor(tone),
+          color,
           fontSize: typeScale[variant],
           lineHeight: lineHeights[variant],
           fontFamily: familyFor(weight),
@@ -76,4 +80,3 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
 });
-

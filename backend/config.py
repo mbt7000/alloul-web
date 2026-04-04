@@ -35,6 +35,17 @@ class Settings(BaseSettings):
     SEED_ADMIN_USERNAME: str = "admin"
     SEED_ADMIN_PASSWORD: Optional[str] = None
 
+    # Optional second bootstrap user (e.g. second phone / non-admin QA). Requires SEED_SECOND_USER_* when enabled.
+    SEED_SECOND_USER_ENABLED: bool = False
+    SEED_SECOND_USER_EMAIL: Optional[str] = None
+    SEED_SECOND_USER_USERNAME: str = "tester_b"
+    SEED_SECOND_USER_PASSWORD: Optional[str] = None
+    SEED_SECOND_USER_NAME: Optional[str] = None
+
+    # Admin API (/admin/*) and is_admin on User responses. Comma-separated, case-insensitive.
+    ADMIN_ALLOWED_EMAILS: str = ""
+    ADMIN_USERNAMES: str = "admin,mbtalm1"
+
     # Firebase (optional – for POST /auth/firebase)
     GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
     FIREBASE_PROJECT_ID: Optional[str] = None
@@ -57,6 +68,11 @@ class Settings(BaseSettings):
 
     # AI (Anthropic Claude)
     ANTHROPIC_API_KEY: Optional[str] = None
+
+    # Daily.co — غرف فيديو + شات داخل الجلسة (قسم الشركات)
+    DAILY_API_KEY: Optional[str] = None
+    # النطاق الفرعي فقط، مثال: alloul → https://alloul.daily.co
+    DAILY_SUBDOMAIN: Optional[str] = None
 
     @computed_field
     @property

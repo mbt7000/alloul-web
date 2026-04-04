@@ -1,14 +1,15 @@
 """
-Validate Azure AD / Microsoft Entra ID id_token (JWT).
-Uses JWKS from Microsoft's discovery endpoint. Optional: set MICROSOFT_CLIENT_ID and MICROSOFT_TENANT_ID.
+Validate Azure AD / Microsoft Entra id_token (JWT).
+Uses JWKS for the tenant that signed the token (tid claim) so /common and
+single-tenant apps both work.
 """
 from __future__ import annotations
 
-import urllib.request
 import json
+import urllib.request
 from typing import Any, Dict, Optional
 
-from jose import jwt, jwk, JWTError
+from jose import JWTError, jwt, jwk
 
 
 def _get_jwks_uri(tenant_id: str) -> str:
@@ -28,9 +29,20 @@ def verify_azure_ad_token(
 ) -> Optional[Dict[str, Any]]:
     """
     Validate Azure AD id_token. Returns decoded claims or None.
+    JWKS and issuer are taken from the token's `tid` / `iss` so multi-tenant
+    (authority common/organizations) works when the app registration allows it.
     """
+    del tenant_id  # reserved for future policy; verification uses tid from token
     try:
-        jwks = _fetch_jwks(tenant_id)
+        claims_preview = jwt.get_unverified_claims(id_token)
+    except JWTError:
+        return None
+    tid = claims_preview.get("tid")
+    iss = claims_preview.get("iss")
+    if not tid or not iss:
+        return None
+    try:
+        jwks = _fetch_jwks(tid)
         unverified = jwt.get_unverified_header(id_token)
         kid = unverified.get("kid")
         key_dict = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
@@ -42,7 +54,7 @@ def verify_azure_ad_token(
             key,
             algorithms=["RS256"],
             audience=client_id,
-            issuer=f"https://login.microsoftonline.com/{tenant_id}/v2.0",
+            issuer=iss,
             options={"verify_aud": True, "verify_iss": True, "verify_exp": True},
         )
         return claims

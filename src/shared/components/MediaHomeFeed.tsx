@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from "react";
-import { View, StyleSheet, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { radius } from "../../theme/radius";
 import AppText from "../ui/AppText";
 import {
@@ -22,6 +23,56 @@ export default function MediaHomeFeed({ navigation: _navigation }: { navigation:
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { gap: 0 },
+    composer: {
+      backgroundColor: c.cardElevated,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: c.floatingBarBorder,
+      padding: 14,
+      marginBottom: 16,
+    },
+    composerInner: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 12 },
+    thumbPh: {
+      width: 52,
+      height: 52,
+      borderRadius: radius.md,
+      backgroundColor: "rgba(255,255,255,0.06)",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    input: {
+      flex: 1,
+      minHeight: 52,
+      color: c.textPrimary,
+      fontSize: 15,
+      textAlignVertical: "top" as const,
+    },
+    composerActions: { flexDirection: "row" as const, justifyContent: "space-between" as const, marginTop: 14, gap: 12 },
+    btnSecondary: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: radius.lg,
+      backgroundColor: "rgba(255,255,255,0.08)",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    btnPrimary: {
+      flex: 1,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: radius.lg,
+      backgroundColor: c.accentBlue,
+    },
+    errBox: { padding: 12, marginBottom: 12 },
+    center: { paddingVertical: 32, alignItems: "center" as const },
+  }));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -149,52 +200,3 @@ export default function MediaHomeFeed({ navigation: _navigation }: { navigation:
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { gap: 0 },
-  composer: {
-    backgroundColor: colors.cardElevated,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.floatingBarBorder,
-    padding: 14,
-    marginBottom: 16,
-  },
-  composerInner: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  thumbPh: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  input: {
-    flex: 1,
-    minHeight: 52,
-    color: colors.textPrimary,
-    fontSize: 15,
-    textAlignVertical: "top",
-  },
-  composerActions: { flexDirection: "row", justifyContent: "space-between", marginTop: 14, gap: 12 },
-  btnSecondary: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnPrimary: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: radius.lg,
-    backgroundColor: colors.accentBlue,
-  },
-  errBox: { padding: 12, marginBottom: 12 },
-  center: { paddingVertical: 32, alignItems: "center" },
-});

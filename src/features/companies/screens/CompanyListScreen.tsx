@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View, I18nManager } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, View, I18nManager } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../../shared/layout/Screen";
@@ -10,10 +10,28 @@ import ListRow from "../../../shared/ui/ListRow";
 import { CompanyEmptyState, CompanyHeroCard, CompanySectionLabel } from "../components/CompanyBlocks";
 import { useCompany } from "../../../state/company/CompanyContext";
 import { getMarketplaceCompanies, type MarketplaceCompanyRow } from "../../../api";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 
 export default function CompanyListScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: {
+      padding: 16,
+      paddingBottom: 110,
+    },
+    loadingWrap: {
+      paddingVertical: 22,
+      alignItems: "center" as const,
+    },
+    listWrap: {
+      gap: 10,
+    },
+    row: {
+      minHeight: 76,
+    },
+  }));
   const { company } = useCompany();
   const isRTL = I18nManager.isRTL;
   const [query, setQuery] = useState("");
@@ -127,20 +145,3 @@ export default function CompanyListScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: 16,
-    paddingBottom: 110,
-  },
-  loadingWrap: {
-    paddingVertical: 22,
-    alignItems: "center",
-  },
-  listWrap: {
-    gap: 10,
-  },
-  row: {
-    minHeight: 76,
-  },
-});

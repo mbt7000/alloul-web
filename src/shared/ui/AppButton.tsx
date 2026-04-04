@@ -1,7 +1,8 @@
 import React from "react";
-import { TouchableOpacity, View, StyleSheet, ActivityIndicator, StyleProp, ViewStyle } from "react-native";
+import { TouchableOpacity, View, ActivityIndicator, StyleProp, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { radii } from "../../theme/radii";
 import { spacing } from "../../theme/spacing";
 import AppText from "./AppText";
@@ -43,13 +44,37 @@ export default function AppButton({
   style,
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    base: {
+      borderRadius: radii.md,
+      paddingHorizontal: spacing.xl,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    row: { flexDirection: "row" as const, alignItems: "center", justifyContent: "center" as const },
+    primary: {
+      backgroundColor: c.accentBlue,
+      shadowColor: c.accentBlue,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 18,
+    },
+    danger: {
+      backgroundColor: c.accentRose,
+      shadowColor: c.accentRose,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 18,
+    },
+    glass: {
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+  }));
 
-  const baseStyle =
-    tone === "primary"
-      ? styles.primary
-      : tone === "danger"
-        ? styles.danger
-        : styles.glass;
+  const baseStyle = tone === "primary" ? styles.primary : tone === "danger" ? styles.danger : styles.glass;
 
   const labelTone = tone === "glass" ? ("primary" as const) : ("primary" as const);
   const labelColor = tone === "glass" ? colors.textPrimary : colors.white;
@@ -81,33 +106,3 @@ export default function AppButton({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
-  primary: {
-    backgroundColor: colors.accentBlue,
-    shadowColor: colors.accentBlue,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-  },
-  danger: {
-    backgroundColor: colors.accentRose,
-    shadowColor: colors.accentRose,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-  },
-  glass: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-});
-

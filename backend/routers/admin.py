@@ -1,6 +1,6 @@
 """
 Admin endpoints — verification management, user administration.
-Only accessible by users with admin role (username == 'admin' or company owner).
+Access: emails in ADMIN_ALLOWED_EMAILS and/or usernames in ADMIN_USERNAMES (see config).
 """
 from __future__ import annotations
 
@@ -10,18 +10,15 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from auth import get_current_user
+from admin_access import require_admin_user
 from database import get_db
-from models import User, CompanyMember
+from models import User
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-ADMIN_USERNAMES = {"admin", "mbtalm1"}
-
 
 def _require_admin(current_user: User) -> User:
-    if current_user.username not in ADMIN_USERNAMES:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return current_user
+    return require_admin_user(current_user)
 
 
 # ── Verification levels ──

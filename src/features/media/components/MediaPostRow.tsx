@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { ApiPost } from "../../../api";
 import AppText from "../../../shared/ui/AppText";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
 
 function timeAgo(dateStr?: string | null): string {
   if (!dateStr) return "الآن";
@@ -27,8 +27,102 @@ type Props = {
 };
 
 export default function MediaPostRow({ post, onLike }: Props) {
+  const { colors } = useAppTheme();
   const initials = (post.author_name || "U").slice(0, 2).toUpperCase();
   const hasVisual = Boolean(post.image_url);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        row: {
+          padding: 14,
+          marginBottom: 12,
+          borderRadius: 22,
+          backgroundColor: colors.cardElevated,
+          borderWidth: 1,
+          borderColor: colors.floatingBarBorder,
+          gap: 10,
+        },
+        header: {
+          flexDirection: "row",
+          alignItems: "flex-start",
+          gap: 10,
+        },
+        avatar: {
+          width: 44,
+          height: 44,
+          borderRadius: 15,
+        },
+        avatarFallback: {
+          width: 44,
+          height: 44,
+          borderRadius: 15,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.cardStrong,
+          borderWidth: 1,
+          borderColor: colors.floatingBarBorder,
+        },
+        avatarText: {
+          color: colors.accentCyan,
+        },
+        meta: {
+          flex: 1,
+          gap: 2,
+        },
+        nameRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          flexWrap: "wrap",
+        },
+        authorName: {
+          maxWidth: "70%",
+        },
+        dot: {
+          letterSpacing: 0.2,
+        },
+        visualBadge: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 4,
+          paddingHorizontal: 8,
+          paddingVertical: 6,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: colors.floatingBarBorder,
+          backgroundColor: colors.cardStrong,
+        },
+        content: {
+          lineHeight: 24,
+        },
+        postImage: {
+          width: "100%",
+          height: 244,
+          borderRadius: 22,
+          backgroundColor: colors.bgCard,
+        },
+        actions: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingRight: 12,
+        },
+        actionBtn: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingVertical: 4,
+        },
+        likedCount: {
+          color: colors.accentRose,
+        },
+        repostedCount: {
+          color: colors.accentEmerald,
+        },
+      }),
+    [colors]
+  );
 
   return (
     <View style={styles.row}>
@@ -125,92 +219,3 @@ export default function MediaPostRow({ post, onLike }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    padding: 14,
-    marginBottom: 12,
-    borderRadius: 22,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.floatingBarBorder,
-    gap: 10,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-  },
-  avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(56,232,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.18)",
-  },
-  avatarText: {
-    color: colors.accentCyan,
-  },
-  meta: {
-    flex: 1,
-    gap: 2,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  authorName: {
-    maxWidth: "70%",
-  },
-  dot: {
-    letterSpacing: 0.2,
-  },
-  visualBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.22)",
-    backgroundColor: "rgba(56,232,255,0.10)",
-  },
-  content: {
-    lineHeight: 24,
-  },
-  postImage: {
-    width: "100%",
-    height: 244,
-    borderRadius: 22,
-    backgroundColor: colors.bgCard,
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingRight: 12,
-  },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 4,
-  },
-  likedCount: {
-    color: colors.accentRose,
-  },
-  repostedCount: {
-    color: colors.accentEmerald,
-  },
-});

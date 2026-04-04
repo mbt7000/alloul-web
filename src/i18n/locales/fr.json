@@ -73,6 +73,7 @@
     "googleSignInTitle": "Connexion Google",
     "microsoftSignInTitle": "Connexion Microsoft",
     "authFailed": "Échec de l'authentification",
+    "sessionStorageFailed": "Connexion OK mais impossible d’enregistrer la session. Fermez complètement l’app ou réinstallez Expo Go.",
     "googleFailed": "Échec Google",
     "microsoftFailed": "Échec Microsoft",
     "firebaseNotConfiguredShort": "Firebase non configuré",
@@ -82,8 +83,12 @@
     "serverError": "Erreur serveur (ex. inscription). Réessayez plus tard ou demandez le déploiement du correctif API.",
     "socialPaused": "Google et Microsoft sont désactivés dans ce build. Utilisez e-mail et mot de passe.",
     "emailLoginActive": "Connexion : e-mail et mot de passe (actif).",
-    "diagOAuthKeysPresent": "Google/Microsoft : clés présentes dans le build, mais les boutons sociaux sont désactivés dans cette version (utilisez l’e-mail ci-dessus).",
+    "diagOAuthKeysPresent": "Google : activé dans ce build (en cas d’échec, vérifiez OAuth Google Cloud + SHA-1 Android). Microsoft : pas encore activé.",
     "diagOAuthKeysMissing": "Google/Microsoft : clés de build incomplètes ; une activation ultérieure exigera un rebuild EAS avec EXPO_PUBLIC_*.",
+    "diagGoogleOk": "Google : activé (Android ? ajoutez le client OAuth Android + SHA-1 EAS dans Google Cloud).",
+    "diagGoogleNo": "Google : Firebase ou IDs client manquants dans ce build.",
+    "diagMicrosoftOk": "Microsoft : activé (Azure : redirect ex. alloul://oauth/microsoft + client public).",
+    "diagMicrosoftNo": "Microsoft : définissez EXPO_PUBLIC_MICROSOFT_CLIENT_ID et TENANT_ID dans EAS, puis rebuild.",
     "googleNotInBuild": "Google nécessite Firebase + clés client dans le build EAS. Reconstruisez l’app."
   },
   "feed": {
@@ -229,6 +234,17 @@
     "testConnection": "Tester le serveur (/health)",
     "serverOk": "Serveur joignable",
     "serverFail": "Serveur injoignable",
-    "rebuildHint": "Définissez les variables EAS puis refaites un build iOS."
+    "rebuildHint": "Définissez les variables EAS puis refaites un build iOS.",
+    "appearance": "Apparence",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeActive": "Actif",
+    "adminConsole": "Console admin",
+    "adminSubtitle": "Statistiques serveur",
+    "adminUsers": "Utilisateurs",
+    "adminVerified": "Vérifiés",
+    "adminPosts": "Publications",
+    "adminCompanies": "Entreprises",
+    "adminHint": "Accès contrôlé par l’API (ADMIN_ALLOWED_EMAILS / ADMIN_USERNAMES)."
   }
 }

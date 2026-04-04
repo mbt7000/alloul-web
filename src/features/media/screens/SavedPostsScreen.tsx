@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect, DrawerActions } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import { getSavedPosts, likePost, unlikePost, type ApiPost } from "../../../api";
 import MediaPostRow from "../components/MediaPostRow";
 
@@ -20,6 +21,23 @@ export default function SavedPostsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    iconBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { color: c.textPrimary, fontSize: 18, fontWeight: "800" },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 48 },
+  }));
   const [posts, setPosts] = useState<ApiPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,20 +107,3 @@ export default function SavedPostsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontSize: 18, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  empty: { color: colors.textMuted, textAlign: "center", marginTop: 48 },
-});

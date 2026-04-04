@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors } from "../../theme/colors";
+import { View, Text, TouchableOpacity } from "react-native";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 
 type SectionHeaderProps = {
   title: string;
@@ -9,6 +9,17 @@ type SectionHeaderProps = {
 };
 
 export default function SectionHeader({ title, actionLabel, onAction }: SectionHeaderProps) {
+  const styles = useThemedStyles((c) => ({
+    container: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      marginBottom: 10,
+    },
+    title: { color: c.textPrimary, fontSize: 16, fontWeight: "700" as const },
+    action: { color: c.accentCyan, fontSize: 12, fontWeight: "700" as const },
+  }));
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -20,14 +31,3 @@ export default function SectionHeader({ title, actionLabel, onAction }: SectionH
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  title: { color: colors.textPrimary, fontSize: 16, fontWeight: "700" },
-  action: { color: colors.accentCyan, fontSize: 12, fontWeight: "700" },
-});

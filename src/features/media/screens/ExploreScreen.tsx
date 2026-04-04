@@ -1,10 +1,10 @@
-import React from "react";
-import { View, StyleSheet, FlatList, Pressable, Alert } from "react-native";
+import React, { useMemo } from "react";
+import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AppText from "../../../shared/ui/AppText";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
 import { radius } from "../../../theme/radius";
 
 /** TODO(api): replace with GET /trending/topics when backend supports it */
@@ -19,6 +19,69 @@ const TAB_BAR_PAD = 108;
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { colors, toggleMode } = useAppTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: { flex: 1 },
+        brandTop: { textAlign: "center", paddingTop: 4, marginBottom: 2 },
+        topBar: {
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          gap: 10,
+        },
+        globeBtn: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: colors.accentBlue,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        stripPill: {
+          flex: 1,
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          borderRadius: radius.pill,
+          backgroundColor: colors.cardElevated,
+          borderWidth: 1,
+          borderColor: colors.floatingBarBorder,
+          minHeight: 46,
+        },
+        roundGhost: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        searchBar: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          marginHorizontal: 16,
+          marginBottom: 20,
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          borderRadius: radius.pill,
+          backgroundColor: colors.cardElevated,
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
+        sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 12 },
+        sep: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
+        topicRow: { paddingVertical: 14 },
+      }),
+    [colors]
+  );
 
   const goSearch = () => navigation.navigate("Search", { source: "feed" });
 
@@ -40,7 +103,7 @@ export default function ExploreScreen() {
         <Pressable style={styles.roundGhost} hitSlop={8}>
           <Ionicons name="globe-outline" size={20} color={colors.textPrimary} />
         </Pressable>
-        <Pressable style={styles.roundGhost} hitSlop={8} onPress={() => Alert.alert("المظهر", "تبديل الوضع الفاتح قريباً.")}>
+        <Pressable style={styles.roundGhost} hitSlop={8} onPress={toggleMode}>
           <Ionicons name="sunny-outline" size={20} color={colors.textPrimary} />
         </Pressable>
       </View>
@@ -86,61 +149,3 @@ export default function ExploreScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  brandTop: { textAlign: "center", paddingTop: 4, marginBottom: 2 },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  globeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stripPill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: radius.pill,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.floatingBarBorder,
-    minHeight: 46,
-  },
-  roundGhost: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: radius.pill,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 12 },
-  sep: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
-  topicRow: { paddingVertical: 14 },
-});

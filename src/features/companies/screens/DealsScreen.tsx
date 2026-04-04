@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import GlassCard from "../../../shared/components/GlassCard";
 import { getDeals, type DealRow } from "../../../api";
 
@@ -12,6 +13,41 @@ export default function DealsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 8,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    backBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { color: c.textPrimary, fontSize: 20, fontWeight: "800" },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, padding: 24, gap: 12 },
+    err: { color: c.danger, textAlign: "center" as const },
+    retry: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+    },
+    retryTxt: { color: c.accentBlue, fontWeight: "700" },
+    list: { padding: 16, paddingBottom: 100 },
+    card: { padding: 14, marginBottom: 10 },
+    company: { color: c.textPrimary, fontSize: 17, fontWeight: "800" },
+    row: { flexDirection: "row" as const, justifyContent: "space-between", marginTop: 8 },
+    stage: { color: c.accentTeal, fontSize: 13, fontWeight: "700", textTransform: "capitalize" as const },
+    prob: { color: c.textMuted, fontSize: 13 },
+    value: { color: c.textSecondary, fontSize: 14, marginTop: 8 },
+    meta: { color: c.textMuted, fontSize: 12, marginTop: 6 },
+    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 40 },
+  }));
   const [items, setItems] = useState<DealRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,38 +120,3 @@ export default function DealsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
-  err: { color: colors.danger, textAlign: "center" },
-  retry: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-  },
-  retryTxt: { color: colors.accentBlue, fontWeight: "700" },
-  list: { padding: 16, paddingBottom: 100 },
-  card: { padding: 14, marginBottom: 10 },
-  company: { color: colors.textPrimary, fontSize: 17, fontWeight: "800" },
-  row: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
-  stage: { color: colors.accentTeal, fontSize: 13, fontWeight: "700", textTransform: "capitalize" },
-  prob: { color: colors.textMuted, fontSize: 13 },
-  value: { color: colors.textSecondary, fontSize: 14, marginTop: 8 },
-  meta: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
-  empty: { color: colors.textMuted, textAlign: "center", marginTop: 40 },
-});

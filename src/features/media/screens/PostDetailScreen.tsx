@@ -1,14 +1,22 @@
 import React from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import GlassCard from "../../../shared/components/GlassCard";
 import AppText from "../../../shared/ui/AppText";
 import AppButton from "../../../shared/ui/AppButton";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 
 export default function PostDetailScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: { padding: 16, paddingBottom: 90 },
+    card: { padding: 16 },
+    kicker: { letterSpacing: 0.8, textTransform: "uppercase" as const },
+    actions: { flexDirection: "row" as const, gap: 10, marginTop: 16 },
+  }));
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const post = route.params?.post as { id?: number; content?: string; username?: string } | undefined;
@@ -36,10 +44,3 @@ export default function PostDetailScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 90 },
-  card: { padding: 16 },
-  kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
-  actions: { flexDirection: "row", gap: 10, marginTop: 16 },
-});

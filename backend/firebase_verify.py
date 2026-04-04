@@ -5,23 +5,46 @@ Optional: if GOOGLE_APPLICATION_CREDENTIALS is not set, returns None and endpoin
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 _firebase_app = None
 
 
+def _resolve_credential_path() -> Optional[str]:
+    cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if not cred_path:
+        return None
+
+    candidate = Path(cred_path)
+    if candidate.is_file():
+        return str(candidate)
+
+    backend_dir = Path(__file__).resolve().parent
+    repo_root = backend_dir.parent
+
+    fallback_candidates = [
+        backend_dir / cred_path,
+        repo_root / cred_path,
+    ]
+    for path in fallback_candidates:
+        if path.is_file():
+            return str(path)
+
+    return None
+
+
 def is_firebase_configured() -> bool:
     """True if a service account path is set and the file exists (does not initialize the SDK)."""
-    cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    return bool(cred_path and os.path.isfile(cred_path))
+    return bool(_resolve_credential_path())
 
 
 def _init_firebase() -> bool:
     global _firebase_app
     if _firebase_app is not None:
         return True
-    cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    if not cred_path or not os.path.isfile(cred_path):
+    cred_path = _resolve_credential_path()
+    if not cred_path:
         return False
     try:
         import firebase_admin as fa

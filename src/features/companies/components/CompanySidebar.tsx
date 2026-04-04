@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
 import AppText from "../../../shared/ui/AppText";
 
 export type CompanySectionKey =
@@ -46,6 +46,31 @@ export default function CompanySidebar({
 }) {
   const { width } = useWindowDimensions();
   const compact = width < 380;
+  const { colors } = useAppTheme();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrap: { gap: 6 },
+        item: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingVertical: 10,
+          paddingHorizontal: 12,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.bgCard,
+        },
+        itemActive: {
+          borderColor: colors.accentCyan,
+          backgroundColor: colors.cardStrong,
+        },
+        itemPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
+      }),
+    [colors]
+  );
 
   return (
     <View style={styles.wrap}>
@@ -73,24 +98,3 @@ export default function CompanySidebar({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 6 },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  itemActive: {
-    borderColor: "rgba(56,232,255,0.35)",
-    backgroundColor: "rgba(56,232,255,0.10)",
-  },
-  itemPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
-});
-

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../layout/Screen";
 import AppHeader from "../layout/AppHeader";
@@ -15,7 +15,8 @@ import {
   CompanySectionLabel,
   CompanyStatTile,
 } from "../../features/companies/components/CompanyBlocks";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useCompany } from "../../state/company/CompanyContext";
 import {
   getCompanyMembers,
@@ -27,6 +28,39 @@ import {
 } from "../../api";
 
 export default function CompanyProfileScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: {
+      padding: 16,
+      paddingBottom: 110,
+    },
+    statRow: {
+      flexDirection: "row" as const,
+      gap: 10,
+      marginTop: 10,
+    },
+    grid: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 10,
+    },
+    card: {
+      padding: 14,
+    },
+    profileRow: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 8,
+    },
+    loadingWrap: {
+      paddingVertical: 24,
+      alignItems: "center" as const,
+    },
+    listWrap: {
+      gap: 10,
+    },
+  }));
+
   const navigation = useNavigation<any>();
   const { company } = useCompany();
   const [stats, setStats] = useState<CompanyStats | null>(null);
@@ -174,36 +208,4 @@ export default function CompanyProfileScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: 16,
-    paddingBottom: 110,
-  },
-  statRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  card: {
-    padding: 14,
-  },
-  profileRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  loadingWrap: {
-    paddingVertical: 24,
-    alignItems: "center",
-  },
-  listWrap: {
-    gap: 10,
-  },
-});
 

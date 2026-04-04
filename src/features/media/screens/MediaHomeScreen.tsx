@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
 import HomeSmartHeader from "../../../shared/components/HomeSmartHeader";
 import MediaHomeFeed from "../../../shared/components/MediaHomeFeed";
 import UnifiedSearchField from "../../../shared/components/UnifiedSearchField";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import { addRecentSearch } from "../../../storage/recentSearches";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useHomeMode } from "../../../state/mode/HomeModeContext";
@@ -17,6 +18,29 @@ const TAB_BAR_PAD = 100;
 
 export default function MediaHomeScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    glowTop: {
+      position: "absolute" as const,
+      top: -80,
+      left: "15%",
+      width: 280,
+      height: 200,
+      borderRadius: 120,
+      backgroundColor: "rgba(76,111,255,0.10)",
+      opacity: 0.9,
+    },
+    glowBlue: {
+      position: "absolute" as const,
+      top: 40,
+      right: -40,
+      width: 180,
+      height: 180,
+      borderRadius: 90,
+      backgroundColor: "rgba(56,232,255,0.06)",
+    },
+    searchWrap: { paddingHorizontal: 16, marginBottom: 12 },
+  }));
   const { user } = useAuth();
   const { company, loading: companyLoading } = useCompany();
   const { displayUnreadCount } = useNotifications();
@@ -101,26 +125,3 @@ export default function MediaHomeScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  glowTop: {
-    position: "absolute",
-    top: -80,
-    left: "15%",
-    width: 280,
-    height: 200,
-    borderRadius: 120,
-    backgroundColor: "rgba(76,111,255,0.10)",
-    opacity: 0.9,
-  },
-  glowBlue: {
-    position: "absolute",
-    top: 40,
-    right: -40,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(56,232,255,0.06)",
-  },
-  searchWrap: { paddingHorizontal: 16, marginBottom: 12 },
-});

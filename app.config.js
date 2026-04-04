@@ -19,13 +19,20 @@ function pickEnv(envKey, fallback) {
   return String(raw).replace(/^["']|["']$/g, "").trim();
 }
 
+function isAllowedApiHostname(hostname) {
+  const h = String(hostname || "").toLowerCase();
+  if (h === "localhost") return true;
+  if (h.endsWith(".local")) return true;
+  return h.includes(".");
+}
+
 function normalizeApiUrl(raw, fallback = "https://api.alloul.app") {
   const candidate = String(raw || "").trim().replace(/\/+$/, "");
   if (!candidate) return fallback;
   if (candidate === "https://api" || candidate === "http://api") return fallback;
   try {
     const parsed = new URL(candidate);
-    if (!parsed.hostname || !parsed.hostname.includes(".")) return fallback;
+    if (!parsed.hostname || !isAllowedApiHostname(parsed.hostname)) return fallback;
     return candidate;
   } catch {
     return fallback;

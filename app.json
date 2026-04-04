@@ -24,14 +24,16 @@
         "NSPhotoLibraryUsageDescription": "Share photos in posts",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "32"
+      "buildNumber": "35"
     },
     "android": {
       "package": "com.alloul.one",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#04070f",
         "foregroundImage": "./assets/icon.png"
-      }
+      },
+      "versionCode": 2
     },
     "plugins": [
       "expo-secure-store"
@@ -44,7 +46,7 @@
         "apiKey": "AIzaSyDJ3ekWJLQXVZuTfqOFxNqFSIlKyIe5CiU",
         "authDomain": "alloul.firebaseapp.com",
         "projectId": "alloul",
-        "storageBucket": "alloul.firebasestorage.app",
+        "storageBucket": "alloul.appspot.com",
         "messagingSenderId": "458917264125",
         "appId": "1:458917264125:web:12e01e5c281f9ef5411c94"
       },

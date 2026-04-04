@@ -7,10 +7,14 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "export:web": "expo export -p web",
     "typecheck": "tsc --noEmit",
-    "eas:update:prod": "EAS_SKIP_AUTO_FINGERPRINT=1 eas update --branch production --environment production",
+    "eas:update:prod": "EAS_SKIP_AUTO_FINGERPRINT=1 eas update --branch production --environment production --message \"update\"",
+    "eas:update:preview": "EAS_SKIP_AUTO_FINGERPRINT=1 eas update --branch preview --environment preview --message \"preview update\"",
     "eas:build:ios": "eas build -p ios --profile production",
     "eas:build:ios:preview": "eas build -p ios --profile preview",
+    "eas:build:android": "eas build -p android --profile production",
+    "eas:build:android:preview": "eas build -p android --profile preview",
     "eas:submit:ios": "eas submit -p ios --profile production --latest"
   },
   "dependencies": {
@@ -33,12 +37,14 @@
     "firebase": "^10.12.4",
     "i18next": "^25.10.5",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-i18next": "^16.6.2",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
+    "react-native-web": "^0.21.0",
     "react-native-worklets": "~0.5.2"
   },
   "devDependencies": {

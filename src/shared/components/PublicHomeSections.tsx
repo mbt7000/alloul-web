@@ -4,7 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import GlassCard from "./GlassCard";
 import AppText from "../ui/AppText";
 import ListRow from "../ui/ListRow";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { useNotifications } from "../../state/notifications/NotificationsContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
 
@@ -36,6 +37,54 @@ const DISCOVERY = [
 
 export default function PublicHomeSections({ navigation }: { navigation: any }) {
   const { displayUnreadCount } = useNotifications();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    card: { padding: 14 },
+    kicker: { letterSpacing: 0.8, textTransform: "uppercase" as const },
+    kickerRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const },
+    previewRow: {
+      flexDirection: "row" as const,
+      gap: 10,
+      paddingVertical: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.accentCyan, marginTop: 6 },
+    hScroll: { gap: 10, paddingBottom: 4 },
+    companyChip: { width: 140, padding: 12 },
+    companyAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      backgroundColor: "rgba(56,232,255,0.12)",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      borderWidth: 1,
+      borderColor: "rgba(56,232,255,0.2)",
+    },
+    twoCol: { flexDirection: "row" as const, gap: 10 },
+    halfCard: { flex: 1, padding: 12, minWidth: 0 },
+    miniRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginTop: 10 },
+    discRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 12,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    discAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: c.bgCardStrong,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+  }));
+
   const inboxSubtitle =
     displayUnreadCount > 0
       ? `${displayUnreadCount} unread notif. · chats & approvals`
@@ -197,44 +246,3 @@ export default function PublicHomeSections({ navigation }: { navigation: any }) 
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { padding: 14 },
-  kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
-  kickerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  previewRow: { flexDirection: "row", gap: 10, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accentCyan, marginTop: 6 },
-  hScroll: { gap: 10, paddingBottom: 4 },
-  companyChip: { width: 140, padding: 12 },
-  companyAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: "rgba(56,232,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.2)",
-  },
-  twoCol: { flexDirection: "row", gap: 10 },
-  halfCard: { flex: 1, padding: 12, minWidth: 0 },
-  miniRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
-  discRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  discAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.bgCardStrong,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-});

@@ -6,3 +6,8 @@ backend/
 *.db
 .env
 docs/
+ios/Pods/
+ios/build/
+android/
+dist/
+.expo/

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import AppText from "../../../shared/ui/AppText";
@@ -14,7 +14,9 @@ import {
 } from "../../companies/components/CompanyBlocks";
 import { useCompany } from "../../../state/company/CompanyContext";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
+import CompanyWorkModeTopBar from "../../companies/components/CompanyWorkModeTopBar";
 import {
   getHandoverWorkItems,
   updateHandoverWorkItemStatus,
@@ -25,6 +27,47 @@ import {
 export default function HandoverScreen() {
   const navigation = useNavigation<any>();
   const { company } = useCompany();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    content: {
+      padding: 16,
+      paddingBottom: 110,
+    },
+    statRow: {
+      flexDirection: "row" as const,
+      gap: 10,
+      marginTop: 10,
+    },
+    loadingWrap: {
+      paddingVertical: 24,
+      alignItems: "center" as const,
+    },
+    listWrap: {
+      gap: 10,
+    },
+    card: {
+      padding: 14,
+    },
+    cardHead: {
+      flexDirection: "row" as const,
+      alignItems: "flex-start" as const,
+      gap: 10,
+    },
+    actionRow: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 8,
+      marginTop: 12,
+    },
+    statusButton: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "rgba(56,232,255,0.30)",
+      backgroundColor: "rgba(56,232,255,0.10)",
+    },
+  }));
   const [items, setItems] = useState<HandoverWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,8 +107,10 @@ export default function HandoverScreen() {
 
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={{ backgroundColor: colors.mediaCanvas }}>
+      <CompanyWorkModeTopBar />
       <AppHeader
         title="التسليم"
+        leftButton="none"
         rightActions={<AppButton label="الملفات" size="sm" onPress={() => navigation.navigate("CompanyFiles")} />}
       />
       <ScrollView
@@ -190,47 +235,6 @@ function StatusChip({ status }: { status: HandoverLifecycleStatus }) {
             : "مغلق";
   return <CompanyChip label={label} icon="swap-horizontal-outline" tone={tone} />;
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: 16,
-    paddingBottom: 110,
-  },
-  statRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
-  loadingWrap: {
-    paddingVertical: 24,
-    alignItems: "center",
-  },
-  listWrap: {
-    gap: 10,
-  },
-  card: {
-    padding: 14,
-  },
-  cardHead: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  statusButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.30)",
-    backgroundColor: "rgba(56,232,255,0.10)",
-  },
-});
 
 function nextStatuses(status: HandoverLifecycleStatus): HandoverLifecycleStatus[] {
   if (status === "open") return ["in_progress", "submitted"];

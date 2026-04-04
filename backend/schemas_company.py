@@ -79,6 +79,7 @@ class CompanyMemberResponse(BaseModel):
     i_code: str
     manager_id: Optional[int] = None
     job_title: Optional[str] = None
+    phone: Optional[str] = None
 
     class Config:
         from_attributes = True

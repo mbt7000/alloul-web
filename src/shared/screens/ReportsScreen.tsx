@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../layout/Screen";
 import AppHeader from "../layout/AppHeader";
@@ -7,7 +7,8 @@ import GlassCard from "../components/GlassCard";
 import AppText from "../ui/AppText";
 import ListRow from "../ui/ListRow";
 import AppButton from "../ui/AppButton";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import {
   getCompanyMembers,
   getDashboardActivity,
@@ -22,6 +23,30 @@ import {
 } from "../../api";
 
 export default function ReportsScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    body: { padding: 16, paddingBottom: 110, gap: 10 },
+    card: { padding: 18 },
+    grid: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 8,
+      marginTop: 12,
+    },
+    stat: {
+      width: "48%",
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: c.bgCard,
+    },
+    actions: { flexDirection: "row" as const, gap: 8, marginTop: 12 },
+    listWrap: { gap: 10 },
+    loadingWrap: { paddingVertical: 24, alignItems: "center" as const },
+  }));
+
   const navigation = useNavigation<any>();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<DashboardActivityItem[]>([]);
@@ -75,6 +100,19 @@ export default function ReportsScreen() {
       subtitle: item.time ? `${item.type} · ${item.time}` : item.type,
     }));
   }, [activity]);
+
+  function Stat({ title, value }: { title: string; value: string }) {
+    return (
+      <View style={styles.stat}>
+        <AppText variant="micro" tone="muted" weight="bold">
+          {title}
+        </AppText>
+        <AppText variant="bodySm" weight="bold" style={{ marginTop: 4 }}>
+          {value}
+        </AppText>
+      </View>
+    );
+  }
 
   return (
     <Screen style={{ backgroundColor: colors.mediaCanvas }}>
@@ -133,40 +171,4 @@ export default function ReportsScreen() {
     </Screen>
   );
 }
-
-function Stat({ title, value }: { title: string; value: string }) {
-  return (
-    <View style={styles.stat}>
-      <AppText variant="micro" tone="muted" weight="bold">
-        {title}
-      </AppText>
-      <AppText variant="bodySm" weight="bold" style={{ marginTop: 4 }}>
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  body: { padding: 16, paddingBottom: 110, gap: 10 },
-  card: { padding: 18 },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  stat: {
-    width: "48%",
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.bgCard,
-  },
-  actions: { flexDirection: "row", gap: 8, marginTop: 12 },
-  listWrap: { gap: 10 },
-  loadingWrap: { paddingVertical: 24, alignItems: "center" },
-});
 

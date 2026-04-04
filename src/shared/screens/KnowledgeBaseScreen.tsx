@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../layout/Screen";
 import AppHeader from "../layout/AppHeader";
@@ -9,9 +9,28 @@ import ListRow from "../ui/ListRow";
 import AppInput from "../ui/AppInput";
 import AppButton from "../ui/AppButton";
 import { getDashboardActivity, getHandovers, getHandoverWorkItems, unifiedSearch, type DashboardActivityItem, type HandoverRow, type HandoverWorkItem, type SearchResultItem } from "../../api";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 
 export default function KnowledgeBaseScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    body: { padding: 16, paddingBottom: 110, gap: 10 },
+    card: { padding: 18 },
+    statsRow: { flexDirection: "row" as const, gap: 8, marginTop: 12 },
+    miniStat: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: c.bgCard,
+    },
+    listWrap: { gap: 10 },
+    loadingWrap: { paddingVertical: 24, alignItems: "center" as const },
+  }));
+
   const navigation = useNavigation<any>();
   const [handovers, setHandovers] = useState<HandoverRow[]>([]);
   const [workItems, setWorkItems] = useState<HandoverWorkItem[]>([]);
@@ -76,6 +95,19 @@ export default function KnowledgeBaseScreen() {
     return [...handoverDocs, ...activityDocs].slice(0, 8);
   }, [activity, handovers, query, searchResults]);
 
+  function MiniStat({ label, value }: { label: string; value: string }) {
+    return (
+      <View style={styles.miniStat}>
+        <AppText variant="micro" tone="muted" weight="bold">
+          {label}
+        </AppText>
+        <AppText variant="bodySm" weight="bold" style={{ marginTop: 2 }}>
+          {value}
+        </AppText>
+      </View>
+    );
+  }
+
   return (
     <Screen style={{ backgroundColor: colors.mediaCanvas }}>
       <AppHeader
@@ -84,7 +116,7 @@ export default function KnowledgeBaseScreen() {
       />
       <ScrollView
         contentContainerStyle={styles.body}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor="#38E8FF" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={colors.accentCyan} />}
       >
         <GlassCard style={styles.card}>
           <AppText variant="bodySm" tone="secondary">
@@ -118,11 +150,11 @@ export default function KnowledgeBaseScreen() {
         <View style={styles.listWrap}>
           {loading && !refreshing ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator color="#38E8FF" />
+              <ActivityIndicator color={colors.accentCyan} />
             </View>
           ) : error ? (
             <GlassCard style={styles.card}>
-              <AppText variant="caption" style={{ color: "#ff6f6f" }}>
+              <AppText variant="caption" style={{ color: colors.danger }}>
                 {error}
               </AppText>
               <View style={{ height: 10 }} />
@@ -150,34 +182,4 @@ export default function KnowledgeBaseScreen() {
     </Screen>
   );
 }
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.miniStat}>
-      <AppText variant="micro" tone="muted" weight="bold">
-        {label}
-      </AppText>
-      <AppText variant="bodySm" weight="bold" style={{ marginTop: 2 }}>
-        {value}
-      </AppText>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  body: { padding: 16, paddingBottom: 110, gap: 10 },
-  card: { padding: 18 },
-  statsRow: { flexDirection: "row", gap: 8, marginTop: 12 },
-  miniStat: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.bgCard,
-  },
-  listWrap: { gap: 10 },
-  loadingWrap: { paddingVertical: 24, alignItems: "center" },
-});
 

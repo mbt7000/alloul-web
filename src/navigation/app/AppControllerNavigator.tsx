@@ -1,10 +1,11 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { useHomeMode } from "../../state/mode/HomeModeContext";
 import { useCompany } from "../../state/company/CompanyContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import { resolveAllowedMode } from "../../state/mode/accessRules";
 import MediaNavigator from "../media/MediaNavigator";
 import CompanyNavigator from "../company/CompanyNavigator";
@@ -14,6 +15,15 @@ import NotificationsGateway from "../global/NotificationsGateway";
 const Stack = createNativeStackNavigator();
 
 function LoadingScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    loading: {
+      flex: 1,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: c.bg,
+    },
+  }));
   return (
     <View style={styles.loading}>
       <ActivityIndicator color={colors.accentCyan} />
@@ -87,7 +97,3 @@ export default function AppControllerNavigator() {
     </Stack.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
-});

@@ -30,8 +30,18 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (never commit secrets)
+.env
 .env*.local
+server.log
+backend/app.db
+
+# Python backend (do not commit venv — huge diffs & wrong bcrypt wheels per OS)
+backend/.venv/
+backend/**/__pycache__/
+*.py[cod]
+backend/.env
+backend/firebase.json
 
 # typescript
 *.tsbuildinfo

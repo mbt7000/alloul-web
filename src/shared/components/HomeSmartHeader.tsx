@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Pressable, Animated, I18nManager, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
 import { radius } from "../../theme/radius";
 import AppText from "../ui/AppText";
 import type { HomeAppMode } from "../../state/mode/HomeModeContext";
@@ -61,6 +61,180 @@ export default function HomeSmartHeader({
     [isRTL, knobTravel, slide]
   );
 
+  const { colors, toggleMode } = useAppTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrap: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 14 },
+        topRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+        copyBlock: { flex: 1, gap: 8 },
+        badgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+        modePill: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 4,
+          paddingHorizontal: 10,
+          paddingVertical: 5,
+          borderRadius: 999,
+          borderWidth: 1,
+        },
+        modePillMedia: {
+          borderColor: "rgba(56,232,255,0.28)",
+          backgroundColor: "rgba(56,232,255,0.10)",
+        },
+        modePillCompany: {
+          borderColor: "rgba(45,226,199,0.35)",
+          backgroundColor: "rgba(45,226,199,0.10)",
+        },
+        iconBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 14,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        switchCard: {
+          borderWidth: 1,
+          borderRadius: 22,
+          padding: 6,
+          gap: 8,
+          overflow: "hidden",
+        },
+        switchCardMedia: {
+          borderColor: "rgba(56,232,255,0.18)",
+          backgroundColor: "rgba(11,17,27,0.94)",
+        },
+        switchCardCompany: {
+          borderColor: "rgba(45,226,199,0.18)",
+          backgroundColor: "rgba(10,20,22,0.96)",
+        },
+        switchMetaRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 6,
+          gap: 12,
+        },
+        notifDot: {
+          position: "absolute",
+          top: 8,
+          right: 8,
+          width: 7,
+          height: 7,
+          borderRadius: 4,
+          backgroundColor: colors.accentRose,
+        },
+        switchRow: {
+          flexDirection: "row",
+          padding: 6,
+          borderRadius: 18,
+          backgroundColor: "rgba(255,255,255,0.04)",
+          borderWidth: 1,
+          borderColor: colors.border,
+          gap: 8,
+          position: "relative",
+          overflow: "hidden",
+        },
+        switchRowRtl: {
+          flexDirection: "row-reverse",
+        },
+        switchKnob: {
+          position: "absolute",
+          top: 6,
+          bottom: 6,
+          borderRadius: 16,
+          backgroundColor: "rgba(56,232,255,0.10)",
+          borderWidth: 1,
+        },
+        switchKnobMedia: {
+          borderColor: "rgba(56,232,255,0.22)",
+          backgroundColor: "rgba(56,232,255,0.12)",
+        },
+        switchKnobCompany: {
+          borderColor: "rgba(45,226,199,0.24)",
+          backgroundColor: "rgba(45,226,199,0.12)",
+        },
+        seg: {
+          flex: 1,
+          minHeight: 82,
+          paddingHorizontal: 10,
+          paddingVertical: 12,
+          borderRadius: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          zIndex: 1,
+        },
+        segIcon: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 1,
+        },
+        segIconIdle: {
+          backgroundColor: "rgba(255,255,255,0.05)",
+          borderColor: "rgba(255,255,255,0.08)",
+        },
+        segIconMediaActive: {
+          backgroundColor: "rgba(56,232,255,0.14)",
+          borderColor: "rgba(56,232,255,0.26)",
+        },
+        segIconCompanyActive: {
+          backgroundColor: "rgba(45,226,199,0.14)",
+          borderColor: "rgba(45,226,199,0.26)",
+        },
+        segIconLocked: {
+          backgroundColor: "rgba(255,122,89,0.08)",
+          borderColor: "rgba(255,122,89,0.16)",
+        },
+        stripWrap: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 10, gap: 8 },
+        brandTop: { textAlign: "center", letterSpacing: 1 },
+        stripRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+        globeBtn: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: colors.accentBlue,
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: colors.accentBlue,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.45,
+          shadowRadius: 10,
+          elevation: 6,
+        },
+        stripPill: {
+          flex: 1,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: radius.pill,
+          backgroundColor: colors.cardElevated,
+          borderWidth: 1,
+          borderColor: colors.floatingBarBorder,
+        },
+        stripSwap: { padding: 4 },
+        roundGhost: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: colors.bgCard,
+          borderWidth: 1,
+          borderColor: colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      }),
+    [colors]
+  );
+
   const subtitle =
     isMedia
       ? "واجهة خفيفة وسريعة لاكتشاف المحتوى والبحث والمتابعة."
@@ -99,11 +273,7 @@ export default function HomeSmartHeader({
             <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
             {inboxUnreadCount > 0 ? <View style={styles.notifDot} /> : null}
           </Pressable>
-          <Pressable
-            style={styles.roundGhost}
-            onPress={() => Alert.alert("المظهر", "تبديل الوضع الفاتح قريباً.")}
-            hitSlop={8}
-          >
+          <Pressable style={styles.roundGhost} onPress={toggleMode} hitSlop={8}>
             <Ionicons name="sunny-outline" size={20} color={colors.textPrimary} />
           </Pressable>
         </View>
@@ -214,172 +384,3 @@ export default function HomeSmartHeader({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 14 },
-  topRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  copyBlock: { flex: 1, gap: 8 },
-  badgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
-  modePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  modePillMedia: {
-    borderColor: "rgba(56,232,255,0.28)",
-    backgroundColor: "rgba(56,232,255,0.10)",
-  },
-  modePillCompany: {
-    borderColor: "rgba(45,226,199,0.35)",
-    backgroundColor: "rgba(45,226,199,0.10)",
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  switchCard: {
-    borderWidth: 1,
-    borderRadius: 22,
-    padding: 6,
-    gap: 8,
-    overflow: "hidden",
-  },
-  switchCardMedia: {
-    borderColor: "rgba(56,232,255,0.18)",
-    backgroundColor: "rgba(11,17,27,0.94)",
-  },
-  switchCardCompany: {
-    borderColor: "rgba(45,226,199,0.18)",
-    backgroundColor: "rgba(10,20,22,0.96)",
-  },
-  switchMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 6,
-    gap: 12,
-  },
-  notifDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: colors.accentRose,
-  },
-  switchRow: {
-    flexDirection: "row",
-    padding: 6,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
-    position: "relative",
-    overflow: "hidden",
-  },
-  switchRowRtl: {
-    flexDirection: "row-reverse",
-  },
-  switchKnob: {
-    position: "absolute",
-    top: 6,
-    bottom: 6,
-    borderRadius: 16,
-    backgroundColor: "rgba(56,232,255,0.10)",
-    borderWidth: 1,
-  },
-  switchKnobMedia: {
-    borderColor: "rgba(56,232,255,0.22)",
-    backgroundColor: "rgba(56,232,255,0.12)",
-  },
-  switchKnobCompany: {
-    borderColor: "rgba(45,226,199,0.24)",
-    backgroundColor: "rgba(45,226,199,0.12)",
-  },
-  seg: {
-    flex: 1,
-    minHeight: 82,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    zIndex: 1,
-  },
-  segIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  segIconIdle: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  segIconMediaActive: {
-    backgroundColor: "rgba(56,232,255,0.14)",
-    borderColor: "rgba(56,232,255,0.26)",
-  },
-  segIconCompanyActive: {
-    backgroundColor: "rgba(45,226,199,0.14)",
-    borderColor: "rgba(45,226,199,0.26)",
-  },
-  segIconLocked: {
-    backgroundColor: "rgba(255,122,89,0.08)",
-    borderColor: "rgba(255,122,89,0.16)",
-  },
-  stripWrap: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 10, gap: 8 },
-  brandTop: { textAlign: "center", letterSpacing: 1 },
-  stripRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  globeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.accentBlue,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  stripPill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radius.pill,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.floatingBarBorder,
-  },
-  stripSwap: { padding: 4 },
-  roundGhost: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

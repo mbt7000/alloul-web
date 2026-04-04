@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Alert, Pressable } from "react-native";
+import { View, Alert, Pressable } from "react-native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import AppInput from "../../../shared/ui/AppInput";
@@ -9,9 +9,28 @@ import AppText from "../../../shared/ui/AppText";
 import { createPost } from "../../../api";
 import { useCompany } from "../../../state/company/CompanyContext";
 import { useHomeMode } from "../../../state/mode/HomeModeContext";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 
 export default function CreatePostScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    body: { padding: 16 },
+    card: { padding: 16, gap: 12 },
+    input: { minHeight: 120, textAlignVertical: "top" as any },
+    visibilityRow: { flexDirection: "row" as const, gap: 8 },
+    visibilityPill: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: "center" as const,
+      backgroundColor: c.bgCard,
+    },
+    visibilityPillActive: { borderColor: "rgba(56,232,255,0.35)", backgroundColor: "rgba(56,232,255,0.12)" },
+    visibilityPillInternal: { borderColor: "rgba(45,226,199,0.35)", backgroundColor: "rgba(45,226,199,0.12)" },
+  }));
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [visibility, setVisibility] = useState<"public" | "internal">("public");
@@ -74,22 +93,3 @@ export default function CreatePostScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  body: { padding: 16 },
-  card: { padding: 16, gap: 12 },
-  input: { minHeight: 120, textAlignVertical: "top" as any },
-  visibilityRow: { flexDirection: "row", gap: 8 },
-  visibilityPill: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    backgroundColor: colors.bgCard,
-  },
-  visibilityPillActive: { borderColor: "rgba(56,232,255,0.35)", backgroundColor: "rgba(56,232,255,0.12)" },
-  visibilityPillInternal: { borderColor: "rgba(45,226,199,0.35)", backgroundColor: "rgba(45,226,199,0.12)" },
-});
-

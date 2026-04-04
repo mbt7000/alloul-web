@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
+import { View, FlatList, TouchableOpacity, Alert, type ViewStyle } from "react-native";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import AppInput from "../../../shared/ui/AppInput";
@@ -7,9 +7,25 @@ import AppText from "../../../shared/ui/AppText";
 import GlassCard from "../../../shared/components/GlassCard";
 import AppButton from "../../../shared/ui/AppButton";
 import { applyToMediaJob, getMediaJobs, type JobPostRow } from "../../../api";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 
 export default function JobsScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    body: { flex: 1, padding: 16 },
+    card: { padding: 12, marginBottom: 10 },
+    applyBtn: { marginTop: 10, alignSelf: "flex-start" as const },
+    sheetWrap: {
+      position: "absolute" as const,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      padding: 12,
+      backgroundColor: "rgba(0,0,0,0.55)",
+    },
+    sheet: { padding: 12, gap: 10 },
+  }));
   const [jobs, setJobs] = useState<JobPostRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -79,6 +95,8 @@ export default function JobsScreen() {
       {activeJobId ? (
         <QuickApply
           jobId={activeJobId}
+          sheetWrapStyle={styles.sheetWrap}
+          sheetStyle={styles.sheet}
           onClose={() => setActiveJobId(null)}
           onApplied={() => {
             setActiveJobId(null);
@@ -90,7 +108,19 @@ export default function JobsScreen() {
   );
 }
 
-function QuickApply({ jobId, onClose, onApplied }: { jobId: string; onClose: () => void; onApplied: () => void }) {
+function QuickApply({
+  jobId,
+  sheetWrapStyle,
+  sheetStyle,
+  onClose,
+  onApplied,
+}: {
+  jobId: string;
+  sheetWrapStyle: ViewStyle;
+  sheetStyle: ViewStyle;
+  onClose: () => void;
+  onApplied: () => void;
+}) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
@@ -99,8 +129,8 @@ function QuickApply({ jobId, onClose, onApplied }: { jobId: string; onClose: () 
   const [loading, setLoading] = useState(false);
 
   return (
-    <View style={styles.sheetWrap}>
-      <GlassCard style={styles.sheet}>
+    <View style={sheetWrapStyle}>
+      <GlassCard style={sheetStyle}>
         <AppText variant="bodySm" weight="bold">
           Quick Apply
         </AppText>
@@ -141,18 +171,3 @@ function QuickApply({ jobId, onClose, onApplied }: { jobId: string; onClose: () 
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  body: { flex: 1, padding: 16 },
-  card: { padding: 12, marginBottom: 10 },
-  applyBtn: { marginTop: 10, alignSelf: "flex-start" },
-  sheetWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 12,
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  sheet: { padding: 12, gap: 10 },
-});

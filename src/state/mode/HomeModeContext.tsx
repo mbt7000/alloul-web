@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "../auth/AuthContext";
 import { useCompany } from "../company/CompanyContext";
 import { STORAGE_KEYS } from "../../config/constants";
 
@@ -34,8 +35,10 @@ export function HomeModeProvider({ children }: { children: React.ReactNode }) {
     public: "Feed",
     company: "CompanyWorkspace",
   });
+  const { user } = useAuth();
   const { isMember, isActive } = useCompany();
-  const canUseCompanyMode = isMember && isActive;
+  /** Admins (server: ADMIN_ALLOWED_EMAILS / ADMIN_USERNAMES) can open company workspace for QA without Stripe. */
+  const canUseCompanyMode = (isMember && isActive) || Boolean(user?.is_admin);
 
   useEffect(() => {
     let on = true;

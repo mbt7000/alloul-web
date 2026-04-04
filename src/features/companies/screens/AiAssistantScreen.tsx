@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import GlassCard from "../../../shared/components/GlassCard";
 import { getAgentHistory, type AgentMessageRow } from "../../../api";
 import AppInput from "../../../shared/ui/AppInput";
@@ -14,6 +15,44 @@ export default function AiAssistantScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 8,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    backBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { color: c.textPrimary, fontSize: 20, fontWeight: "800" },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, padding: 24 },
+    err: { color: c.danger, textAlign: "center" as const },
+    retry: {
+      marginTop: 12,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+    },
+    retryTxt: { color: c.accentBlue, fontWeight: "700" },
+    list: { padding: 16, paddingBottom: 100, gap: 10 },
+    bubble: { padding: 14, marginBottom: 8 },
+    userBubble: { borderLeftWidth: 3, borderLeftColor: c.accentBlue },
+    assistantBubble: { borderLeftWidth: 3, borderLeftColor: c.accentTeal },
+    role: { color: c.textMuted, fontSize: 11, fontWeight: "800", textTransform: "uppercase" as const, marginBottom: 6 },
+    content: { color: c.textPrimary, fontSize: 14, lineHeight: 22 },
+    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 40 },
+    configCard: { padding: 12, gap: 8 },
+    configTitle: { color: c.textPrimary, fontSize: 13, fontWeight: "800" },
+    configBody: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
+    savedProviders: { color: c.accentTeal, fontSize: 11, marginTop: 4, fontWeight: "700" },
+  }));
   const [items, setItems] = useState<AgentMessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -114,41 +153,3 @@ export default function AiAssistantScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: "800" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  err: { color: colors.danger, textAlign: "center" },
-  retry: {
-    marginTop: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-  },
-  retryTxt: { color: colors.accentBlue, fontWeight: "700" },
-  list: { padding: 16, paddingBottom: 100, gap: 10 },
-  bubble: { padding: 14, marginBottom: 8 },
-  userBubble: { borderLeftWidth: 3, borderLeftColor: colors.accentBlue },
-  assistantBubble: { borderLeftWidth: 3, borderLeftColor: colors.accentTeal },
-  role: { color: colors.textMuted, fontSize: 11, fontWeight: "800", textTransform: "uppercase", marginBottom: 6 },
-  content: { color: colors.textPrimary, fontSize: 14, lineHeight: 22 },
-  empty: { color: colors.textMuted, textAlign: "center", marginTop: 40 },
-  configCard: { padding: 12, gap: 8 },
-  configTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: "800" },
-  configBody: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
-  savedProviders: { color: colors.accentTeal, fontSize: 11, marginTop: 4, fontWeight: "700" },
-});

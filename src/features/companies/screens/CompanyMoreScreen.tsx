@@ -1,34 +1,41 @@
 import React from "react";
-import { StyleSheet, View, Pressable, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../../state/auth/AuthContext";
 import Screen from "../../../shared/layout/Screen";
 import GlassCard from "../../../shared/components/GlassCard";
 import AppText from "../../../shared/ui/AppText";
 import ListRow from "../../../shared/ui/ListRow";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import { radius } from "../../../theme/radius";
+import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
 export default function CompanyMoreScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    content: { padding: 16, gap: 14 },
+    profileCard: { padding: 16, borderRadius: radius.xl },
+    profileRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 14 },
+    coverPh: {
+      width: 72,
+      height: 72,
+      borderRadius: radius.md,
+      backgroundColor: c.cardElevated,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    card: { padding: 14 },
+    kicker: { letterSpacing: 0.8, textTransform: "uppercase" as const },
+  }));
   const { user } = useAuth();
   const displayName = user?.name || user?.username || "عضو";
   const roleLine = user?.bio?.split("\n")[0]?.slice(0, 48) || "مساحة العمل";
 
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={{ backgroundColor: colors.mediaCanvas }}>
-      <View style={styles.topStrip}>
-        <View style={styles.greenSq}>
-          <Ionicons name="document-text" size={18} color={colors.white} />
-        </View>
-        <AppText variant="micro" weight="bold" tone="secondary" style={{ flex: 1 }}>
-          قائمة الأعمال
-        </AppText>
-        <Pressable onPress={() => Alert.alert("المظهر", "قريباً.")} style={styles.sunBtn}>
-          <Ionicons name="sunny-outline" size={20} color={colors.textPrimary} />
-        </Pressable>
-      </View>
+      <CompanyWorkModeTopBar centerLabel="المزيد" />
       <View style={styles.content}>
         <GlassCard style={styles.profileCard}>
           <View style={styles.profileRow}>
@@ -60,45 +67,3 @@ export default function CompanyMoreScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  topStrip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  greenSq: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.accentNeonGreen,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sunBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: { padding: 16, gap: 14 },
-  profileCard: { padding: 16, borderRadius: radius.xl },
-  profileRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  coverPh: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.md,
-    backgroundColor: colors.cardElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  card: { padding: 14 },
-  kicker: { letterSpacing: 0.8, textTransform: "uppercase" },
-});

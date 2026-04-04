@@ -1,10 +1,11 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../../shared/layout/Screen";
-import { colors } from "../../../theme/colors";
 import { spacing } from "../../../theme/spacing";
 import { radii } from "../../../theme/radii";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import AppText from "../../../shared/ui/AppText";
 import AppButton from "../../../shared/ui/AppButton";
 
@@ -13,15 +14,49 @@ type Props = {
 };
 
 export default function OnboardingScreen({ onDone }: Props) {
+  const styles = useThemedStyles((colors) => ({
+    root: { paddingHorizontal: spacing.xxl },
+    glow1: {
+      position: "absolute" as const,
+      top: -120,
+      left: -60,
+      width: 280,
+      height: 280,
+      borderRadius: 140,
+      backgroundColor: "rgba(76,111,255,0.16)",
+    },
+    glow2: {
+      position: "absolute" as const,
+      bottom: 40,
+      right: -80,
+      width: 240,
+      height: 240,
+      borderRadius: 120,
+      backgroundColor: "rgba(56,232,255,0.10)",
+    },
+    content: { flex: 1, paddingTop: 44 },
+    logo: {
+      width: 52,
+      height: 52,
+      borderRadius: radii.lg,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: colors.cardStrong,
+      borderWidth: 1,
+      borderColor: colors.floatingBarBorder,
+      marginBottom: 18,
+    },
+    bullets: { marginTop: 24, gap: 14 },
+    footer: { paddingBottom: 18 },
+  }));
+
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={styles.root}>
       <View style={styles.glow1} pointerEvents="none" />
       <View style={styles.glow2} pointerEvents="none" />
 
       <View style={styles.content}>
-        <View style={styles.logo}>
-          <Ionicons name="diamond" size={24} color={colors.accentCyan} />
-        </View>
+        <BulletScreenLogo />
 
         <AppText variant="display" weight="bold">
           Alloul One
@@ -47,6 +82,28 @@ export default function OnboardingScreen({ onDone }: Props) {
   );
 }
 
+function BulletScreenLogo() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    logo: {
+      width: 52,
+      height: 52,
+      borderRadius: radii.lg,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: c.cardStrong,
+      borderWidth: 1,
+      borderColor: c.floatingBarBorder,
+      marginBottom: 18,
+    },
+  }));
+  return (
+    <View style={styles.logo}>
+      <Ionicons name="diamond" size={24} color={colors.accentCyan} />
+    </View>
+  );
+}
+
 function Bullet({
   icon,
   title,
@@ -56,6 +113,29 @@ function Bullet({
   title: string;
   body: string;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    bulletRow: {
+      flexDirection: "row" as const,
+      gap: 12,
+      padding: 14,
+      borderRadius: radii.lg,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    bulletIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: c.cardStrong,
+      borderWidth: 1,
+      borderColor: c.floatingBarBorder,
+    },
+  }));
+
   return (
     <View style={styles.bulletRow}>
       <View style={styles.bulletIcon}>
@@ -72,59 +152,3 @@ function Bullet({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingHorizontal: spacing.xxl },
-  glow1: {
-    position: "absolute",
-    top: -120,
-    left: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(76,111,255,0.16)",
-  },
-  glow2: {
-    position: "absolute",
-    bottom: 40,
-    right: -80,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: "rgba(56,232,255,0.10)",
-  },
-  content: { flex: 1, paddingTop: 44 },
-  logo: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(56,232,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.20)",
-    marginBottom: 18,
-  },
-  bullets: { marginTop: 24, gap: 14 },
-  bulletRow: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 14,
-    borderRadius: radii.lg,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  bulletIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(56,232,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.18)",
-  },
-  footer: { paddingBottom: 18 },
-});
-

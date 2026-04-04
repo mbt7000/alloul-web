@@ -1,7 +1,8 @@
 import React from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { useAppTheme } from "../../theme/ThemeContext";
+import { useThemedStyles } from "../../theme/useThemedStyles";
 import GlassCard from "../components/GlassCard";
 import AppText from "./AppText";
 
@@ -13,6 +14,21 @@ type Props = {
 
 /** Compact error + retry for list screens (Feed, Inbox, etc.). */
 export default function InlineErrorRetry({ message, onRetry, retryLabel = "Retry" }: Props) {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(() => ({
+    card: { padding: 20, marginVertical: 8 },
+    retryBtn: {
+      alignSelf: "center" as const,
+      marginTop: 14,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "rgba(56,232,255,0.35)",
+      backgroundColor: "rgba(56,232,255,0.08)",
+    },
+  }));
+
   return (
     <GlassCard style={styles.card}>
       <Ionicons name="cloud-offline-outline" size={36} color={colors.textMuted} style={{ alignSelf: "center" }} />
@@ -27,17 +43,3 @@ export default function InlineErrorRetry({ message, onRetry, retryLabel = "Retry
     </GlassCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { padding: 20, marginVertical: 8 },
-  retryBtn: {
-    alignSelf: "center",
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(56,232,255,0.35)",
-    backgroundColor: "rgba(56,232,255,0.08)",
-  },
-});

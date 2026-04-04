@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleProp, ViewStyle } from "react-native";
-import { glass } from "../../theme/glass";
+import { glassStyles } from "../../theme/glass";
 import { shadows } from "../../theme/shadows";
+import { useAppTheme } from "../../theme/ThemeContext";
 
 type GlassCardProps = {
   children: React.ReactNode;
@@ -10,6 +11,8 @@ type GlassCardProps = {
 };
 
 export default function GlassCard({ children, style, strength = "default" }: GlassCardProps) {
+  const { colors } = useAppTheme();
+  const glass = useMemo(() => glassStyles(colors), [colors]);
   const base = strength === "strong" ? glass.cardStrong : glass.card;
   return <View style={[base, shadows.soft, style]}>{children}</View>;
 }

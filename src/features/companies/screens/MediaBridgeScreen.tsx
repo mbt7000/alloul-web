@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import { MEDIA_TAB_ROUTES, ROOT_SHELL_ROUTES } from "../../../config/routes";
 
 /**
@@ -10,6 +11,10 @@ import { MEDIA_TAB_ROUTES, ROOT_SHELL_ROUTES } from "../../../config/routes";
  */
 export default function MediaBridgeScreen() {
   const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg, alignItems: "center" as const, justifyContent: "center" as const },
+  }));
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -25,7 +30,3 @@ export default function MediaBridgeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
-});

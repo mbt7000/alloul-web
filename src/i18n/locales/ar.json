@@ -73,6 +73,7 @@
     "googleSignInTitle": "دخول Google",
     "microsoftSignInTitle": "دخول Microsoft",
     "authFailed": "فشل التحقق",
+    "sessionStorageFailed": "تم التحقق لكن لم نتمكن من حفظ الجلسة على الجهاز. أغلق التطبيق بالكامل وأعد المحاولة، أو أعد تثبيت Expo Go.",
     "googleFailed": "فشل دخول Google",
     "microsoftFailed": "فشل دخول Microsoft",
     "firebaseNotConfiguredShort": "Firebase غير مُعدّ",
@@ -82,8 +83,12 @@
     "serverError": "الخادم يواجه خطأ مؤقتاً (مثل فشل التسجيل). جرّب لاحقاً أو أبلِ فريق الـ API لإعادة نشر التحديث.",
     "socialPaused": "تسجيل Google وMicrosoft متوقف مؤقتاً في هذا البناء. استخدم البريد وكلمة المرور.",
     "emailLoginActive": "تسجيل الدخول: البريد وكلمة المرور (مفعّل).",
-    "diagOAuthKeysPresent": "Google/Microsoft: المفاتيح موجودة في البناء، لكن أزرار الدخول الاجتماعي معطّلة في هذا الإصدار (استخدم البريد أعلاه).",
+    "diagOAuthKeysPresent": "Google: مفعّل في هذا البناء (إن فشل الدخول، راجع Google Console وSHA-1 للتطبيق). Microsoft: غير مفعّل بعد.",
     "diagOAuthKeysMissing": "Google/Microsoft: مفاتيح البناء ناقصة؛ حتى عند التفعيل لاحقاً تحتاج إعادة بناء مع EXPO_PUBLIC_*.",
+    "diagGoogleOk": "Google: مفعّل (فشل على أندرويد؟ أضف OAuth Android + SHA-1 من EAS في Google Console).",
+    "diagGoogleNo": "Google: ناقص Firebase أو معرّفات العميل في البناء.",
+    "diagMicrosoftOk": "Microsoft: مفعّل (Azure: أضف redirect مثل alloul://oauth/microsoft + تدفق عميل عام).",
+    "diagMicrosoftNo": "Microsoft: أضف EXPO_PUBLIC_MICROSOFT_CLIENT_ID و EXPO_PUBLIC_MICROSOFT_TENANT_ID في EAS ثم أعد البناء.",
     "googleNotInBuild": "دخول Google يحتاج Firebase ومفاتيح Google في البناء (EXPO_PUBLIC_*). أعد بناء التطبيق بعد ضبط الأسرار."
   },
   "feed": {
@@ -264,6 +269,17 @@
     "testConnection": "اختبار الخادم (/health)",
     "serverOk": "الخادم يستجيب",
     "serverFail": "الخادم لا يستجيب",
-    "rebuildHint": "اضبط المتغيرات في Expo (EAS) ثم اعمل بناء iOS جديد."
+    "rebuildHint": "اضبط المتغيرات في Expo (EAS) ثم اعمل بناء iOS جديد.",
+    "appearance": "المظهر",
+    "themeLight": "فاتح",
+    "themeDark": "داكن",
+    "themeActive": "مفعّل",
+    "adminConsole": "لوحة المشرف",
+    "adminSubtitle": "إحصائيات الخادم والأدوات",
+    "adminUsers": "المستخدمون",
+    "adminVerified": "موثّقون",
+    "adminPosts": "المنشورات",
+    "adminCompanies": "الشركات",
+    "adminHint": "الصلاحية تُفرض من الـ API (ADMIN_ALLOWED_EMAILS / ADMIN_USERNAMES على الخادم)."
   }
 }

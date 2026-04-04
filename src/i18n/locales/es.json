@@ -73,6 +73,7 @@
     "googleSignInTitle": "Google",
     "microsoftSignInTitle": "Microsoft",
     "authFailed": "Error de autenticación",
+    "sessionStorageFailed": "Sesión verificada pero no se pudo guardar en el dispositivo. Cierra la app por completo o reinstala Expo Go.",
     "googleFailed": "Error con Google",
     "microsoftFailed": "Error con Microsoft",
     "firebaseNotConfiguredShort": "Firebase no configurado",
@@ -82,8 +83,12 @@
     "serverError": "Error del servidor (p. ej. registro). Inténtalo más tarde o pide desplegar el último backend.",
     "socialPaused": "Google y Microsoft están desactivados en esta versión. Usa correo y contraseña.",
     "emailLoginActive": "Acceso: correo y contraseña (activo).",
-    "diagOAuthKeysPresent": "Google/Microsoft: hay claves en el build, pero los botones sociales están desactivados en esta versión (usa el correo de arriba).",
+    "diagOAuthKeysPresent": "Google: activo en este build (si falla, revisa OAuth en Google Cloud + SHA-1 de Android). Microsoft: aún no activo.",
     "diagOAuthKeysMissing": "Google/Microsoft: claves del build incompletas; activarlos después requiere rebuild EAS con EXPO_PUBLIC_*.",
+    "diagGoogleOk": "Google: activo (¿Android? añade cliente OAuth Android + SHA-1 de EAS en Google Cloud).",
+    "diagGoogleNo": "Google: faltan Firebase o IDs de cliente en este build.",
+    "diagMicrosoftOk": "Microsoft: activo (Azure: redirect ej. alloul://oauth/microsoft + cliente público).",
+    "diagMicrosoftNo": "Microsoft: define EXPO_PUBLIC_MICROSOFT_CLIENT_ID y TENANT_ID en EAS y rebuild.",
     "googleNotInBuild": "Google requiere Firebase y claves en el build. Vuelve a compilar con EXPO_PUBLIC_*."
   },
   "feed": {
@@ -229,6 +234,17 @@
     "testConnection": "Probar servidor (/health)",
     "serverOk": "Servidor accesible",
     "serverFail": "Servidor no accesible",
-    "rebuildHint": "Configura variables en EAS y vuelve a hacer build iOS."
+    "rebuildHint": "Configura variables en EAS y vuelve a hacer build iOS.",
+    "appearance": "Apariencia",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeActive": "Activo",
+    "adminConsole": "Consola admin",
+    "adminSubtitle": "Estadísticas del servidor",
+    "adminUsers": "Usuarios",
+    "adminVerified": "Verificados",
+    "adminPosts": "Publicaciones",
+    "adminCompanies": "Empresas",
+    "adminHint": "El acceso lo controla la API (ADMIN_ALLOWED_EMAILS / ADMIN_USERNAMES)."
   }
 }

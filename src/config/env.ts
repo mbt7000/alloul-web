@@ -17,6 +17,13 @@ export function trimTrailingSlashes(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
+function isAllowedApiHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  if (h === "localhost") return true;
+  if (h.endsWith(".local")) return true;
+  return h.includes(".");
+}
+
 function normalizeApiBaseUrl(raw?: string): string {
   const fallback = DEFAULT_API_BASE_URL;
   const candidate = trimTrailingSlashes((raw ?? "").trim());
@@ -24,7 +31,7 @@ function normalizeApiBaseUrl(raw?: string): string {
   if (candidate === "https://api" || candidate === "http://api") return fallback;
   try {
     const parsed = new URL(candidate);
-    if (!parsed.hostname.includes(".")) return fallback;
+    if (!parsed.hostname || !isAllowedApiHostname(parsed.hostname)) return fallback;
     return candidate;
   } catch {
     return fallback;

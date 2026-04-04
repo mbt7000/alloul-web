@@ -73,6 +73,7 @@
     "googleSignInTitle": "Google Sign-In",
     "microsoftSignInTitle": "Microsoft Sign-In",
     "authFailed": "Authentication failed",
+    "sessionStorageFailed": "Signed in but could not save the session on this device. Close the app completely and try again, or reinstall Expo Go.",
     "googleFailed": "Google sign-in failed",
     "microsoftFailed": "Microsoft sign-in failed",
     "firebaseNotConfiguredShort": "Firebase is not configured",
@@ -82,8 +83,12 @@
     "serverError": "The server returned an error (e.g. registration). Try again later or ask the API team to deploy the latest backend fix.",
     "socialPaused": "Google and Microsoft sign-in are paused in this build. Use email and password.",
     "emailLoginActive": "Sign-in: email & password (active).",
-    "diagOAuthKeysPresent": "Google/Microsoft: keys are in the build, but social sign-in buttons are disabled in this version (use email above).",
+    "diagOAuthKeysPresent": "Google: enabled in this build (if sign-in fails, check Google Cloud OAuth + Android SHA-1 for this app). Microsoft: not enabled yet.",
     "diagOAuthKeysMissing": "Google/Microsoft: build keys incomplete; a future enable still needs an EAS rebuild with EXPO_PUBLIC_*.",
+    "diagGoogleOk": "Google: enabled (Android failing? add Android OAuth client + EAS SHA-1 in Google Cloud).",
+    "diagGoogleNo": "Google: missing Firebase or client IDs in this build.",
+    "diagMicrosoftOk": "Microsoft: enabled (Azure: add redirect e.g. alloul://oauth/microsoft + public client).",
+    "diagMicrosoftNo": "Microsoft: set EXPO_PUBLIC_MICROSOFT_CLIENT_ID and TENANT_ID in EAS, then rebuild.",
     "googleNotInBuild": "Google sign-in needs Firebase + Google client IDs in the EAS build (EXPO_PUBLIC_*). Rebuild the app after setting secrets."
   },
   "feed": {
@@ -264,6 +269,17 @@
     "testConnection": "Test server (/health)",
     "serverOk": "Server reachable",
     "serverFail": "Server unreachable",
-    "rebuildHint": "Set env in Expo (EAS) then run a new iOS build."
+    "rebuildHint": "Set env in Expo (EAS) then run a new iOS build.",
+    "appearance": "Appearance",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeActive": "Active",
+    "adminConsole": "Admin console",
+    "adminSubtitle": "Server stats and tools",
+    "adminUsers": "Users",
+    "adminVerified": "Verified users",
+    "adminPosts": "Posts",
+    "adminCompanies": "Companies",
+    "adminHint": "Access is enforced by the API (ADMIN_ALLOWED_EMAILS / ADMIN_USERNAMES on the server)."
   }
 }

@@ -73,6 +73,7 @@
     "googleSignInTitle": "Google साइन-इन",
     "microsoftSignInTitle": "Microsoft साइन-इन",
     "authFailed": "प्रमाणीकरण विफल",
+    "sessionStorageFailed": "साइन-इन हुआ लेकिन सत्र इस डिवाइस पर सेव नहीं हुआ। ऐप पूरी तरह बंद करें या Expo Go फिर से इंस्टॉल करें।",
     "googleFailed": "Google साइन-इन विफल",
     "microsoftFailed": "Microsoft साइन-इन विफल",
     "firebaseNotConfiguredShort": "Firebase कॉन्फ़िग नहीं",
@@ -82,8 +83,12 @@
     "serverError": "सर्वर त्रुटि (जैसे पंजीकरण)। बाद में कोशिश करें या API टीम से नया बैकएंड डिप्लॉय करवाएँ।",
     "socialPaused": "इस बिल्ड में Google और Microsoft बंद हैं। ईमेल और पासवर्ड उपयोग करें।",
     "emailLoginActive": "साइन-इन: ईमेल और पासवर्ड (सक्रिय)।",
-    "diagOAuthKeysPresent": "Google/Microsoft: बिल्ड में कुंजियाँ हैं, लेकिन इस संस्करण में सामाजिक साइन-इन बटन बंद हैं (ऊपर ईमेल उपयोग करें)।",
+    "diagOAuthKeysPresent": "Google: इस बिल्ड में चालू (असफल हो तो Google Cloud OAuth + Android SHA-1 जाँचें)। Microsoft: अभी चालू नहीं।",
     "diagOAuthKeysMissing": "Google/Microsoft: बिल्ड कुंजियाँ अधूरी; बाद में चालू करने पर EAS रीबिल्ड + EXPO_PUBLIC_* चाहिए।",
+    "diagGoogleOk": "Google: चालू (Android? Google Cloud में Android OAuth + EAS SHA-1 जोड़ें).",
+    "diagGoogleNo": "Google: इस बिल्ड में Firebase या client IDs नहीं.",
+    "diagMicrosoftOk": "Microsoft: चालू (Azure: redirect जैसे alloul://oauth/microsoft + public client).",
+    "diagMicrosoftNo": "Microsoft: EAS में EXPO_PUBLIC_MICROSOFT_CLIENT_ID और TENANT_ID सेट करके rebuild करें.",
     "googleNotInBuild": "Google के लिए Firebase और EXPO_PUBLIC_* कुंजियाँ बिल्ड में चाहिए। पुनः बिल्ड करें।"
   },
   "feed": {
@@ -229,6 +234,17 @@
     "testConnection": "सर्वर जाँचें (/health)",
     "serverOk": "सर्वर मिला",
     "serverFail": "सर्वर नहीं मिला",
-    "rebuildHint": "EAS में वेरिएबल सेट करके नया iOS बिल्ड करें।"
+    "rebuildHint": "EAS में वेरिएबल सेट करके नया iOS बिल्ड करें।",
+    "appearance": "दिखावट",
+    "themeLight": "हल्का",
+    "themeDark": "गहरा",
+    "themeActive": "सक्रिय",
+    "adminConsole": "एडमिन कंसोल",
+    "adminSubtitle": "सर्वर आँकड़े",
+    "adminUsers": "उपयोगकर्ता",
+    "adminVerified": "सत्यापित",
+    "adminPosts": "पोस्ट",
+    "adminCompanies": "कंपनियाँ",
+    "adminHint": "पहुँच API द्वारा (ADMIN_ALLOWED_EMAILS / ADMIN_USERNAMES)।"
   }
 }

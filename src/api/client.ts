@@ -73,7 +73,8 @@ export async function apiFetch<T = any>(
   }
 
   if (!res.ok) {
-    if (res.status === 401) {
+    // Wrong password on login/register returns 401 — do not clear session / broadcast expiry unless we had a token.
+    if (res.status === 401 && token) {
       await removeToken();
       emitAuthSessionReset("expired");
     }

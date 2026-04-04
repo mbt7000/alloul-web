@@ -8,6 +8,7 @@ import MarketplaceScreen from "../../features/media/screens/MarketplaceScreen";
 import DiscoverScreen from "../../features/discover/screens/DiscoverScreen";
 import CompanyProfileScreen from "../../shared/screens/CompanyProfileScreen";
 import SettingsScreen from "../../features/settings/screens/SettingsScreen";
+import AdminHubScreen from "../../features/settings/screens/AdminHubScreen";
 import NotificationsScreen from "../../features/notifications/screens/NotificationsScreen";
 import PostDetailScreen from "../../features/media/screens/PostDetailScreen";
 import CommunityProfileScreen from "../../features/media/screens/CommunityProfileScreen";
@@ -27,6 +28,7 @@ export default function MediaNavigator() {
       <Stack.Screen name="Discover" component={DiscoverScreen} />
       <Stack.Screen name="CompanyProfile" component={CompanyProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="AdminHub" component={AdminHubScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
     </Stack.Navigator>
   );

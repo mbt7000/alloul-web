@@ -11,7 +11,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import SectionHeader from "../../../shared/components/SectionHeader";
 import StatCard from "../../../shared/components/cards/StatCard";
 import ActionCard from "../../../shared/components/cards/ActionCard";
@@ -41,6 +42,58 @@ function riskLabel(risks: number | undefined): string {
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    eyebrow: { color: c.textMuted, fontSize: 12, fontWeight: "600", letterSpacing: 1 },
+    title: { color: c.textPrimary, fontSize: 20, fontWeight: "800" },
+    headerIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      backgroundColor: "rgba(255,255,255,0.06)",
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    scroll: { padding: 16, paddingBottom: 80, gap: 18 },
+    section: { gap: 12 },
+    row: { flexDirection: "row" as const, gap: 12 },
+    projectCard: { padding: 14, gap: 6 },
+    projectHeader: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const },
+    projectTitle: { color: c.textPrimary, fontSize: 15, fontWeight: "700", flex: 1, marginRight: 8 },
+    projectTag: { color: c.accentTeal, fontSize: 11, fontWeight: "700" },
+    projectMeta: { color: c.textMuted, fontSize: 12 },
+    projectFooter: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const },
+    projectMetric: { color: c.textSecondary, fontSize: 12 },
+    activityRow: { padding: 12, gap: 4 },
+    activityTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "600" },
+    activityMeta: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10 },
+    activityType: { color: c.textMuted, fontSize: 11, textTransform: "uppercase" as const },
+    activityTime: { color: c.accentCyan, fontSize: 11 },
+    muted: { color: c.textMuted, fontSize: 13, lineHeight: 20 },
+    centered: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, padding: 24, gap: 16 },
+    errText: { color: c.danger, textAlign: "center" as const, fontSize: 14 },
+    retryBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    retryBtnText: { color: c.accentBlue, fontWeight: "700" },
+  }));
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<DashboardActivityItem[]>([]);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
@@ -203,55 +256,3 @@ export default function DashboardScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-  },
-  eyebrow: { color: colors.textMuted, fontSize: 12, fontWeight: "600", letterSpacing: 1 },
-  title: { color: colors.textPrimary, fontSize: 20, fontWeight: "800" },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  scroll: { padding: 16, paddingBottom: 80, gap: 18 },
-  section: { gap: 12 },
-  row: { flexDirection: "row", gap: 12 },
-  projectCard: { padding: 14, gap: 6 },
-  projectHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  projectTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: "700", flex: 1, marginRight: 8 },
-  projectTag: { color: colors.accentTeal, fontSize: 11, fontWeight: "700" },
-  projectMeta: { color: colors.textMuted, fontSize: 12 },
-  projectFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  projectMetric: { color: colors.textSecondary, fontSize: 12 },
-  activityRow: { padding: 12, gap: 4 },
-  activityTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "600" },
-  activityMeta: { flexDirection: "row", alignItems: "center", gap: 10 },
-  activityType: { color: colors.textMuted, fontSize: 11, textTransform: "uppercase" },
-  activityTime: { color: colors.accentCyan, fontSize: 11 },
-  muted: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 },
-  errText: { color: colors.danger, textAlign: "center", fontSize: 14 },
-  retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  retryBtnText: { color: colors.accentBlue, fontWeight: "700" },
-});

@@ -13,7 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect, DrawerActions } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
 import GlassCard from "../../../shared/components/GlassCard";
 import { getMarketplaceCompanies, type MarketplaceCompanyRow } from "../../../api";
 
@@ -21,6 +22,42 @@ export default function MarketplaceScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    iconBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
+    title: { color: c.textPrimary, fontSize: 18, fontWeight: "800" },
+    searchRow: {
+      flexDirection: "row" as const,
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 8,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.bgCard,
+      overflow: "hidden",
+    },
+    input: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, color: c.textPrimary, fontSize: 15 },
+    go: { backgroundColor: c.accent, paddingHorizontal: 16, justifyContent: "center" as const },
+    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const },
+    list: { padding: 16, paddingBottom: 100 },
+    card: { padding: 14, marginBottom: 10 },
+    name: { color: c.textPrimary, fontSize: 17, fontWeight: "800" },
+    meta: { color: c.accentTeal, fontSize: 13, marginTop: 6 },
+    loc: { color: c.textMuted, fontSize: 12, marginTop: 4 },
+    desc: { color: c.textSecondary, fontSize: 13, marginTop: 8, lineHeight: 20 },
+    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 48 },
+  }));
   const [q, setQ] = useState("");
   const [items, setItems] = useState<MarketplaceCompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,39 +140,3 @@ export default function MarketplaceScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  title: { color: colors.textPrimary, fontSize: 18, fontWeight: "800" },
-  searchRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-    overflow: "hidden",
-  },
-  input: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, color: colors.textPrimary, fontSize: 15 },
-  go: { backgroundColor: colors.accent, paddingHorizontal: 16, justifyContent: "center" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  list: { padding: 16, paddingBottom: 100 },
-  card: { padding: 14, marginBottom: 10 },
-  name: { color: colors.textPrimary, fontSize: 17, fontWeight: "800" },
-  meta: { color: colors.accentTeal, fontSize: 13, marginTop: 6 },
-  loc: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
-  desc: { color: colors.textSecondary, fontSize: 13, marginTop: 8, lineHeight: 20 },
-  empty: { color: colors.textMuted, textAlign: "center", marginTop: 48 },
-});

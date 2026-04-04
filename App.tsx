@@ -1,7 +1,7 @@
 import "react-native-gesture-handler";
 import React from "react";
 import { StatusBar, ActivityIndicator, View } from "react-native";
-import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, Theme as NavTheme } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nextProvider } from "react-i18next";
@@ -11,28 +11,31 @@ import { NotificationsProvider } from "./src/state/notifications/NotificationsCo
 import { CompanyProvider } from "./src/state/company/CompanyContext";
 import { HomeModeProvider } from "./src/state/mode/HomeModeContext";
 import LanguageSync from "./src/shared/LanguageSync";
-import { colors } from "./src/theme/colors";
+import { ThemeProvider, useAppTheme } from "./src/theme/ThemeContext";
 import OnboardingScreen from "./src/features/onboarding/screens/OnboardingScreen";
 import { getOnboardingCompleted, setOnboardingCompleted } from "./src/storage/session";
 import RootNavigation from "./src/navigation/RootNavigator";
 import AuthNavigator from "./src/navigation/auth/AuthNavigator";
 
-const DarkTheme = {
-  ...DefaultTheme,
-  dark: true,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.bg,
-    card: colors.bgSurface,
-    text: colors.textPrimary,
-    border: colors.border,
-    primary: colors.accent,
-    notification: colors.accentRose,
-  },
-};
+function buildNavTheme(colors: ReturnType<typeof useAppTheme>["colors"], dark: boolean): NavTheme {
+  return {
+    ...DefaultTheme,
+    dark,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.bg,
+      card: colors.bgSurface,
+      text: colors.textPrimary,
+      border: colors.border,
+      primary: colors.accent,
+      notification: colors.accentRose,
+    },
+  };
+}
 
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const { colors } = useAppTheme();
   const [onboarded, setOnboarded] = React.useState<boolean | null>(null);
   const [startupTimedOut, setStartupTimedOut] = React.useState(false);
 
@@ -80,24 +83,38 @@ function RootNavigator() {
   return user ? <RootNavigation /> : <AuthNavigator />;
 }
 
+function AppNavigation() {
+  const { colors, mode } = useAppTheme();
+  const navTheme = React.useMemo(() => buildNavTheme(colors, mode === "dark"), [colors, mode]);
+
+  return (
+    <NavigationContainer theme={navTheme}>
+      <StatusBar
+        barStyle={mode === "light" ? "dark-content" : "light-content"}
+        backgroundColor={colors.bg}
+      />
+      <RootNavigator />
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <LanguageSync />
-          <AuthProvider>
-            <NotificationsProvider>
-              <CompanyProvider>
-                <HomeModeProvider>
-                  <NavigationContainer theme={DarkTheme}>
-                    <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
-                    <RootNavigator />
-                  </NavigationContainer>
-                </HomeModeProvider>
-              </CompanyProvider>
-            </NotificationsProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <LanguageSync />
+            <AuthProvider>
+              <NotificationsProvider>
+                <CompanyProvider>
+                  <HomeModeProvider>
+                    <AppNavigation />
+                  </HomeModeProvider>
+                </CompanyProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </I18nextProvider>

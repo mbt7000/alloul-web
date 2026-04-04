@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../../shared/layout/Screen";
@@ -10,7 +10,9 @@ import GlassCard from "../../../shared/components/GlassCard";
 import { CompanyChip, CompanyEmptyState, CompanyHeroCard, CompanySectionLabel } from "../components/CompanyBlocks";
 import { useCompany } from "../../../state/company/CompanyContext";
 import { getDashboardActivity, getPosts, type ApiPost, type DashboardActivityItem } from "../../../api";
-import { colors } from "../../../theme/colors";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
+import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
 function relativeTime(value?: string | null) {
   if (!value) return "Just now";
@@ -25,6 +27,69 @@ function relativeTime(value?: string | null) {
 export default function CompanyFeedScreen() {
   const navigation = useNavigation<any>();
   const { company } = useCompany();
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    content: {
+      padding: 16,
+      paddingBottom: 110,
+    },
+    summaryRow: {
+      flexDirection: "row" as const,
+      gap: 10,
+      marginTop: 14,
+    },
+    summaryCard: {
+      flex: 1,
+      padding: 14,
+    },
+    summaryHead: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+      gap: 10,
+    },
+    loadingWrap: {
+      paddingVertical: 24,
+      alignItems: "center" as const,
+    },
+    stack: {
+      gap: 10,
+    },
+    postCard: {
+      padding: 14,
+    },
+    postTop: {
+      flexDirection: "row" as const,
+      alignItems: "flex-start" as const,
+      gap: 10,
+    },
+    postBody: {
+      marginTop: 12,
+      lineHeight: 22,
+    },
+    postMeta: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 8,
+      marginTop: 14,
+    },
+    activityCard: {
+      padding: 14,
+      flexDirection: "row" as const,
+      alignItems: "flex-start" as const,
+      gap: 12,
+    },
+    activityIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      borderWidth: 1,
+      borderColor: "rgba(45,226,199,0.18)",
+      backgroundColor: "rgba(45,226,199,0.10)",
+    },
+  }));
   const [posts, setPosts] = useState<ApiPost[]>([]);
   const [activity, setActivity] = useState<DashboardActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,8 +126,10 @@ export default function CompanyFeedScreen() {
 
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={{ backgroundColor: colors.mediaCanvas }}>
+      <CompanyWorkModeTopBar />
       <AppHeader
         title="الإعلانات"
+        leftButton="none"
         rightActions={
           <AppButton label="نشر" size="sm" onPress={() => navigation.navigate("CreatePost")} />
         }
@@ -185,6 +252,20 @@ export default function CompanyFeedScreen() {
 }
 
 function MetaPill({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles((c) => ({
+    metaPill: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: "rgba(255,255,255,0.04)",
+    },
+  }));
   return (
     <View style={styles.metaPill}>
       <Ionicons name={icon} size={13} color={colors.textSecondary} />
@@ -194,77 +275,3 @@ function MetaPill({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: 16,
-    paddingBottom: 110,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  summaryCard: {
-    flex: 1,
-    padding: 14,
-  },
-  summaryHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  loadingWrap: {
-    paddingVertical: 24,
-    alignItems: "center",
-  },
-  stack: {
-    gap: 10,
-  },
-  postCard: {
-    padding: 14,
-  },
-  postTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  postBody: {
-    marginTop: 12,
-    lineHeight: 22,
-  },
-  postMeta: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 14,
-  },
-  metaPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  activityCard: {
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  activityIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(45,226,199,0.18)",
-    backgroundColor: "rgba(45,226,199,0.10)",
-  },
-});
