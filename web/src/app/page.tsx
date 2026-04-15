@@ -8,6 +8,7 @@ import FeedPost from '@/components/FeedPost';
 import LandingIntro from '@/components/LandingIntro';
 import { getPosts, ApiError, type ApiPost } from '@/lib/api-client';
 import { isAuthenticated, clearToken } from '@/lib/auth';
+import { FEATURES } from '@/config/features';
 
 const FEED_TABS = ['لك', 'متابَعون', 'الترند'];
 
@@ -40,6 +41,13 @@ export default function HomePage() {
       setLoading(false);
       return;
     }
+
+    // If Media World disabled, show empty state
+    if (!FEATURES.MEDIA_WORLD) {
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     (async () => {
       try {
@@ -71,6 +79,20 @@ export default function HomePage() {
   // ─── Not authenticated → show marketing landing ───────────────────────
   if (!authed) {
     return <LandingIntro />;
+  }
+
+  // ─── Media World disabled → show empty state ────────────────────────────
+  if (!FEATURES.MEDIA_WORLD) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-2">قريباً...</h1>
+            <p className="text-white/60">هذا القسم قيد التطوير</p>
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   // ─── Authenticated → show the feed ────────────────────────────────────
