@@ -7,8 +7,6 @@ import { ROOT_SHELL_ROUTES } from "../../config/routes";
 import { useAppTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { resolveAllowedMode } from "../../state/mode/accessRules";
-import { FEATURES } from "../../config/features";
-import MediaNavigator from "../media/MediaNavigator";
 import CompanyNavigator from "../company/CompanyNavigator";
 import SearchGateway from "../global/SearchGateway";
 import NotificationsGateway from "../global/NotificationsGateway";
@@ -67,22 +65,11 @@ function ShellEntryScreen({ navigation }: { navigation: any }) {
   React.useEffect(() => {
     if (!hydrated && !fallbackReady) return;
     const allowed = resolveAllowedMode(mode, { canUseCompanyMode });
-    const defaultRoute = FEATURES.MEDIA_WORLD ? ROOT_SHELL_ROUTES.media : ROOT_SHELL_ROUTES.company;
-    const targetRoute = allowed === "company" ? ROOT_SHELL_ROUTES.company : defaultRoute;
+    const targetRoute = ROOT_SHELL_ROUTES.company;
     navigation.replace(targetRoute);
   }, [canUseCompanyMode, fallbackReady, hydrated, mode, navigation]);
 
   return <LoadingScreen />;
-}
-
-function MediaShellScreen() {
-  const { setMode } = useHomeMode();
-  React.useEffect(() => {
-    setMode("public");
-  }, [setMode]);
-  
-  if (!FEATURES.MEDIA_WORLD) return null;
-  return <MediaNavigator />;
 }
 
 function CompanyShellScreen() {
@@ -97,7 +84,6 @@ export default function AppControllerNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name={ROOT_SHELL_ROUTES.entry} component={ShellEntryScreen} />
-      {FEATURES.MEDIA_WORLD && <Stack.Screen name={ROOT_SHELL_ROUTES.media} component={MediaShellScreen} />}
       <Stack.Screen name={ROOT_SHELL_ROUTES.company} component={CompanyShellScreen} />
       <Stack.Screen name="Discover" component={SearchGateway} />
       <Stack.Screen name="Notifications" component={NotificationsGateway} />

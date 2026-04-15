@@ -4,7 +4,7 @@
  * ALLOUL&Q — AI Assistant (web)
  * -----------------------------
  * Mirrors the mobile AiAssistantScreen. Streams responses from /agent/chat
- * using Server-Sent Events. Company vs media mode, suggestion cards, and
+ * using Server-Sent Events. Company mode, suggestion cards, and
  * quick-analysis shortcuts that hit /agent/analyze.
  *
  * Requires ANTHROPIC_API_KEY on the server. If it's missing, the backend
@@ -32,7 +32,7 @@ type Message = {
   streaming?: boolean;
 };
 
-type Mode = 'company' | 'media';
+type Mode = 'company';
 
 const SUGGESTIONS = [
   { icon: BarChart3,  label: 'حلّل لوحة التحكم',  topic: 'dashboard', color: '#2E8BFF' },
@@ -47,12 +47,6 @@ const STARTER_PROMPTS: Record<Mode, string[]> = {
     'لخّص حالة المشاريع الحالية',
     'أي المهام متأخرة أو معلّقة؟',
     'اقترح خطة لهذا الأسبوع',
-  ],
-  media: [
-    'اكتب منشور LinkedIn احترافي',
-    'أفكار محتوى لشركتي',
-    'تغريدة عن منتج جديد',
-    'استراتيجية سوشال ميديا لشهر',
   ],
 };
 
@@ -225,24 +219,6 @@ export default function AiAssistantPage() {
           )}
         </div>
 
-        {/* Mode toggle */}
-        <div className="px-4 pt-4">
-          <div className="glass inline-flex p-1 gap-1">
-            {(['company', 'media'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  mode === m
-                    ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-glow-primary'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                {m === 'company' ? '🏢 الشركة' : '📱 سوشال ميديا'}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Chat area */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">

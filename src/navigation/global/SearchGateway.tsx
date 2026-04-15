@@ -24,15 +24,8 @@ export default function SearchGateway() {
 
   useFocusEffect(
     React.useCallback(() => {
-      const inCompany = mode === "company" && canUseCompanyMode;
-      const targetShell = inCompany ? ROOT_SHELL_ROUTES.company : (FEATURES.MEDIA_WORLD ? ROOT_SHELL_ROUTES.media : ROOT_SHELL_ROUTES.company);
-      navigation.navigate(
-        targetShell,
-        inCompany
-          ? { screen: "InternalSearch", params }
-          : (FEATURES.MEDIA_WORLD ? { screen: "MediaTabs", params: { screen: "Search", params } } : { screen: "InternalSearch", params })
-      );
-    }, [canUseCompanyMode, mode, navigation, params])
+      navigation.navigate(ROOT_SHELL_ROUTES.company, { screen: "InternalSearch", params });
+    }, [navigation, params])
   );
 
   return (

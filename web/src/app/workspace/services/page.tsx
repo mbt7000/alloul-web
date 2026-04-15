@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowRight, Folder, CheckSquare, RefreshCw, FolderOpen,
-  Video, MessageSquare, Users, Newspaper,
+  Video, MessageSquare, Users,
   TrendingUp, BarChart3, BookOpen, Key, UserPlus, Inbox,
   Sparkles, Search,
 } from 'lucide-react';
@@ -47,7 +47,6 @@ const CATEGORIES: Category[] = [
       { key: 'meet',  icon: Video,       label: 'اجتماعات', route: '/workspace/meetings', color: '#14E0A4' },
       { key: 'chat',  icon: MessageSquare, label: 'الدردشة', route: '/messages',           color: '#00D4FF' },
       { key: 'team',  icon: Users,       label: 'الفريق',    route: '/workspace/team',     color: '#8B5CF6' },
-      { key: 'news',  icon: Newspaper,   label: 'الأخبار',   route: '/workspace/news',     color: '#EF4444' },
     ],
   },
   {

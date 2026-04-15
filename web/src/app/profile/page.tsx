@@ -55,7 +55,6 @@ export default function ProfilePage() {
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-white font-black text-[17px] truncate">{user.name || user.username}</h1>
-          <p className="text-white/40 text-xs">{user.posts_count ?? 0} منشور</p>
         </div>
       </header>
 

@@ -22,13 +22,8 @@ export default function NotificationsGateway() {
 
   useFocusEffect(
     React.useCallback(() => {
-      const inCompany = mode === "company" && canUseCompanyMode;
-      const targetShell = inCompany ? ROOT_SHELL_ROUTES.company : (FEATURES.MEDIA_WORLD ? ROOT_SHELL_ROUTES.media : ROOT_SHELL_ROUTES.company);
-      navigation.navigate(
-        targetShell,
-        inCompany ? { screen: "Inbox" } : (FEATURES.MEDIA_WORLD ? { screen: "MediaTabs", params: { screen: "Inbox" } } : { screen: "Inbox" })
-      );
-    }, [canUseCompanyMode, mode, navigation])
+      navigation.navigate(ROOT_SHELL_ROUTES.company, { screen: "Inbox" });
+    }, [navigation])
   );
 
   return (

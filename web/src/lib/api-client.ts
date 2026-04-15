@@ -62,41 +62,6 @@ export async function apiFetch<T = any>(
 
 // ─── Typed helpers (mirror the mobile app's API client) ────────────────────
 
-export interface ApiPost {
-  id: number;
-  user_id: number;
-  content: string;
-  image_url?: string | null;
-  likes_count: number;
-  comments_count: number;
-  reposts_count: number;
-  author_name?: string | null;
-  author_username?: string | null;
-  author_avatar?: string | null;
-  author_verified?: boolean;
-  created_at?: string | null;
-  liked_by_me: boolean;
-  reposted_by_me: boolean;
-  saved_by_me: boolean;
-}
-
-export interface StoryItem {
-  id: number;
-  user_id: number;
-  media_url: string | null;
-  media_type: string;
-  caption: string | null;
-  author_name: string | null;
-  author_username: string | null;
-  author_avatar: string | null;
-  is_news_channel?: boolean;
-  live_url?: string | null;
-  views_count: number;
-  viewed_by_me: boolean;
-  created_at: string | null;
-  expires_at: string | null;
-}
-
 export interface DashboardStats {
   total_memory_items?: number;
   total_handovers?: number;
@@ -134,18 +99,10 @@ export const loginWithFirebase = (idToken: string) =>
 
 export const getCurrentUser = () => apiFetch<import('./auth').AuthUser>('/auth/me');
 
-export const getPosts = (limit = 30, offset = 0) =>
-  apiFetch<ApiPost[]>(`/posts/?limit=${limit}&offset=${offset}`);
-
-export const getStories = () => apiFetch<StoryItem[]>('/stories/');
-
 export const getDashboardStats = () => apiFetch<DashboardStats>('/dashboard/stats');
 
 export const getDashboardActivity = (limit = 20) =>
   apiFetch<DashboardActivityItem[]>(`/dashboard/activity?limit=${limit}`);
-
-export const likePost = (id: number) => apiFetch(`/posts/${id}/like`, { method: 'POST' });
-export const unlikePost = (id: number) => apiFetch(`/posts/${id}/like`, { method: 'DELETE' });
 
 // ─── Company services (same endpoints as mobile) ───────────────────────────
 

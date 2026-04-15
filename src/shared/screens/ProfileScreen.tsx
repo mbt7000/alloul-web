@@ -30,7 +30,6 @@ import { useHomeMode } from "../../state/mode/HomeModeContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
 import { FEATURES } from "../../config/features";
 import {
-  getPosts, likePost, unlikePost, type ApiPost,
   getUserProfile, followUser, unfollowUser, blockUser, type UserProfile,
   startConversation,
 } from "../../api";
@@ -43,7 +42,6 @@ import Screen from "../layout/Screen";
 import AppText from "../ui/AppText";
 import ListRow from "../ui/ListRow";
 import InlineErrorRetry from "../ui/InlineErrorRetry";
-import MediaPostRow from "../../features/media/components/MediaPostRow";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -59,19 +57,14 @@ function OtherUserProfile({ userId }: { userId: number }) {
   const { startCall } = useCallContext();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [posts, setPosts] = useState<ApiPost[]>([]);
   const [following, setFollowing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [p, allPosts] = await Promise.all([
-        getUserProfile(userId),
-        getPosts(50, 0),
-      ]);
+      const p = await getUserProfile(userId);
       setProfile(p);
       setFollowing(p.is_following);
-      setPosts((Array.isArray(allPosts) ? allPosts : []).filter((post) => post.user_id === userId));
     } catch {}
     setLoading(false);
   }, [userId]);
@@ -237,23 +230,6 @@ function OtherUserProfile({ userId }: { userId: number }) {
           </View>
         </View>
 
-        {/* Posts */}
-        <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <Ionicons name="pricetag-outline" size={16} color={c.textMuted} />
-            <AppText variant="bodySm" weight="bold" tone="secondary">المنشورات</AppText>
-          </View>
-          {posts.length === 0 ? (
-            <GlassCard style={{ padding: 24, alignItems: "center" as const }}>
-              <Ionicons name="document-outline" size={32} color={c.textMuted} />
-              <AppText variant="caption" tone="muted" style={{ marginTop: 8 }}>لا توجد منشورات بعد</AppText>
-            </GlassCard>
-          ) : (
-            posts.map((post) => (
-              <MediaPostRow key={post.id} post={post} onLike={() => {}} />
-            ))
-          )}
-        </View>
       </ScrollView>
     </Screen>
   );
@@ -286,9 +262,6 @@ function OwnProfile() {
   const [coverUrlDraft, setCoverUrlDraft] = useState("");
   const [section, setSection] = useState<CompanySection>("overview");
   const [mediaTab, setMediaTab] = useState<MediaProfileTab>("posts");
-  const [profilePosts, setProfilePosts] = useState<ApiPost[]>([]);
-  const [profilePostsLoading, setProfilePostsLoading] = useState(false);
-  const [profilePostsError, setProfilePostsError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -296,41 +269,11 @@ function OwnProfile() {
     }, [refresh])
   );
 
-  const loadProfilePosts = useCallback(async () => {
-    if (!user?.id) {
-      setProfilePosts([]);
-      setProfilePostsError(null);
-      setProfilePostsLoading(false);
-      return;
-    }
-
-    setProfilePostsLoading(true);
-    setProfilePostsError(null);
-    try {
-      const posts = await getPosts(40, 0);
-      const ownPosts = (Array.isArray(posts) ? posts : []).filter((post) => post.user_id === user.id);
-      setProfilePosts(ownPosts);
-    } catch (e) {
-      setProfilePosts([]);
-      setProfilePostsError(formatApiError(e));
-    } finally {
-      setProfilePostsLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (homeMode === "public") {
-      void loadProfilePosts();
-    }
-  }, [homeMode, loadProfilePosts]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       await refresh();
-      if (homeMode === "public") {
-        await loadProfilePosts();
-      }
     } finally {
       setRefreshing(false);
     }
@@ -339,7 +282,6 @@ function OwnProfile() {
   const initials = (user?.name || user?.username || "?").slice(0, 2).toUpperCase();
   const displayName = user?.name || user?.username || "Guest";
   const headline = user?.bio ? user.bio.split("\n")[0].slice(0, 80) : "Member · Alloul One";
-  const mediaVisualPosts = useMemo(() => profilePosts.filter((post) => Boolean(post.image_url)), [profilePosts]);
   const joinedLabel = useMemo(() => {
     if (!user?.created_at) return "عضو في مجتمع اللّول";
     return `منضم منذ ${new Date(user.created_at).getFullYear()}`;
@@ -353,30 +295,6 @@ function OwnProfile() {
       });
     } catch {
       /* ignore */
-    }
-  };
-
-  const handleProfileLike = async (postId: number) => {
-    const post = profilePosts.find((item) => item.id === postId);
-    if (!post) return;
-
-    setProfilePosts((prev) =>
-      prev.map((item) =>
-        item.id === postId
-          ? {
-              ...item,
-              liked_by_me: !item.liked_by_me,
-              likes_count: item.liked_by_me ? item.likes_count - 1 : item.likes_count + 1,
-            }
-          : item
-      )
-    );
-
-    try {
-      if (post.liked_by_me) await unlikePost(postId);
-      else await likePost(postId);
-    } catch {
-      setProfilePosts((prev) => prev.map((item) => (item.id === postId ? post : item)));
     }
   };
 
@@ -918,80 +836,6 @@ function OwnProfile() {
               </View>
             ) : null}
 
-            {/* ── Compact Mode Segmented Switcher ── */}
-            {user ? (
-              <View style={{
-                marginHorizontal: 16, marginTop: 10,
-                flexDirection: "row", padding: 4, borderRadius: 999,
-                borderWidth: 1, borderColor: colors.border,
-                backgroundColor: "rgba(255,255,255,0.03)",
-              }}>
-                {FEATURES.MEDIA_WORLD && (
-                  <Pressable
-                    onPress={() => {
-                      setHomeMode("public");
-                      const rootNav = navigation.getParent?.() as any;
-                      rootNav?.navigate(ROOT_SHELL_ROUTES.media, {
-                        screen: "MediaTabs",
-                        params: { screen: getLastRoute("public") ?? "Feed" },
-                      });
-                    }}
-                    style={{
-                      flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-                      gap: 6, paddingVertical: 9, borderRadius: 999,
-                      backgroundColor: currentHomeMode === "public" ? `${colors.accentBlue}22` : "transparent",
-                      borderWidth: currentHomeMode === "public" ? 1 : 0,
-                      borderColor: `${colors.accentBlue}55`,
-                    }}
-                  >
-                    <Ionicons
-                      name="globe-outline" size={14}
-                      color={currentHomeMode === "public" ? colors.accentBlue : colors.textMuted}
-                    />
-                    <AppText style={{
-                      fontSize: 12, fontWeight: "700",
-                      color: currentHomeMode === "public" ? colors.accentBlue : colors.textMuted,
-                    }}>
-                      ميديا
-                    </AppText>
-                  </Pressable>
-                )}
-
-                <Pressable
-                  onPress={() => {
-                    if (!canUseCompanyMode) {
-                      Alert.alert("عالم الأعمال", "تحتاج عضوية في شركة فعّالة.");
-                      return;
-                    }
-                    setHomeMode("company");
-                    const rootNav = navigation.getParent?.() as any;
-                    rootNav?.navigate(ROOT_SHELL_ROUTES.company, {
-                      screen: getLastRoute("company") ?? "CompanyWorkspace",
-                    });
-                  }}
-                  style={{
-                    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-                    gap: 6, paddingVertical: 9, borderRadius: 999,
-                    backgroundColor: currentHomeMode === "company" ? `${colors.accentTeal}22` : "transparent",
-                    borderWidth: currentHomeMode === "company" ? 1 : 0,
-                    borderColor: `${colors.accentTeal}55`,
-                    opacity: canUseCompanyMode ? 1 : 0.5,
-                  }}
-                >
-                  <Ionicons
-                    name={canUseCompanyMode ? "briefcase-outline" : "lock-closed-outline"} size={14}
-                    color={currentHomeMode === "company" ? colors.accentTeal : colors.textMuted}
-                  />
-                  <AppText style={{
-                    fontSize: 12, fontWeight: "700",
-                    color: currentHomeMode === "company" ? colors.accentTeal : colors.textMuted,
-                  }}>
-                    شركة
-                  </AppText>
-                </Pressable>
-              </View>
-            ) : null}
-
             <View style={styles.identityBlock} />
 
             {user ? (
@@ -1005,28 +849,6 @@ function OwnProfile() {
 
                 <View style={styles.pad}>
                   <View style={styles.mediaTabRow}>
-                    <Pressable
-                      onPress={() => setMediaTab("posts")}
-                      style={[styles.mediaTabChip, mediaTab === "posts" && styles.mediaTabChipActive]}
-                    >
-                      <AppText variant="bodySm" weight="bold" tone={mediaTab === "posts" ? "primary" : "secondary"}>
-                        المنشورات
-                      </AppText>
-                      <AppText variant="micro" tone={mediaTab === "posts" ? "cyan" : "muted"}>
-                        {profilePosts.length}
-                      </AppText>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setMediaTab("media")}
-                      style={[styles.mediaTabChip, mediaTab === "media" && styles.mediaTabChipActive]}
-                    >
-                      <AppText variant="bodySm" weight="bold" tone={mediaTab === "media" ? "primary" : "secondary"}>
-                        الوسائط
-                      </AppText>
-                      <AppText variant="micro" tone={mediaTab === "media" ? "cyan" : "muted"}>
-                        {mediaVisualPosts.length}
-                      </AppText>
-                    </Pressable>
                   </View>
                 </View>
 
@@ -1043,85 +865,9 @@ function OwnProfile() {
                       </GlassCard>
                     ) : null}
 
-                    {FEATURES.MEDIA_WORLD && (
-                      <GlassCard style={[styles.card, styles.mediaPromptCard]}>
-                        <View style={styles.mediaPromptRow}>
-                          <View style={styles.mediaPromptCopy}>
-                            <AppText variant="bodySm" weight="bold">
-                              شارك آخر ما تعمل عليه
-                            </AppText>
-                            <AppText variant="caption" tone="muted" style={{ marginTop: 6 }}>
-                              نص، صورة، أو تحديث سريع يظهر فوراً في عالم الميديا.
-                            </AppText>
-                          </View>
-                          <Pressable style={styles.mediaPromptBtn} onPress={() => navigation.navigate("CreatePost")}>
-                            <Ionicons name="add" size={18} color={colors.white} />
-                          </Pressable>
-                        </View>
-                      </GlassCard>
-                    )}
 
-                    {profilePostsLoading ? (
-                      <View style={styles.loadingBlock}>
-                        <ActivityIndicator color={colors.accentCyan} />
-                      </View>
-                    ) : profilePostsError ? (
-                      <InlineErrorRetry message={profilePostsError} onRetry={() => void loadProfilePosts()} />
-                    ) : profilePosts.length > 0 ? (
-                      <View style={styles.postList}>
-                        {profilePosts.map((post) => (
-                          <MediaPostRow key={post.id} post={post} onLike={handleProfileLike} />
-                        ))}
-                      </View>
-                    ) : FEATURES.MEDIA_WORLD ? (
-                      <GlassCard style={[styles.card, styles.emptyStateCard]}>
-                        <Pressable style={styles.emptyPlusBox} onPress={() => navigation.navigate("CreatePost")}>
-                          <Ionicons name="add" size={40} color={colors.textMuted} />
-                        </Pressable>
-                        <AppText variant="body" style={{ marginTop: 16, textAlign: "center" }}>
-                          لا توجد منشورات بعد
-                        </AppText>
-                        <AppText variant="caption" tone="muted" style={styles.emptyStateBody}>
-                          اضغط + لإنشاء أول منشور.
-                        </AppText>
-                      </GlassCard>
-                    ) : null}
                   </View>
-                ) : (
-                  <View style={styles.pad}>
-                    {mediaVisualPosts.length > 0 ? (
-                      <View style={styles.mediaGrid}>
-                        {mediaVisualPosts.map((post) => (
-                          <Pressable
-                            key={post.id}
-                            onPress={() => setMediaTab("posts")}
-                            style={styles.mediaTile}
-                          >
-                            {post.image_url ? <Image source={{ uri: post.image_url }} style={styles.mediaTileImage} /> : null}
-                            <View style={styles.mediaTileOverlay}>
-                              <AppText variant="micro" weight="bold" style={{ color: colors.white }}>
-                                @{user.username}
-                              </AppText>
-                              <AppText variant="caption" numberOfLines={2} style={{ color: colors.white }}>
-                                {post.content}
-                              </AppText>
-                            </View>
-                          </Pressable>
-                        ))}
-                      </View>
-                    ) : (
-                      <GlassCard style={[styles.card, styles.emptyStateCard]}>
-                        <Ionicons name="images-outline" size={28} color={colors.accentBlue} />
-                        <AppText variant="body" style={{ marginTop: 10, textAlign: "center" }}>
-                          لا توجد وسائط منشورة حتى الآن.
-                        </AppText>
-                        <AppText variant="caption" tone="muted" style={styles.emptyStateBody}>
-                          أضف صورة إلى منشورك القادم ليظهر في هذا التبويب.
-                        </AppText>
-                      </GlassCard>
-                    )}
-                  </View>
-                )}
+                ) : null}
               </>
             ) : null}
           </View>

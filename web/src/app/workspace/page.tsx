@@ -34,7 +34,6 @@ const SERVICES = [
   { icon: TrendingUp,  label: 'CRM',           sub: 'إدارة الصفقات',      color: '#FFB24D', href: '/workspace/crm' },
   { icon: MessageSquare, label: 'دردشة الشركة', sub: 'قنوات وشات',        color: '#00D4FF', href: '/workspace/chat' },
   { icon: Briefcase,   label: 'التسليمات',     sub: 'handover ذكي',       color: '#FFB24D', href: '/workspace/handover' },
-  { icon: BookOpen,    label: 'الأخبار',       sub: 'تحديثات الشركة',     color: '#FFB24D', href: '/workspace/news' },
   { icon: BookOpen,    label: 'قاعدة المعرفة', sub: 'مستندات + بحث ذكي',  color: '#8B5CF6', href: '/workspace/knowledge' },
   { icon: UserPlus,    label: 'التوظيف',       sub: 'مرشحون ومقابلات',    color: '#14E0A4', href: '/workspace/hiring' },
   { icon: PieChart,    label: 'التقارير',      sub: 'إحصائيات الشركة',    color: '#00D4FF', href: '/workspace/reports' },
