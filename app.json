@@ -72,7 +72,12 @@
       "githubAuth": {
         "clientId": "Ov23lilP6oyNimxHqyXB"
       },
-      "eas": {}
+      "eas": {
+        "projectId": "17794375-d9c2-403a-890a-9c6037cb9990"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/17794375-d9c2-403a-890a-9c6037cb9990"
     }
   }
 }
