@@ -1,53 +1,34 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View, ScrollView, Pressable, ActivityIndicator, RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next";
 import { useAppTheme } from "../../../theme/ThemeContext";
-import { useThemedStyles } from "../../../theme/useThemedStyles";
-import GlassCard from "../../../shared/components/GlassCard";
+import AppText from "../../../shared/ui/AppText";
+import Screen from "../../../shared/layout/Screen";
 import { getDeals, type DealRow } from "../../../api";
 
+const STAGE_META: Record<string, { label: string; color: string; icon: string }> = {
+  lead:        { label: "عميل محتمل",  color: "#6b7280", icon: "radio-button-on-outline" },
+  proposal:    { label: "عرض مقدم",    color: "#3b82f6", icon: "document-text-outline" },
+  negotiation: { label: "تفاوض",       color: "#8b5cf6", icon: "git-compare-outline" },
+  won:         { label: "مكتملة",      color: "#10b981", icon: "checkmark-circle-outline" },
+  lost:        { label: "خسرنا",       color: "#ef4444", icon: "close-circle-outline" },
+};
+
+function formatValue(v: number | null | undefined): string {
+  if (!v) return "—";
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}م`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}ك`;
+  return String(v);
+}
+
 export default function DealsScreen() {
-  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
-  const { colors } = useAppTheme();
-  const styles = useThemedStyles((c) => ({
-    root: { flex: 1, backgroundColor: c.bg },
-    header: {
-      flexDirection: "row" as const,
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 8,
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    backBtn: { width: 40, height: 40, alignItems: "center" as const, justifyContent: "center" as const },
-    title: { color: c.textPrimary, fontSize: 20, fontWeight: "800" },
-    center: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, padding: 24, gap: 12 },
-    err: { color: c.danger, textAlign: "center" as const },
-    retry: {
-      paddingHorizontal: 18,
-      paddingVertical: 10,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.border,
-      backgroundColor: c.bgCard,
-    },
-    retryTxt: { color: c.accentBlue, fontWeight: "700" },
-    list: { padding: 16, paddingBottom: 100 },
-    card: { padding: 14, marginBottom: 10 },
-    company: { color: c.textPrimary, fontSize: 17, fontWeight: "800" },
-    row: { flexDirection: "row" as const, justifyContent: "space-between", marginTop: 8 },
-    stage: { color: c.accentTeal, fontSize: 13, fontWeight: "700", textTransform: "capitalize" as const },
-    prob: { color: c.textMuted, fontSize: 13 },
-    value: { color: c.textSecondary, fontSize: 14, marginTop: 8 },
-    meta: { color: c.textMuted, fontSize: 12, marginTop: 6 },
-    empty: { color: c.textMuted, textAlign: "center" as const, marginTop: 40 },
-  }));
+  const navigation = useNavigation<any>();
+  const { colors: c } = useAppTheme();
   const [items, setItems] = useState<DealRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,8 +40,7 @@ export default function DealsScreen() {
       const list = await getDeals();
       setItems(Array.isArray(list) ? list : []);
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Err";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "خطأ في التحميل");
       setItems([]);
     } finally {
       setLoading(false);
@@ -68,55 +48,149 @@ export default function DealsScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      void load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => {
+    setLoading(true);
+    void load();
+  }, [load]));
+
+  // Summary stats
+  const won = items.filter(d => d.stage === "won").length;
+  const totalValue = items.reduce((s, d) => s + (d.value || 0), 0);
+  const pipeline = items.filter(d => !["won","lost"].includes(d.stage ?? ""));
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>{t("deals.title")}</Text>
-        <View style={{ width: 40 }} />
-      </View>
-      {loading && !refreshing ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accentCyan} />
+    <Screen edges={["top"]} style={{ backgroundColor: "#0b0b0b" }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            tintColor={c.accentCyan}
+            onRefresh={() => { setRefreshing(true); void load(); }}
+          />
+        }
+      >
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </Pressable>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <AppText style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>الصفقات</AppText>
+            <AppText style={{ color: "#888", fontSize: 12, marginTop: 2 }}>
+              {items.length} صفقة · {pipeline.length} في الأنبوب
+            </AppText>
+          </View>
+          <Pressable
+            style={{ backgroundColor: c.accentCyan + "22", borderWidth: 1, borderColor: c.accentCyan + "55", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 }}
+            onPress={() => {}}
+          >
+            <AppText style={{ color: c.accentCyan, fontSize: 12, fontWeight: "700" }}>+ صفقة</AppText>
+          </Pressable>
         </View>
-      ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.err}>{error}</Text>
-          <TouchableOpacity style={styles.retry} onPress={() => { setLoading(true); void load(); }}>
-            <Text style={styles.retryTxt}>{t("common.retry")}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(it) => String(it.id)}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={colors.accentCyan} />
-          }
-          ListEmptyComponent={<Text style={styles.empty}>{t("deals.empty")}</Text>}
-          renderItem={({ item }) => (
-            <GlassCard style={styles.card}>
-              <Text style={styles.company}>{item.company}</Text>
-              <View style={styles.row}>
-                <Text style={styles.stage}>{item.stage}</Text>
-                <Text style={styles.prob}>{item.probability}%</Text>
+
+        {/* Stats bar */}
+        {!loading && items.length > 0 && (
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 22 }}>
+            {[
+              { label: "مكتملة", value: String(won), color: "#10b981" },
+              { label: "الأنبوب", value: String(pipeline.length), color: "#3b82f6" },
+              { label: "إجمالي القيمة", value: formatValue(totalValue), color: "#8b5cf6" },
+            ].map((s) => (
+              <View key={s.label} style={{ flex: 1, backgroundColor: "#151515", borderRadius: 14, borderWidth: 1, borderColor: "#222", padding: 12, alignItems: "center" }}>
+                <AppText style={{ color: s.color, fontSize: 18, fontWeight: "800" }}>{s.value}</AppText>
+                <AppText style={{ color: "#666", fontSize: 10, marginTop: 3 }}>{s.label}</AppText>
               </View>
-              <Text style={styles.value}>{t("deals.valueLabel", { value: item.value })}</Text>
-              {item.contact ? <Text style={styles.meta}>{item.contact}</Text> : null}
-            </GlassCard>
-          )}
-        />
-      )}
-    </View>
+            ))}
+          </View>
+        )}
+
+        {loading ? (
+          <ActivityIndicator color={c.accentCyan} style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={{ alignItems: "center", padding: 40, gap: 12 }}>
+            <Ionicons name="warning-outline" size={40} color="#ef4444" />
+            <AppText style={{ color: "#ef4444", textAlign: "center" }}>{error}</AppText>
+            <Pressable
+              style={{ backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#333", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}
+              onPress={() => { setLoading(true); void load(); }}
+            >
+              <AppText style={{ color: "#fff", fontWeight: "700" }}>إعادة المحاولة</AppText>
+            </Pressable>
+          </View>
+        ) : items.length === 0 ? (
+          <View style={{ alignItems: "center", padding: 60 }}>
+            <Ionicons name="briefcase-outline" size={56} color="#333" />
+            <AppText style={{ color: "#666", marginTop: 12 }}>لا توجد صفقات بعد</AppText>
+          </View>
+        ) : (
+          items.map((item) => {
+            const stage = item.stage ?? "lead";
+            const meta = STAGE_META[stage] ?? { label: stage, color: "#6b7280", icon: "ellipse-outline" };
+            const prob = item.probability ?? 0;
+            return (
+              <View key={String(item.id)} style={{ backgroundColor: "#151515", borderRadius: 18, borderWidth: 1, borderColor: "#222", padding: 16, marginBottom: 12 }}>
+                {/* Top row */}
+                <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <AppText style={{ color: "#fff", fontSize: 15, fontWeight: "800" }} numberOfLines={1}>
+                      {item.company}
+                    </AppText>
+                    {item.contact ? (
+                      <AppText style={{ color: "#888", fontSize: 12, marginTop: 3 }} numberOfLines={1}>
+                        {item.contact}
+                      </AppText>
+                    ) : null}
+                  </View>
+                  {/* Stage badge */}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: meta.color + "20", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: meta.color + "44" }}>
+                    <Ionicons name={meta.icon as any} size={12} color={meta.color} />
+                    <AppText style={{ color: meta.color, fontSize: 11, fontWeight: "700" }}>{meta.label}</AppText>
+                  </View>
+                </View>
+
+                {/* Probability bar */}
+                <View style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+                    <AppText style={{ color: "#666", fontSize: 11 }}>احتمالية الإغلاق</AppText>
+                    <AppText style={{ color: meta.color, fontSize: 11, fontWeight: "700" }}>{prob}%</AppText>
+                  </View>
+                  <View style={{ height: 5, backgroundColor: "#222", borderRadius: 3, overflow: "hidden" }}>
+                    <View style={{ height: "100%", width: `${prob}%` as any, backgroundColor: meta.color, borderRadius: 3 }} />
+                  </View>
+                </View>
+
+                {/* Value + actions */}
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Ionicons name="cash-outline" size={14} color="#888" />
+                    <AppText style={{ color: "#ccc", fontSize: 14, fontWeight: "700" }}>
+                      {formatValue(item.value)} ر.س
+                    </AppText>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <Pressable
+                      style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#333" }}
+                      onPress={() => navigation.navigate("ApprovalDetail", { id: item.id, title: item.company })}
+                    >
+                      <AppText style={{ color: "#aaa", fontSize: 12, fontWeight: "600" }}>تفاصيل</AppText>
+                    </Pressable>
+                    {stage !== "won" && stage !== "lost" && (
+                      <Pressable
+                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, backgroundColor: "#10b981" + "22", borderWidth: 1, borderColor: "#10b981" + "55" }}
+                        onPress={() => {}}
+                      >
+                        <AppText style={{ color: "#10b981", fontSize: 12, fontWeight: "700" }}>تقدّم</AppText>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    </Screen>
   );
 }

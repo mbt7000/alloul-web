@@ -1,10 +1,9 @@
 import type { HomeAppMode } from "./HomeModeContext";
 
-export function canEnterMode(mode: HomeAppMode, opts: { canUseCompanyMode: boolean }): boolean {
-  if (mode === "company") return opts.canUseCompanyMode;
-  return true;
+export function canEnterMode(_mode: HomeAppMode, opts: { canUseCompanyMode: boolean }): boolean {
+  return opts.canUseCompanyMode;
 }
 
-export function resolveAllowedMode(preferred: HomeAppMode, opts: { canUseCompanyMode: boolean }): HomeAppMode {
-  return canEnterMode(preferred, opts) ? preferred : "public";
+export function resolveAllowedMode(_preferred: HomeAppMode, _opts: { canUseCompanyMode: boolean }): HomeAppMode {
+  return "company";
 }

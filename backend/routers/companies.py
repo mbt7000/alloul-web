@@ -4,6 +4,8 @@ import random
 import string
 from typing import Annotated, Optional
 
+from routers.employees import generate_work_id
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -154,6 +156,7 @@ def create_company(
         user_id=current_user.id,
         role="owner",
         i_code=mem_code,
+        work_id=generate_work_id(db),
     )
     db.add(member)
     # Create onboarding tracker for the new company
@@ -484,6 +487,7 @@ def add_member(
         manager_id=body.manager_id,
         job_title=body.job_title,
         i_code=i_code,
+        work_id=generate_work_id(db),
     )
     db.add(new_mem)
     db.commit()
@@ -885,6 +889,7 @@ def join_by_invite_code(
         user_id=current_user.id,
         role="employee",
         i_code=mem_code,
+        work_id=generate_work_id(db),
     )
     db.add(new_member)
     db.commit()

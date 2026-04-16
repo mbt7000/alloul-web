@@ -3,26 +3,41 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, Calendar, Loader2 } from 'lucide-react';
+import {
+  Settings, Building2, Shield, Key, LogOut,
+  Loader2, Mail, Calendar, BadgeCheck, ChevronLeft,
+  BarChart3, Users, Briefcase,
+} from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { getCurrentUser } from '@/lib/api-client';
-import { isAuthenticated, type AuthUser } from '@/lib/auth';
+import { getCurrentUser, getDashboardStats, type DashboardStats } from '@/lib/api-client';
+import { isAuthenticated, clearAuth, type AuthUser } from '@/lib/auth';
+
+const MENU_ITEMS = [
+  { icon: Building2, label: 'ملف الشركة',      sub: 'الهوية والبيانات',       href: '/workspace',           color: '#00D4FF' },
+  { icon: Users,     label: 'الفريق',           sub: 'الموظفون والأدوار',      href: '/workspace/team',      color: '#8B5CF6' },
+  { icon: BarChart3, label: 'التقارير',          sub: 'الأداء والإحصائيات',     href: '/workspace/reports',   color: '#14E0A4' },
+  { icon: Key,       label: 'الأدوار والصلاحيات', sub: 'إدارة الوصول',          href: '/workspace/services',  color: '#FFB24D' },
+  { icon: Briefcase, label: 'الوظائف',           sub: 'نشر وإدارة الوظائف',    href: '/workspace/hiring',    color: '#6366F1' },
+  { icon: Shield,    label: 'الأمان',            sub: 'كلمة المرور والحماية',   href: '/settings/billing',    color: '#EF4444' },
+  { icon: Settings,  label: 'الإعدادات',         sub: 'الحساب والتفضيلات',      href: '/settings/billing',    color: '#64748B' },
+];
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace('/login');
-      return;
-    }
+    if (!isAuthenticated()) { router.replace('/login'); return; }
     let mounted = true;
     (async () => {
       try {
-        const me = await getCurrentUser();
-        if (mounted) setUser(me);
+        const [me, s] = await Promise.all([
+          getCurrentUser(),
+          getDashboardStats().catch(() => null),
+        ]);
+        if (mounted) { setUser(me); setStats(s); }
       } catch {
         router.replace('/login');
       } finally {
@@ -45,106 +60,116 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const initials = (user.name || user.username || 'U').slice(0, 2).toUpperCase();
-  const joinedYear = '2026';
 
   return (
     <AppShell>
-      <header className="sticky top-0 z-20 bg-dark-bg-900/85 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-4">
-        <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-white/5">
-          <ArrowRight size={18} />
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-dark-bg-900/85 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-3">
+        <h1 className="text-white font-black text-lg flex-1">الملف الشخصي</h1>
+        <Link href="/settings/billing" className="p-2 rounded-xl hover:bg-white/5 text-white/60 hover:text-white transition-colors">
+          <Settings size={18} />
         </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-white font-black text-[17px] truncate">{user.name || user.username}</h1>
-        </div>
       </header>
 
-      {/* Cover */}
-      <div className="h-48 bg-gradient-to-br from-primary/40 via-primary/20 to-secondary/30 relative">
-        {user.cover_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-logo opacity-30" />
-        )}
-        <Link
-          href="/workspace"
-          className="absolute top-3 right-3 flex items-center gap-2 px-3 py-2 rounded-full bg-dark-bg-900/80 border border-primary/40 backdrop-blur-sm hover:bg-dark-bg-900"
-        >
-          <div className="w-5 h-5 rounded-full bg-gradient-logo flex items-center justify-center">
-            <span className="text-white font-bold text-[8px]">AQ</span>
-          </div>
-          <span className="text-white text-[11px] font-bold">التبديل للأعمال</span>
-        </Link>
-      </div>
+      <div className="px-4 py-5 space-y-5 pb-24 md:pb-10">
 
-      {/* Avatar + action */}
-      <div className="px-4 flex items-end justify-between -mt-16 relative">
-        <div className="w-32 h-32 rounded-full border-4 border-dark-bg-900 overflow-hidden shadow-glow-primary">
-          {user.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-logo flex items-center justify-center">
-              <span className="text-white font-black text-4xl">{initials}</span>
+        {/* Profile card */}
+        <div className="rounded-2xl border border-white/8 bg-white/[0.03] overflow-hidden">
+          {/* Top gradient band */}
+          <div className="h-20 bg-gradient-to-br from-primary/30 via-secondary/20 to-transparent relative">
+            <div className="absolute inset-0 opacity-20"
+              style={{ background: 'radial-gradient(ellipse at top right, #00D4FF44, transparent 70%)' }}
+            />
+          </div>
+
+          <div className="px-4 pb-5">
+            {/* Avatar overlapping the band */}
+            <div className="flex items-end justify-between -mt-10 mb-3">
+              <div className="w-20 h-20 rounded-2xl border-2 border-primary/40 overflow-hidden shadow-glow-primary flex-shrink-0">
+                {user.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-logo flex items-center justify-center">
+                    <span className="text-white font-black text-2xl">{initials}</span>
+                  </div>
+                )}
+              </div>
+              <Link
+                href="/settings/billing"
+                className="mb-1 px-4 py-2 rounded-xl border border-white/10 text-white/70 text-xs font-bold hover:bg-white/5 transition-colors"
+              >
+                تعديل الملف
+              </Link>
             </div>
-          )}
-        </div>
-        <div className="pb-3 flex gap-2">
-          <Link
-            href="/settings/billing"
-            className="px-5 py-2 rounded-full border border-white/20 text-white font-bold text-sm hover:bg-white/5"
-          >
-            إعدادات الملف
-          </Link>
-        </div>
-      </div>
 
-      {/* Name + bio */}
-      <div className="px-4 pt-3 pb-4 border-b border-primary/10">
-        <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-white font-black text-xl">{user.name || user.username}</h2>
-          {user.verified ? (
-            <svg className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.866.25 1.336.25 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.356-.643.378-.022.003-.045.003-.067.003-.236 0-.463-.093-.63-.26l-2.503-2.5c-.347-.347-.347-.91 0-1.26.348-.345.91-.345 1.26 0l1.744 1.74 3.697-5.546c.272-.41.824-.52 1.233-.246.41.273.519.826.246 1.234z"/>
-            </svg>
-          ) : null}
-        </div>
-        <p className="text-white/50 text-sm mb-3">@{user.username}</p>
-        {user.bio && <p className="text-white text-sm leading-relaxed mb-3">{user.bio}</p>}
-        <div className="flex items-center gap-1 text-white/50 text-sm mb-3">
-          <Calendar size={14} />
-          انضم في {joinedYear}
-        </div>
-        <div className="flex items-center gap-5 text-sm">
-          <div>
-            <span className="text-white font-bold">{user.following_count ?? 0}</span>
-            <span className="text-white/50 mr-1">يتابع</span>
-          </div>
-          <div>
-            <span className="text-white font-bold">{user.followers_count ?? 0}</span>
-            <span className="text-white/50 mr-1">متابع</span>
+            {/* Name + badge */}
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-white font-black text-xl">{user.name || user.username}</h2>
+              {user.verified && (
+                <BadgeCheck size={18} className="text-accent flex-shrink-0" />
+              )}
+            </div>
+            <p className="text-white/50 text-sm mb-3">@{user.username}</p>
+
+            {/* Meta info */}
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-white/50">
+              {user.email && (
+                <span className="flex items-center gap-1">
+                  <Mail size={12} /> {user.email}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar size={12} /> منذ 2026
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex border-b border-primary/10 sticky top-[72px] bg-dark-bg-900/85 backdrop-blur-xl z-10">
-        {['المنشورات', 'الردود', 'الوسائط', 'الإعجابات'].map((t, i) => (
-          <button
-            key={t}
-            className={`flex-1 py-4 text-[14px] font-bold relative ${
-              i === 0 ? 'text-white' : 'text-white/50 hover:bg-white/[0.03]'
-            }`}
-          >
-            {t}
-            {i === 0 && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-12 bg-primary rounded-full" />
-            )}
-          </button>
-        ))}
-      </div>
+        {/* Stats strip */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'أعضاء الفريق', value: stats?.team_size ?? '—', color: '#00D4FF' },
+            { label: 'المهام',        value: stats?.pending_tasks ?? '—', color: '#2E8BFF' },
+            { label: 'التسليمات',     value: stats?.total_handovers ?? '—', color: '#FFB24D' },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-white/5 bg-white/[0.02] p-3 text-center">
+              <div className="font-black text-xl" style={{ color: s.color }}>{String(s.value)}</div>
+              <div className="text-white/40 text-[10px] mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
 
-      <div className="pb-24 md:pb-10 p-8 text-center">
-        <p className="text-white/40 text-sm">لا توجد منشورات بعد</p>
+        {/* Menu */}
+        <div className="rounded-2xl border border-white/8 bg-white/[0.02] overflow-hidden divide-y divide-white/5">
+          {MENU_ITEMS.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: `${item.color}18` }}>
+                <item.icon size={17} style={{ color: item.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-sm font-bold">{item.label}</div>
+                <div className="text-white/40 text-[11px]">{item.sub}</div>
+              </div>
+              <ChevronLeft size={15} className="text-white/30 flex-shrink-0" />
+            </Link>
+          ))}
+        </div>
+
+        {/* Sign out */}
+        <button
+          onClick={() => { clearAuth(); router.replace('/login'); }}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-500/20 bg-red-500/5 text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors"
+        >
+          <LogOut size={16} />
+          تسجيل الخروج
+        </button>
+
       </div>
     </AppShell>
   );

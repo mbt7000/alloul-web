@@ -23,36 +23,15 @@ export interface UserProfile {
   avatar_url?: string | null;
   cover_url?: string | null;
   bio?: string | null;
-  i_code?: string | null; // only returned when is_self=true
-  followers_count: number;
-  following_count: number;
-  posts_count: number;
-  is_following: boolean;
+  i_code?: string | null;
   is_self: boolean;
   created_at?: string | null;
 }
 
 export const getUserProfile = (id: number | string) =>
-  apiFetch<UserProfile>(`/follows/users/${id}/profile`);
-
-export const followUser = (id: number) => apiFetch(`/follows/${id}`, { method: "POST" });
-export const unfollowUser = (id: number) => apiFetch(`/follows/${id}`, { method: "DELETE" });
-export const blockUser = (id: number) => apiFetch(`/follows/${id}/block`, { method: "POST" });
-export const unblockUser = (id: number) => apiFetch(`/follows/${id}/block`, { method: "DELETE" });
-
-export interface FollowUser {
-  id: number;
-  username: string;
-  name: string | null;
-  avatar_url: string | null;
-  is_following: boolean;
-}
-
-export const getFollowers = (userId: number) =>
-  apiFetch<FollowUser[]>(`/follows/${userId}/followers`);
-
-export const getFollowing = (userId: number) =>
-  apiFetch<FollowUser[]>(`/follows/${userId}/following`);
+  apiFetch<UserProfile>(`/companies/members/${id}/profile`).catch(() =>
+    apiFetch<UserProfile>(`/auth/me`)
+  );
 
 export interface DashboardStats {
   total_memory_items?: number;
@@ -159,6 +138,7 @@ export interface CompanyMemberRow {
   role: string;
   department_id?: number | null;
   i_code: string;
+  work_id?: string | null;
   manager_id?: number | null;
   job_title?: string | null;
   phone?: string | null;
@@ -211,6 +191,8 @@ export interface HandoverRow {
   score: number;
   tasks: number;
   completed_tasks: number;
+  pending_actions?: string[] | null;
+  risk_level?: string | null;
   created_at?: string | null;
 }
 
@@ -583,3 +565,52 @@ export const sendChannelMessage = (channelId: number, content: string) =>
 
 export const deleteChannelMessage = (channelId: number, messageId: number) =>
   apiFetch(`/channels/${channelId}/messages/${messageId}`, { method: "DELETE" });
+
+// ─── Work ID / Employee Profile ───────────────────────────────────────────────
+
+export interface MyEmployeeProfile {
+  membership_id: number;
+  company_id: number;
+  company_name: string;
+  role: string;
+  job_title: string | null;
+  work_id: string;
+  joined_at: string | null;
+}
+
+export interface WorkIdPreview {
+  work_id: string;
+  user_id: number;
+  user_name: string | null;
+  user_email: string | null;
+  current_company: string | null;
+  role: string;
+  job_title: string | null;
+}
+
+export interface AddByWorkIdResponse {
+  message: string;
+  membership_id: number;
+  work_id: string;
+  user_name: string | null;
+}
+
+export const getMyEmployeeProfile = () =>
+  apiFetch<MyEmployeeProfile>("/employees/me");
+
+export const validateWorkId = (work_id: string) =>
+  apiFetch<WorkIdPreview>("/employees/validate-work-id", {
+    method: "POST",
+    body: JSON.stringify({ work_id }),
+  });
+
+export const addMemberByWorkId = (body: {
+  work_id: string;
+  role?: string;
+  job_title?: string;
+  department_id?: number;
+}) =>
+  apiFetch<AddByWorkIdResponse>("/employees/add-by-work-id", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });

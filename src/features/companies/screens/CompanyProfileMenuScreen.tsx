@@ -27,11 +27,11 @@ interface MenuItem {
 
 const MENU: MenuItem[] = [
   { key: "team",    icon: "people-outline",    title: "الفريق",           subtitle: "الأعضاء والأدوار",    route: "TeamHierarchy", color: "#8b5cf6" },
-  { key: "feed",    icon: "newspaper-outline", title: "الأخبار والتحديثات", subtitle: "منشورات الشركة",       route: "CompanyNews",  color: "#0ea5e9" },
   { key: "reports", icon: "bar-chart-outline", title: "التحليلات",          subtitle: "الأداء والرؤى",       route: "Reports",      color: "#10b981" },
   { key: "roles",   icon: "key-outline",       title: "إدارة الأدوار",      subtitle: "الصلاحيات والوصول",  route: "Roles",        color: "#f59e0b" },
   { key: "inbox",   icon: "file-tray-outline", title: "الموافقات",          subtitle: "الطلبات المعلقة",     route: "Inbox",        color: "#ef4444" },
   { key: "company", icon: "business-outline",  title: "ملف الشركة",         subtitle: "الهوية والبيانات",    route: "Company",      color: "#06b6d4" },
+  { key: "jobs",    icon: "briefcase-outline",  title: "الوظائف",             subtitle: "نشر وإدارة الوظائف", route: "Jobs",         color: "#6366f1" },
   { key: "hiring",  icon: "person-add-outline",title: "التوظيف",            subtitle: "لوحة التوظيف",        route: "HiringBoard",  color: "#a855f7" },
   { key: "files",   icon: "folder-open-outline",title: "الملفات",           subtitle: "المستندات والوثائق",  route: "CompanyFiles", color: "#3b82f6" },
   { key: "settings",icon: "settings-outline",  title: "الإعدادات",          subtitle: "الحساب والتفضيلات",   route: "Settings",     color: "#6b7280" },

@@ -266,12 +266,48 @@ export default function HandoverScreen() {
 
                   {expanded && (
                     <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 10, borderTopWidth: 1, borderTopColor: c.border }}>
-                      {item.department && (
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
-                          <Ionicons name="business-outline" size={13} color={c.textMuted} />
-                          <AppText variant="caption" tone="muted">{item.department}</AppText>
+                      {/* Meta row */}
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                        {item.department && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                            <Ionicons name="business-outline" size={12} color={c.textMuted} />
+                            <AppText variant="micro" tone="muted">{item.department}</AppText>
+                          </View>
+                        )}
+                        {item.risk_level && (
+                          <View style={{
+                            flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
+                            backgroundColor: item.risk_level === "critical" ? "#ef444420" : item.risk_level === "high" ? "#f59e0b20" : "#6b728020",
+                          }}>
+                            <Ionicons name="warning-outline" size={12} color={item.risk_level === "critical" ? "#ef4444" : item.risk_level === "high" ? "#f59e0b" : "#6b7280"} />
+                            <AppText variant="micro" style={{ color: item.risk_level === "critical" ? "#ef4444" : item.risk_level === "high" ? "#f59e0b" : "#6b7280", fontWeight: "700" }}>
+                              مخاطرة {item.risk_level === "critical" ? "حرجة" : item.risk_level === "high" ? "عالية" : item.risk_level === "medium" ? "متوسطة" : "منخفضة"}
+                            </AppText>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Pending actions checklist */}
+                      {item.pending_actions && item.pending_actions.length > 0 && (
+                        <View style={{ backgroundColor: "rgba(251,191,36,0.07)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(251,191,36,0.2)" }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                            <Ionicons name="checkmark-done-outline" size={14} color="#FBBF24" />
+                            <AppText variant="caption" weight="bold" style={{ color: "#FBBF24" }}>الإجراءات المعلقة</AppText>
+                            <View style={{ backgroundColor: "#FBBF2430", paddingHorizontal: 7, paddingVertical: 1, borderRadius: 8 }}>
+                              <AppText style={{ color: "#FBBF24", fontSize: 10, fontWeight: "700" }}>{item.pending_actions.length}</AppText>
+                            </View>
+                          </View>
+                          {item.pending_actions.map((action, idx) => (
+                            <View key={idx} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: idx < item.pending_actions!.length - 1 ? 8 : 0 }}>
+                              <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: "#FBBF24", alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 }}>
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FBBF2444" }} />
+                              </View>
+                              <AppText variant="caption" style={{ flex: 1, lineHeight: 20 }}>{action}</AppText>
+                            </View>
+                          ))}
                         </View>
                       )}
+
                       {item.content && (
                         <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 12 }}>
                           <AppText variant="caption" style={{ lineHeight: 20 }}>{item.content}</AppText>

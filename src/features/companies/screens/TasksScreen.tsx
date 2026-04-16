@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   StyleSheet,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
@@ -91,6 +92,7 @@ export default function TasksScreen() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showAICompose, setShowAICompose] = useState(false);
   const [showSmartSummary, setShowSmartSummary] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
 
   // ─── Load ────────────────────────────────────────────────────────────────
 
@@ -185,6 +187,13 @@ export default function TasksScreen() {
             <Pressable onPress={() => setShowAICompose(true)} style={[styles.addBtn, { backgroundColor: `${colors.accentCyan}22` }]}>
               <Ionicons name="sparkles-outline" size={18} color={colors.accentCyan} />
             </Pressable>
+            {/* View toggle */}
+            <Pressable
+              onPress={() => setViewMode((v) => v === "list" ? "kanban" : "list")}
+              style={[styles.addBtn, viewMode === "kanban" && { backgroundColor: "#4c6fff22", borderWidth: 1, borderColor: "#4c6fff" }]}
+            >
+              <Ionicons name={viewMode === "list" ? "grid-outline" : "list-outline"} size={18} color="#4c6fff" />
+            </Pressable>
             <Pressable onPress={() => setShowCreate(true)} style={styles.addBtn}>
               <Ionicons name="add" size={20} color="#4c6fff" />
             </Pressable>
@@ -246,9 +255,16 @@ export default function TasksScreen() {
           </ScrollView>
         )}
 
-        {/* ── Task List ── */}
+        {/* ── Task List / Kanban ── */}
         {loading && !refreshing ? (
           <ActivityIndicator color={colors.accentCyan} style={{ marginTop: 40 }} />
+        ) : viewMode === "kanban" ? (
+          <KanbanBoard
+            tasks={tasks.filter((t) => !selectedProject || t.project_id === selectedProject)}
+            onCycleStatus={(t) => void cycleStatus(t)}
+            onDelete={handleDelete}
+            colors={colors}
+          />
         ) : display.length === 0 ? (
           <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.cardElevated }]}>
             <Ionicons name="checkbox-outline" size={36} color={colors.textMuted} />
@@ -357,6 +373,92 @@ export default function TasksScreen() {
         })}
       />
     </Screen>
+  );
+}
+
+// ─── Kanban Board ────────────────────────────────────────────────────────────
+
+const { width: SCREEN_W } = Dimensions.get("window");
+const KANBAN_COL_W = SCREEN_W * 0.72;
+
+function KanbanBoard({
+  tasks, onCycleStatus, onDelete, colors,
+}: {
+  tasks: TaskRow[];
+  onCycleStatus: (t: TaskRow) => void;
+  onDelete: (t: TaskRow) => void;
+  colors: ReturnType<typeof useAppTheme>["colors"];
+}) {
+  const cols: Array<{ key: "todo" | "in_progress" | "done" }> = [
+    { key: "todo" },
+    { key: "in_progress" },
+    { key: "done" },
+  ];
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 16 }}>
+      {cols.map(({ key }) => {
+        const cfg = STATUS[key];
+        const colTasks = tasks.filter((t) => t.status === key);
+        return (
+          <View key={key} style={{
+            width: KANBAN_COL_W,
+            backgroundColor: cfg.bg,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: cfg.color + "44",
+            padding: 12,
+            minHeight: 200,
+          }}>
+            {/* Column header */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Ionicons name={cfg.icon} size={15} color={cfg.color} />
+              <AppText style={{ color: cfg.color, fontSize: 13, fontWeight: "700", flex: 1 }}>{cfg.label}</AppText>
+              <View style={{ backgroundColor: cfg.color + "22", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                <AppText style={{ color: cfg.color, fontSize: 11, fontWeight: "700" }}>{colTasks.length}</AppText>
+              </View>
+            </View>
+
+            {colTasks.length === 0 ? (
+              <View style={{ alignItems: "center", paddingVertical: 24 }}>
+                <AppText style={{ color: cfg.color + "88", fontSize: 12 }}>لا توجد مهام</AppText>
+              </View>
+            ) : (
+              colTasks.map((task) => {
+                const pri = PRIORITY[task.priority as keyof typeof PRIORITY] ?? PRIORITY.medium;
+                return (
+                  <Pressable
+                    key={task.id}
+                    onPress={() => onCycleStatus(task)}
+                    style={{
+                      backgroundColor: colors.bgCard,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      padding: 12,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <AppText style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "600", marginBottom: 6 }} numberOfLines={2}>
+                      {task.title}
+                    </AppText>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <View style={{ backgroundColor: pri.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                        <AppText style={{ color: pri.color, fontSize: 10, fontWeight: "700" }}>{pri.label}</AppText>
+                      </View>
+                      {task.due_date && (
+                        <AppText style={{ color: colors.textMuted, fontSize: 10 }}>{task.due_date}</AppText>
+                      )}
+                    </View>
+                    <AppText style={{ color: colors.textMuted, fontSize: 10, marginTop: 6 }}>اضغط لتغيير الحالة</AppText>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        );
+      })}
+    </ScrollView>
   );
 }
 

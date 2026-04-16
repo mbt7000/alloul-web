@@ -109,7 +109,6 @@ export default function EditProfileScreen() {
 
       const res = await apiFetch<{ url: string }>("/upload/image", {
         method: "POST",
-        headers: { "Content-Type": "multipart/form-data" } as any,
         body: formData as any,
       });
 
@@ -214,7 +213,6 @@ export default function EditProfileScreen() {
 
       const res = await apiFetch<{ url: string }>("/upload/image", {
         method: "POST",
-        headers: { "Content-Type": "multipart/form-data" } as any,
         body: formData as any,
       });
 
@@ -400,8 +398,8 @@ export default function EditProfileScreen() {
               icon="location-outline"
             />
 
-            {/* Voice Profile Section */}
-            <GlassCard>
+            {/* Voice Profile Section — native only (expo-av not supported on web) */}
+            {Platform.OS !== "web" && <GlassCard>
               <View style={styles.voiceSection}>
                 <View style={styles.voiceSectionHeader}>
                   <Ionicons name="mic-outline" size={14} color="#1d9bf0" />
@@ -452,7 +450,7 @@ export default function EditProfileScreen() {
                   </View>
                 )}
               </View>
-            </GlassCard>
+            </GlassCard>}
 
             {/* Account info card */}
             <GlassCard style={styles.accountCard}>

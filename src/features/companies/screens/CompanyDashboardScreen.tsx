@@ -15,13 +15,14 @@
 import React, { useCallback, useState } from "react";
 import {
   View, ScrollView, Pressable, ActivityIndicator, Text,
-  RefreshControl,
+  RefreshControl, Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
 import AppText from "../../../shared/ui/AppText";
 import CompanyBottomBar from "../components/CompanyBottomBar";
+import WebSidebar from "../components/WebSidebar";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useCompany } from "../../../state/company/CompanyContext";
@@ -85,13 +86,12 @@ export default function CompanyDashboardScreen() {
 
   const firstName = (user?.name || user?.username || "").split(/\s+/)[0];
 
-  return (
-    <Screen edges={["top"]} style={{ backgroundColor: "#0b0b0b" }}>
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={c.accentCyan} onRefresh={() => { setRefreshing(true); void load(); }} />}
-      >
+  const isWeb = Platform.OS === "web";
+  const contentPad = isWeb ? 32 : 16;
+
+  const innerContent = (
+    <>
+        {/* ═══════════════ 1. TOP HEADER ═══════════════ */}
         {/* ═══════════════ 1. TOP HEADER ═══════════════ */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
           <View style={{ flex: 1 }}>
@@ -261,26 +261,33 @@ export default function CompanyDashboardScreen() {
             <ActivityIndicator color={c.accentCyan} />
           </View>
         ) : (
-          <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
-            <StatCard
-              icon="people"
-              label="الفريق"
-              value={String(stats?.team_size ?? 0)}
-              color="#06b6d4"
-            />
-            <StatCard
-              icon="checkmark-done"
-              label="مهام معلقة"
-              value={String(stats?.pending_tasks ?? 0)}
-              color="#3b82f6"
-            />
-            <StatCard
-              icon="swap-horizontal"
-              label="تسليمات"
-              value={String(stats?.total_handovers ?? 0)}
-              color="#f59e0b"
-            />
-          </View>
+          <>
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+              <StatCard icon="people"          label="الفريق"       value={String(stats?.team_size ?? 0)}       color="#06b6d4" />
+              <StatCard icon="checkmark-done"  label="مهام معلقة"   value={String(stats?.pending_tasks ?? 0)}   color="#3b82f6" />
+              <StatCard icon="swap-horizontal" label="تسليمات"      value={String(stats?.total_handovers ?? 0)} color="#f59e0b" />
+            </View>
+            {/* Health scores */}
+            <View style={{ backgroundColor: "#151515", borderRadius: 18, borderWidth: 1, borderColor: "#222", padding: 16, marginBottom: 24 }}>
+              <AppText style={{ color: "#fff", fontSize: 13, fontWeight: "700", marginBottom: 14 }}>مؤشرات الصحة</AppText>
+              {[
+                { label: "المعرفة",    value: stats?.knowledge_health_score     ?? 70, color: "#06b6d4" },
+                { label: "التسليمات", value: stats?.handover_completion_rate    ?? 70, color: "#f59e0b" },
+                { label: "التوثيق",   value: stats?.documentation_rate          ?? 70, color: "#8b5cf6" },
+                { label: "الاستقرار", value: stats?.team_stability_score         ?? 70, color: "#10b981" },
+              ].map((h) => (
+                <View key={h.label} style={{ marginBottom: 10 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+                    <AppText style={{ color: "#aaa", fontSize: 12 }}>{h.label}</AppText>
+                    <AppText style={{ color: h.color, fontSize: 12, fontWeight: "700" }}>{h.value}%</AppText>
+                  </View>
+                  <View style={{ height: 6, backgroundColor: "#222", borderRadius: 3, overflow: "hidden" }}>
+                    <View style={{ width: `${h.value}%`, height: "100%", backgroundColor: h.color, borderRadius: 3 }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
         )}
 
         {/* ═══════════════ 5. RECENT ACTIVITY ═══════════════ */}
@@ -329,6 +336,32 @@ export default function CompanyDashboardScreen() {
             ))
           )}
         </View>
+    </>
+  );
+
+  if (isWeb) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#0b0b0b" }}>
+        <WebSidebar />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: contentPad, paddingBottom: 60 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {innerContent}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  return (
+    <Screen edges={["top"]} style={{ backgroundColor: "#0b0b0b" }}>
+      <ScrollView
+        contentContainerStyle={{ padding: contentPad, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={c.accentCyan} onRefresh={() => { setRefreshing(true); void load(); }} />}
+      >
+        {innerContent}
       </ScrollView>
       <CompanyBottomBar />
     </Screen>

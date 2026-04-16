@@ -32,5 +32,6 @@ export const COMPANY_ROUTES = {
   settings: "Settings",
   roles: "Roles",
   hiringBoard: "HiringBoard",
+  jobs: "Jobs",
   notifications: "Notifications",
 } as const;

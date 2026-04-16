@@ -1,0 +1,9 @@
+node_modules
+dist
+.expo
+/backend
+/web
+android
+ios
+.cache
+*.log

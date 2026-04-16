@@ -1,16 +1,13 @@
 import React from "react";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { ActivityIndicator, View } from "react-native";
-import { useHomeMode } from "../../state/mode/HomeModeContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
 import { useAppTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
-import { FEATURES } from "../../config/features";
 
 export default function SearchGateway() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { mode, canUseCompanyMode } = useHomeMode();
   const params = route.params ?? {};
   const { colors } = useAppTheme();
   const styles = useThemedStyles((c) => ({

@@ -3,7 +3,7 @@ import { initSentry, captureException } from "./src/config/sentry";
 initSentry();
 
 import React from "react";
-import { StatusBar, ActivityIndicator, View, Text, TouchableOpacity } from "react-native";
+import { StatusBar, ActivityIndicator, View, Text, TouchableOpacity, Platform } from "react-native";
 import { NavigationContainer, DefaultTheme, Theme as NavTheme } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -19,6 +19,7 @@ import OnboardingScreen from "./src/features/onboarding/screens/OnboardingScreen
 import { getOnboardingCompleted, setOnboardingCompleted } from "./src/storage/session";
 import RootNavigation from "./src/navigation/RootNavigator";
 import AuthNavigator from "./src/navigation/auth/AuthNavigator";
+import WebLandingScreen from "./src/features/web/WebLandingScreen";
 import { CallProvider } from "./src/context/CallContext";
 import IncomingCallScreen from "./src/components/calls/IncomingCallScreen";
 import DailyCallScreen from "./src/components/calls/DailyCallScreen";
@@ -80,6 +81,8 @@ function RootNavigator() {
   const { colors } = useAppTheme();
   const [onboarded, setOnboarded] = React.useState<boolean | null>(null);
   const [startupTimedOut, setStartupTimedOut] = React.useState(false);
+  // Web-only: show landing page before login
+  const [webLandingDone, setWebLandingDone] = React.useState(Platform.OS !== "web");
 
   React.useEffect(() => {
     let on = true;
@@ -101,6 +104,14 @@ function RootNavigator() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Web: skip loading spinner + onboarding entirely — go straight to landing page
+  if (Platform.OS === "web") {
+    if (user) return <RootNavigation />;
+    if (!webLandingDone) return <WebLandingScreen onEnter={() => setWebLandingDone(true)} />;
+    return <AuthNavigator />;
+  }
+
+  // Native: normal loading + onboarding flow
   if ((loading && !startupTimedOut) || onboarded == null) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg }}>
@@ -122,7 +133,8 @@ function RootNavigator() {
     );
   }
 
-  return user ? <RootNavigation /> : <AuthNavigator />;
+  if (user) return <RootNavigation />;
+  return <AuthNavigator />;
 }
 
 function AppNavigation() {

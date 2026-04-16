@@ -77,6 +77,7 @@ class CompanyMemberResponse(BaseModel):
     role: str
     department_id: Optional[int] = None
     i_code: str
+    work_id: Optional[str] = None
     manager_id: Optional[int] = None
     job_title: Optional[str] = None
     phone: Optional[str] = None

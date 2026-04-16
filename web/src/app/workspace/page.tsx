@@ -107,15 +107,15 @@ export default function WorkspacePage() {
         {/* Quick actions */}
         <div className="flex gap-4 overflow-x-auto scrollbar-none">
           {QUICK_ACTIONS.map((a) => (
-            <button key={a.label} className="flex flex-col items-center gap-2 flex-shrink-0 w-[72px]">
+            <Link key={a.label} href={a.href} className="flex flex-col items-center gap-2 flex-shrink-0 w-[72px]">
               <div
-                className="w-[58px] h-[58px] rounded-2xl flex items-center justify-center border"
+                className="w-[58px] h-[58px] rounded-2xl flex items-center justify-center border transition-transform hover:scale-105 active:scale-95"
                 style={{ background: `${a.color}20`, borderColor: `${a.color}44` }}
               >
                 <a.icon size={22} style={{ color: a.color }} />
               </div>
               <span className="text-white text-[11px] font-bold text-center">{a.label}</span>
-            </button>
+            </Link>
           ))}
         </div>
 
@@ -127,9 +127,10 @@ export default function WorkspacePage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             {SERVICES.map((s) => (
-              <button
+              <Link
                 key={s.label}
-                className="p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-primary/30 transition-all text-right min-h-[118px] flex flex-col justify-between"
+                href={s.href}
+                className="p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-primary/30 active:scale-[0.97] transition-all text-right min-h-[118px] flex flex-col justify-between"
               >
                 <div
                   className="w-[42px] h-[42px] rounded-xl flex items-center justify-center"
@@ -141,7 +142,7 @@ export default function WorkspacePage() {
                   <div className="text-white font-bold text-sm">{s.label}</div>
                   <div className="text-white/40 text-[11px] mt-0.5">{s.sub}</div>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         </div>

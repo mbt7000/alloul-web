@@ -1,15 +1,12 @@
 import React from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { ActivityIndicator, View } from "react-native";
-import { useHomeMode } from "../../state/mode/HomeModeContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
 import { useAppTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
-import { FEATURES } from "../../config/features";
 
 export default function NotificationsGateway() {
   const navigation = useNavigation<any>();
-  const { mode, canUseCompanyMode } = useHomeMode();
   const { colors } = useAppTheme();
   const styles = useThemedStyles((c) => ({
     root: {

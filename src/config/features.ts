@@ -6,16 +6,12 @@
  */
 
 export const FEATURES = {
-  // Media & Social Features
-  MEDIA_WORLD: false,        // ❌ Media/Social مُعطَّل
-  CORPORATE_WORLD: true,     // ✅ Business features مفعّل
-  AI_HUB: true,              // ✅ AI مفعّل
-
-  // Additional Features
-  AUTOMATION: true,          // ✅ أتمتة مفعّلة
-  TEAM_MANAGEMENT: true,     // ✅ إدارة الفريق مفعّلة
-  BILLING: true,             // ✅ الفواتير مفعّلة
-  NOTIFICATIONS: true,       // ✅ الإشعارات مفعّلة
+  CORPORATE_WORLD: true,     // ✅ Business workspace
+  AI_HUB: true,              // ✅ AI assistant
+  AUTOMATION: true,          // ✅ Automations
+  TEAM_MANAGEMENT: true,     // ✅ Team management
+  BILLING: true,             // ✅ Billing & subscriptions
+  NOTIFICATIONS: true,       // ✅ Notifications
 } as const;
 
 // Type safety

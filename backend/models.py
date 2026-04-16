@@ -121,6 +121,7 @@ class CompanyMember(Base):
     role = Column(String(32), nullable=False)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     i_code = Column(String(6), nullable=False)
+    work_id = Column(String(24), unique=True, index=True, nullable=True)  # EMP-YYYY-NNNN-XXXX
     manager_id = Column(Integer, ForeignKey("company_members.id"), nullable=True)
     job_title = Column(String(128), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

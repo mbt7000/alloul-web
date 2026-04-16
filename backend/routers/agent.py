@@ -31,7 +31,7 @@ class AgentMessageResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[dict]
-    mode: str = "media"
+    mode: str = "company"
 
 
 def _get_anthropic_client():
@@ -233,14 +233,6 @@ def _build_system_prompt(mode: str, user: User, db: Session) -> str:
         ctx += "- Keep responses concise; offer detailed analysis only when asked\n"
 
         return base + ctx
-
-    elif mode == "media":
-        return (
-            base +
-            "\n\nYou are in Social Media mode. Help users create engaging posts, captions, content ideas, "
-            "and social media strategy. Be creative and adapt to different platforms (LinkedIn, Twitter, Instagram). "
-            "Suggest timing, hashtags, and engagement tactics."
-        )
 
     return base
 
@@ -481,20 +473,15 @@ async def analyze(
     if body.extra:
         full_prompt += f"\nAdditional context: {body.extra}"
 
-    if not client:
-        summary = f"تحليل {body.topic}:\n\n{topic_ctx}\n\n⚠️ AI غير مفعّل — يرجى إعداد ANTHROPIC_API_KEY."
-        return {"summary": summary, "topic": body.topic}
-
     system = _build_system_prompt("company", current_user, db)
 
     try:
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+        summary = _complete_with_fallback(
+            system_prompt=system,
+            user_prompt=full_prompt,
             max_tokens=2048,
-            system=system,
-            messages=[{"role": "user", "content": full_prompt}],
+            private=True,
         )
-        summary = msg.content[0].text if msg.content else "No analysis generated."
     except Exception as e:
         summary = f"خطأ في التحليل: {str(e)}"
 

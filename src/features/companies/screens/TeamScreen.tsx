@@ -27,8 +27,11 @@ import {
   getInviteLink,
   removeMember,
   updateMemberRole,
+  validateWorkId,
+  addMemberByWorkId,
   type CompanyMemberRow,
   type MyRoleResponse,
+  type WorkIdPreview,
 } from "../../../api";
 import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 
@@ -84,6 +87,13 @@ export default function TeamScreen() {
   const [editRole, setEditRole] = useState("employee");
   const [editJobTitle, setEditJobTitle] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Add by Work ID modal
+  const [showWorkIdModal, setShowWorkIdModal] = useState(false);
+  const [workIdInput, setWorkIdInput] = useState("");
+  const [workIdPreview, setWorkIdPreview] = useState<WorkIdPreview | null>(null);
+  const [workIdLookingUp, setWorkIdLookingUp] = useState(false);
+  const [workIdAdding, setWorkIdAdding] = useState(false);
 
   // ─── Load ───────────────────────────────────────────────────────────────
 
@@ -178,6 +188,38 @@ export default function TeamScreen() {
     }
   };
 
+  const handleWorkIdLookup = async () => {
+    const wid = workIdInput.trim().toUpperCase();
+    if (!wid) return;
+    setWorkIdLookingUp(true);
+    setWorkIdPreview(null);
+    try {
+      const preview = await validateWorkId(wid);
+      setWorkIdPreview(preview);
+    } catch (e: any) {
+      Alert.alert("غير موجود", e?.message || "لم يُعثر على هذا الـ Work ID");
+    } finally {
+      setWorkIdLookingUp(false);
+    }
+  };
+
+  const handleAddByWorkId = async () => {
+    if (!workIdPreview) return;
+    setWorkIdAdding(true);
+    try {
+      const res = await addMemberByWorkId({ work_id: workIdPreview.work_id, role: "employee" });
+      Alert.alert("تمت الإضافة ✓", res.message);
+      setShowWorkIdModal(false);
+      setWorkIdInput("");
+      setWorkIdPreview(null);
+      void load();
+    } catch (e: any) {
+      Alert.alert("خطأ", e?.message || "تعذّرت الإضافة");
+    } finally {
+      setWorkIdAdding(false);
+    }
+  };
+
   // ─── Derived ─────────────────────────────────────────────────────────────
 
   const isManager = canManage(myRole?.role ?? null);
@@ -248,24 +290,35 @@ export default function TeamScreen() {
           })}
         </ScrollView>
 
-        {/* ── Invite + Copy Link buttons (admin only) ── */}
+        {/* ── Invite + Copy Link + Work ID buttons (admin only) ── */}
         {isManager ? (
-          <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 16 }}>
-            <Pressable
-              onPress={() => setShowInvite(true)}
-              style={[styles.actionCardBtn, { borderColor: c.accentCyan + "55", backgroundColor: c.accentCyan + "12" }]}
-            >
-              <Ionicons name="person-add-outline" size={16} color={c.accentCyan} />
-              <AppText style={{ color: c.accentCyan, fontSize: 13, fontWeight: "700" }}>دعوة عضو</AppText>
-            </Pressable>
-            <Pressable
-              onPress={handleCopyInviteLink}
-              style={[styles.actionCardBtn, { borderColor: "#a78bfa55", backgroundColor: "#a78bfa12" }]}
-            >
-              <Ionicons name="link-outline" size={16} color="#a78bfa" />
-              <AppText style={{ color: "#a78bfa", fontSize: 13, fontWeight: "700" }}>رابط الدعوة</AppText>
-            </Pressable>
-          </View>
+          <>
+            <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 8 }}>
+              <Pressable
+                onPress={() => setShowInvite(true)}
+                style={[styles.actionCardBtn, { borderColor: c.accentCyan + "55", backgroundColor: c.accentCyan + "12" }]}
+              >
+                <Ionicons name="person-add-outline" size={16} color={c.accentCyan} />
+                <AppText style={{ color: c.accentCyan, fontSize: 13, fontWeight: "700" }}>دعوة عضو</AppText>
+              </Pressable>
+              <Pressable
+                onPress={handleCopyInviteLink}
+                style={[styles.actionCardBtn, { borderColor: "#a78bfa55", backgroundColor: "#a78bfa12" }]}
+              >
+                <Ionicons name="link-outline" size={16} color="#a78bfa" />
+                <AppText style={{ color: "#a78bfa", fontSize: 13, fontWeight: "700" }}>رابط الدعوة</AppText>
+              </Pressable>
+            </View>
+            <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+              <Pressable
+                onPress={() => { setShowWorkIdModal(true); setWorkIdPreview(null); setWorkIdInput(""); }}
+                style={[styles.actionCardBtn, { borderColor: "#f59e0b55", backgroundColor: "#f59e0b12" }]}
+              >
+                <Ionicons name="id-card-outline" size={16} color="#f59e0b" />
+                <AppText style={{ color: "#f59e0b", fontSize: 13, fontWeight: "700" }}>إضافة بـ Work ID</AppText>
+              </Pressable>
+            </View>
+          </>
         ) : null}
 
         {/* ── Quick nav ── */}
@@ -489,6 +542,68 @@ export default function TeamScreen() {
                 onPress={handleSaveRole}
                 disabled={editSaving}
               />
+            </View>
+          </Pressable>
+        </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Add by Work ID Modal ── */}
+      <Modal visible={showWorkIdModal} transparent animationType="slide" onRequestClose={() => setShowWorkIdModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <Pressable style={styles.overlay} onPress={() => setShowWorkIdModal(false)}>
+          <Pressable style={[styles.sheet, { backgroundColor: c.bgCard }]} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>إضافة موظف بـ Work ID</AppText>
+            <AppText variant="caption" tone="muted" style={{ marginBottom: 20 }}>
+              اطلب من الموظف مشاركة رمز الـ Work ID الخاص به وأدخله أدناه
+            </AppText>
+
+            <TextInput
+              style={[styles.input, { borderColor: c.border, color: c.textPrimary, backgroundColor: c.bg, marginBottom: 12 }]}
+              placeholder="EMP-2024-XXXX-XXXX"
+              placeholderTextColor={c.textMuted}
+              value={workIdInput}
+              onChangeText={(t) => { setWorkIdInput(t.toUpperCase()); setWorkIdPreview(null); }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+
+            {workIdPreview ? (
+              <View style={{ borderRadius: 14, borderWidth: 1, borderColor: "#10b98133", backgroundColor: "#10b98111", padding: 14, marginBottom: 16, gap: 4 }}>
+                <AppText style={{ fontSize: 13, color: "#10b981", fontWeight: "700" }}>✓ تم التحقق</AppText>
+                <AppText style={{ fontSize: 14, color: c.textPrimary, fontWeight: "600" }}>{workIdPreview.user_name ?? "—"}</AppText>
+                <AppText style={{ fontSize: 12, color: c.textMuted }}>{workIdPreview.user_email ?? ""}</AppText>
+                {workIdPreview.current_company ? (
+                  <AppText style={{ fontSize: 12, color: c.textMuted }}>الشركة الحالية: {workIdPreview.current_company}</AppText>
+                ) : null}
+              </View>
+            ) : null}
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {!workIdPreview ? (
+                <>
+                  <AppButton label="إلغاء" tone="glass" style={{ flex: 1 }} onPress={() => setShowWorkIdModal(false)} />
+                  <AppButton
+                    label={workIdLookingUp ? "جاري البحث…" : "بحث"}
+                    tone="primary"
+                    style={{ flex: 1 }}
+                    onPress={handleWorkIdLookup}
+                    disabled={workIdLookingUp || !workIdInput.trim()}
+                  />
+                </>
+              ) : (
+                <>
+                  <AppButton label="تغيير" tone="glass" style={{ flex: 1 }} onPress={() => setWorkIdPreview(null)} />
+                  <AppButton
+                    label={workIdAdding ? "جاري الإضافة…" : "إضافة للفريق"}
+                    tone="primary"
+                    style={{ flex: 1 }}
+                    onPress={handleAddByWorkId}
+                    disabled={workIdAdding}
+                  />
+                </>
+              )}
             </View>
           </Pressable>
         </Pressable>

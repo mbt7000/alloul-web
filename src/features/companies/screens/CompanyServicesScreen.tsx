@@ -50,7 +50,6 @@ const CATEGORIES: Category[] = [
       { key: "meet",      icon: "videocam",        label: "اجتماعات", route: "Meetings", color: "#10b981" },
       { key: "chat",      icon: "chatbubbles",     label: "الدردشة",  route: "Chat",     color: "#0ea5e9" },
       { key: "team",      icon: "people",          label: "الفريق",   route: "Team",     color: "#8b5cf6" },
-      { key: "feed",      icon: "newspaper",       label: "الخلاصة",  route: "CompanyFeed", color: "#ef4444" },
     ],
   },
   {
@@ -60,6 +59,7 @@ const CATEGORIES: Category[] = [
       { key: "reports",   icon: "bar-chart",       label: "التقارير", route: "Reports",    color: "#f59e0b" },
       { key: "knowledge", icon: "book",            label: "المعرفة",  route: "Knowledge",  color: "#8b5cf6" },
       { key: "roles",     icon: "key",             label: "الأدوار",  route: "Roles",      color: "#10b981" },
+      { key: "jobs",      icon: "briefcase",       label: "الوظائف",  route: "Jobs",        color: "#6366f1" },
       { key: "hiring",    icon: "person-add",      label: "التوظيف",  route: "HiringBoard", color: "#3b82f6" },
       { key: "approvals", icon: "file-tray",       label: "الموافقات",route: "Inbox",      color: "#06b6d4" },
     ],

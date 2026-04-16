@@ -18,7 +18,6 @@ import {
 } from "../../../api";
 import { getUserPresence } from "../../../api/calls.api";
 import { openMeetingProvider } from "../openMeetingLinks";
-import { startConversation } from "../../../api";
 
 // ─── Presence colors ─────────────────────────────────────────────────────────
 
@@ -589,10 +588,7 @@ export default function MeetingsInfoScreen() {
                 presence={presenceMap[member.user_id] ?? "offline"}
                 colors={c}
                 onMessage={async () => {
-                  try {
-                    const conv = await startConversation(member.user_id);
-                    navigation.navigate("Conversation", { conversationId: conv.id, otherUserName: member.user_name });
-                  } catch {}
+                  navigation.navigate("Chat");
                 }}
                 onAudioCall={() => void startCall(
                   member.user_id,

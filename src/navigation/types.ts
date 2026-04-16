@@ -18,11 +18,8 @@ export type RootStackParamList = {
   Notifications: undefined;
   Settings: undefined;
   ApprovalDetail: undefined;
-  CreatePost: undefined;
-  Discover: { q?: string; scope?: string; source?: string } | undefined;
   Companies: undefined;
   Company: undefined;
-  CompanyFeed: undefined;
   CompanyFiles: undefined;
   Jobs: undefined;
   HiringBoard: undefined;
