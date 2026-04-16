@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { getCurrentUser, getDashboardStats, type DashboardStats } from '@/lib/api-client';
-import { isAuthenticated, clearAuth, type AuthUser } from '@/lib/auth';
+import { isAuthenticated, clearToken, type AuthUser } from '@/lib/auth';
 
 const MENU_ITEMS = [
   { icon: Building2, label: 'ملف الشركة',      sub: 'الهوية والبيانات',       href: '/workspace',           color: '#00D4FF' },
@@ -163,7 +163,7 @@ export default function ProfilePage() {
 
         {/* Sign out */}
         <button
-          onClick={() => { clearAuth(); router.replace('/login'); }}
+          onClick={() => { clearToken(); router.replace('/login'); }}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-500/20 bg-red-500/5 text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors"
         >
           <LogOut size={16} />
