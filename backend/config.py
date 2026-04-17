@@ -93,6 +93,10 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIR: str = "/data/alloul-chroma"
     EMBEDDING_MODEL: str = "nomic-embed-text"
 
+    # ALLOUL Agent (custom private SQL/data agent on the company server)
+    ALLOUL_AGENT_URL: str = "http://76.13.216.178:8001"
+    ALLOUL_AGENT_KEY: str = "ALLOUL_AGENT_43245c238018ed6795aa47bbb9ea0b9d"
+
     # AI System
     AI_DEFAULT_PROVIDER: str = "auto"  # auto, claude, ollama
     AI_MAX_TOKENS: int = 4096

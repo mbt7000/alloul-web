@@ -7,9 +7,8 @@
  * using Server-Sent Events. Company mode, suggestion cards, and
  * quick-analysis shortcuts that hit /agent/analyze.
  *
- * Requires ANTHROPIC_API_KEY on the server. If it's missing, the backend
- * returns a graceful fallback message via the same SSE stream, so the UI
- * still works (it just tells the user to configure the key).
+ * Primary provider: ALLOUL Agent (private SQL/data agent on the company server).
+ * Falls back to cloud AI (Claude/DeepSeek) if ALLOUL Agent is unreachable.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -133,7 +132,7 @@ export default function AiAssistantPage() {
           ? 'جلستك انتهت. أعد تسجيل الدخول.'
           : status === 402 || status === 403
             ? 'هذه الميزة تحتاج باقة احترافية — ترقية الخطة مطلوبة.'
-            : 'تعذّر الاتصال بالذكاء الاصطناعي. تأكد من الإنترنت أو من إعداد ANTHROPIC_API_KEY على الخادم.';
+            : 'تعذّر الاتصال بـ ALLOUL Agent. تأكد من الإنترنت أو أن الخادم يعمل.';
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantId ? { ...m, content: msg, streaming: false } : m)),
       );
@@ -204,7 +203,7 @@ export default function AiAssistantPage() {
           <div className="flex-1">
             <h1 className="text-base font-bold">المساعد الذكي</h1>
             <p className="text-xs text-white/60">
-              {mode === 'company' ? 'وضع الشركة · مدعوم بـ Claude 4.5' : 'وضع السوشال ميديا'}
+              {mode === 'company' ? 'وضع الشركة · مدعوم بـ ALLOUL Agent' : 'وضع السوشال ميديا'}
             </p>
           </div>
 

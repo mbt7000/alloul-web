@@ -44,6 +44,55 @@ def _get_anthropic_client():
         return None
 
 
+def _call_alloul_agent(question: str) -> str:
+    """Call ALLOUL Agent (private SQL/data agent on the company server)."""
+    import httpx
+
+    url = f"{settings.ALLOUL_AGENT_URL}/ask"
+    headers = {"X-API-Key": settings.ALLOUL_AGENT_KEY, "Content-Type": "application/json"}
+    payload = {"question": question, "explain": False}
+
+    try:
+        resp = httpx.post(url, json=payload, headers=headers, timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Format the response: show data results + SQL if present
+        parts = []
+        if data.get("data"):
+            rows = data["data"]
+            if isinstance(rows, list) and rows:
+                # Build a simple table or summary
+                if len(rows) == 1 and len(rows[0]) == 1:
+                    # Single value result
+                    val = list(rows[0].values())[0]
+                    parts.append(f"**النتيجة:** {val}")
+                else:
+                    # Multiple rows — summarize
+                    parts.append(f"**النتائج ({len(rows)} سجل):**")
+                    for i, row in enumerate(rows[:10]):
+                        line = " | ".join(f"{k}: {v}" for k, v in row.items())
+                        parts.append(f"- {line}")
+                    if len(rows) > 10:
+                        parts.append(f"_(وأكثر من ذلك — {len(rows)} سجل إجمالاً)_")
+            else:
+                parts.append("لا توجد نتائج.")
+
+        if data.get("explanation"):
+            parts.append(f"\n{data['explanation']}")
+        elif data.get("sql"):
+            parts.append(f"\n_استعلام SQL:_ `{data['sql']}`")
+
+        return "\n".join(parts) if parts else "لا توجد بيانات."
+
+    except httpx.ConnectError:
+        raise Exception("ALLOUL Agent غير متاح حالياً. تأكد من تشغيل الخادم.")
+    except httpx.TimeoutException:
+        raise Exception("استغرق ALLOUL Agent وقتاً طويلاً. حاول لاحقاً.")
+    except Exception as e:
+        raise Exception(f"خطأ في ALLOUL Agent: {str(e)}")
+
+
 def _get_deepseek_openai_client():
     """Return a sync OpenAI client pointed at DeepSeek, or None if unconfigured."""
     if not settings.DEEPSEEK_API_KEY:
@@ -292,58 +341,60 @@ async def chat(
         ))
         db.commit()
 
-    # Check provider availability
-    ai_service = get_ai_service()
-    preferred_provider = ai_service.get_preferred_provider(private=(body.mode == "company"))
+    # ── ALLOUL Agent (primary provider) ──────────────────────────────────────
+    # Try ALLOUL Agent first — it's our private SQL/data agent on the server.
+    # Falls back to cloud AI (Claude/DeepSeek) if ALLOUL Agent is unavailable.
 
-    if not preferred_provider:
-        reply = (
-            "⚠️ خدمة الذكاء الاصطناعي غير مفعّلة حالياً. "
-            "يرجى إعداد ANTHROPIC_API_KEY أو DEEPSEEK_API_KEY على الخادم.\n\n"
-            f"رسالتك: \"{user_msg[:200]}\""
-        )
-        db.add(AgentMessageModel(
-            user_id=current_user.id, role="assistant", content=reply, mode=body.mode,
-        ))
-        db.commit()
-
-        async def fallback_stream():
-            yield f"data: {json.dumps({'text': reply})}\n\n"
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(fallback_stream(), media_type="text/event-stream")
-
-    # Build system prompt with company context
-    system_prompt = _build_system_prompt(body.mode, current_user, db)
-
-    # Build API messages
-    api_messages = []
-    for m in body.messages:
-        role = m.get("role", "user")
-        if role in ("user", "assistant"):
-            api_messages.append({"role": role, "content": m.get("content", "")})
-    if not api_messages:
-        api_messages = [{"role": "user", "content": user_msg or "مرحباً"}]
-
-    # Streaming response
     async def stream():
         full_reply: list[str] = []
+
+        # 1) Try ALLOUL Agent
         try:
-            # Use unified AI service for streaming
-            async for chunk in ai_service.stream_complete(
-                system_prompt=system_prompt,
-                user_prompt=json.dumps(api_messages),  # Pass full message history
-                max_tokens=4096,
-                temperature=0.3,
-                private=(body.mode == "company"),
-                provider=preferred_provider,
-            ):
-                if chunk:
-                    full_reply.append(chunk)
-                    yield f"data: {json.dumps({'text': chunk})}\n\n"
-        except Exception as e:
-            error_text = f"خطأ: {str(e)}"
-            yield f"data: {json.dumps({'text': error_text})}\n\n"
-            full_reply.append(error_text)
+            import asyncio
+            loop = asyncio.get_event_loop()
+            reply_text = await loop.run_in_executor(None, _call_alloul_agent, user_msg or "مرحباً")
+
+            full_reply.append(reply_text)
+            # Yield the reply in chunks for a smooth streaming effect
+            chunk_size = 80
+            for i in range(0, len(reply_text), chunk_size):
+                yield f"data: {json.dumps({'text': reply_text[i:i+chunk_size]})}\n\n"
+
+        except Exception as alloul_err:
+            # 2) Fallback: try cloud AI providers
+            ai_service = get_ai_service()
+            preferred_provider = ai_service.get_preferred_provider(private=(body.mode == "company"))
+
+            if not preferred_provider:
+                err_msg = f"⚠️ خدمة الذكاء الاصطناعي غير متاحة: {str(alloul_err)}"
+                full_reply.append(err_msg)
+                yield f"data: {json.dumps({'text': err_msg})}\n\n"
+            else:
+                system_prompt = _build_system_prompt(body.mode, current_user, db)
+                api_messages = []
+                for m in body.messages:
+                    role = m.get("role", "user")
+                    if role in ("user", "assistant"):
+                        api_messages.append({"role": role, "content": m.get("content", "")})
+                if not api_messages:
+                    api_messages = [{"role": "user", "content": user_msg or "مرحباً"}]
+
+                try:
+                    async for chunk in ai_service.stream_complete(
+                        system_prompt=system_prompt,
+                        user_prompt=json.dumps(api_messages),
+                        max_tokens=4096,
+                        temperature=0.3,
+                        private=(body.mode == "company"),
+                        provider=preferred_provider,
+                    ):
+                        if chunk:
+                            full_reply.append(chunk)
+                            yield f"data: {json.dumps({'text': chunk})}\n\n"
+                except Exception as e:
+                    error_text = f"خطأ: {str(e)}"
+                    yield f"data: {json.dumps({'text': error_text})}\n\n"
+                    full_reply.append(error_text)
 
         # Save assistant response
         final_text = "".join(full_reply)
