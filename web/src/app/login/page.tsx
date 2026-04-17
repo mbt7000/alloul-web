@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { login, register, loginWithFirebase, getCurrentUser } from '@/lib/api-client';
 import { setToken, setCachedUser, isAuthenticated } from '@/lib/auth';
-import { signInWithGoogle, signInWithApple, getOAuthRedirectResult } from '@/lib/firebase';
+import { signInWithGoogle, signInWithApple } from '@/lib/firebase';
 
 type Mode = 'login' | 'register';
 type OAuthProvider = 'google' | 'apple' | null;
@@ -27,22 +27,8 @@ export default function LoginPage() {
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider>(null);
 
   useEffect(() => {
-    if (isAuthenticated()) { router.replace('/'); return; }
-
-    // Handle redirect result from OAuth (when popup was blocked)
-    getOAuthRedirectResult().then(async (result) => {
-      if (!result) return;
-      setOauthLoading('google');
-      try {
-        const res = await loginWithFirebase(result.idToken);
-        await finishLogin(res.access_token, result.isNew);
-      } catch (err: any) {
-        setError(err?.message || 'فشل تسجيل الدخول');
-        setOauthLoading(null);
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (isAuthenticated()) router.replace('/');
+  }, [router]);
 
   const finishLogin = async (accessToken: string, isNewUser = false) => {
     setToken(accessToken);
@@ -62,7 +48,7 @@ export default function LoginPage() {
         : await login(email.trim(), password);
       await finishLogin(res.access_token, isRegister);
     } catch (err: any) {
-      setError(err?.message || (mode === 'login' ? 'البريد أو كلمة المرور غير صحيحة' : 'فشل إنشاء الحساب، ربما البريد مستخدم'));
+      setError(err?.message || (mode === 'login' ? 'البريد أو كلمة المرور غير صحيحة' : 'فشل إنشاء الحساب، ربما البريد مستخدم مسبقاً'));
       setLoading(false);
     }
   };
@@ -72,20 +58,17 @@ export default function LoginPage() {
     setOauthLoading(provider);
     try {
       const idToken = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
-      if (!idToken) return; // redirect in progress — page will reload
       const res = await loginWithFirebase(idToken);
       const isNew = !!(res as any)?.is_new_user;
       await finishLogin(res.access_token, isNew);
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('popup-closed-by-user') || msg.includes('popup_closed_by_user')) {
+      if (msg.includes('popup-closed-by-user') || msg.includes('popup_closed_by_user') || msg.includes('cancelled')) {
         // user dismissed — silent
       } else if (msg.includes('unauthorized-domain') || msg.includes('auth/unauthorized-domain')) {
         setError('يرجى تفعيل النطاق في Firebase Console أو استخدم البريد الإلكتروني');
       } else if (msg.includes('network') || msg.includes('Network')) {
         setError('تعذّر الاتصال. تحقق من اتصالك بالإنترنت.');
-      } else if (msg.includes('cancelled') || msg.includes('cancel')) {
-        // silent
       } else {
         setError(msg || `فشل الدخول عبر ${provider === 'google' ? 'Google' : 'Apple'}`);
       }
@@ -97,14 +80,13 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Background orbs */}
       <div className="pointer-events-none fixed top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary/20 blur-[140px] animate-float-orb" />
       <div className="pointer-events-none fixed bottom-[-20%] right-[-10%] w-[700px] h-[700px] rounded-full bg-secondary/15 blur-[160px] animate-float-orb" />
       <div className="pointer-events-none fixed top-[30%] left-[40%] w-[400px] h-[400px] rounded-full bg-accent/10 blur-[120px]" />
 
       <div className="relative max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 px-4 py-10 lg:py-16 min-h-screen items-center">
 
-        {/* ═══════ Left: presentation ═══════ */}
+        {/* Left: presentation */}
         <div className="order-2 lg:order-1 space-y-8">
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-glow-primary border border-primary/30">
@@ -144,7 +126,7 @@ export default function LoginPage() {
               { icon: Users,         label: 'فريق العمل',    sub: 'أدوار وصلاحيات',color: '#00D4FF' },
               { icon: MessageSquare, label: 'تواصل داخلي',   sub: 'شات + مكالمات', color: '#FF4757' },
             ].map((f, i) => (
-              <div key={i} className="glass glass-hover p-4 flex items-start gap-3" style={{ animationDelay: `${i * 60}ms` }}>
+              <div key={i} className="glass glass-hover p-4 flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${f.color}22`, border: `1px solid ${f.color}55` }}>
                   <f.icon size={18} style={{ color: f.color }} />
                 </div>
@@ -163,11 +145,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* ═══════ Right: Auth card ═══════ */}
+        {/* Right: Auth card */}
         <div className="order-1 lg:order-2 w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
           <div className="glass-strong p-7 glass-ring-primary">
 
-            {/* Tabs */}
             <div className="flex bg-white/5 rounded-full p-1 mb-6">
               {(['login', 'register'] as const).map((m) => (
                 <button
@@ -189,17 +170,14 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* OAuth buttons — Google + Apple only */}
+            {/* Google + Apple */}
             <div className="space-y-2.5 mb-5">
-              {/* Google */}
               <button
                 onClick={() => handleOAuth('google')}
                 disabled={busy}
                 className="w-full bg-white hover:bg-white/90 text-[#1f1f1f] font-bold py-3 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {oauthLoading === 'google' ? (
-                  <Loader2 size={18} className="animate-spin text-[#1f1f1f]" />
-                ) : (
+                {oauthLoading === 'google' ? <Loader2 size={18} className="animate-spin text-[#1f1f1f]" /> : (
                   <svg width="18" height="18" viewBox="0 0 48 48">
                     <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
                     <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
@@ -210,15 +188,12 @@ export default function LoginPage() {
                 <span className="text-sm">المتابعة مع Google</span>
               </button>
 
-              {/* Apple */}
               <button
                 onClick={() => handleOAuth('apple')}
                 disabled={busy}
                 className="w-full bg-black hover:bg-black/80 border border-white/10 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {oauthLoading === 'apple' ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
+                {oauthLoading === 'apple' ? <Loader2 size={18} className="animate-spin" /> : (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M17.05,20.28C16.07,21.23 15.03,21.08 14.03,20.68C12.95,20.26 11.96,20.24 10.82,20.68C9.39,21.26 8.64,21.09 7.78,20.28C3.21,15.64 3.86,8.34 9.05,8.05C10.36,8.12 11.27,8.8 12.04,8.85C13.19,8.63 14.29,7.99 15.53,8.07C17.09,8.19 18.26,8.84 19.03,10.03C15.79,12.06 16.56,16.26 19.53,17.49C18.94,18.8 18.18,20.09 17.04,20.29L17.05,20.28M12,8C11.88,6.04 13.47,4.43 15.31,4.26C15.57,6.5 13.34,8.22 12,8Z"/>
                   </svg>
@@ -227,14 +202,12 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Divider */}
             <div className="flex items-center gap-3 mb-5">
               <div className="flex-1 h-px bg-white/10" />
               <span className="text-white/40 text-xs">أو بالبريد الإلكتروني</span>
               <div className="flex-1 h-px bg-white/10" />
             </div>
 
-            {/* Email form */}
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               {mode === 'register' && (
                 <div>

@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth, GoogleAuthProvider, OAuthProvider,
-  signInWithPopup, signInWithRedirect, getRedirectResult,
+  signInWithPopup,
   type User as FirebaseUser,
 } from 'firebase/auth';
 
@@ -19,8 +19,6 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// ─── Providers ──────────────────────────────────────────────────────────────
-
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -28,43 +26,14 @@ const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
 
-// ─── Helper: try popup, fall back to redirect ────────────────────────────────
-async function signInWithProvider(provider: GoogleAuthProvider | OAuthProvider): Promise<string> {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user.getIdToken();
-  } catch (err: any) {
-    // Popup blocked by browser — use redirect instead
-    if (
-      err?.code === 'auth/popup-blocked' ||
-      err?.code === 'auth/popup-closed-by-user'
-    ) {
-      await signInWithRedirect(auth, provider);
-      return ''; // page will reload
-    }
-    throw err;
-  }
-}
-
 export async function signInWithGoogle(): Promise<string> {
-  return signInWithProvider(googleProvider);
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user.getIdToken();
 }
 
 export async function signInWithApple(): Promise<string> {
-  return signInWithProvider(appleProvider);
-}
-
-// Call this on page load to handle redirect result
-export async function getOAuthRedirectResult(): Promise<{ idToken: string; isNew: boolean } | null> {
-  try {
-    const result = await getRedirectResult(auth);
-    if (!result) return null;
-    const idToken = await result.user.getIdToken();
-    const isNew = (result as any)._tokenResponse?.isNewUser ?? false;
-    return { idToken, isNew };
-  } catch {
-    return null;
-  }
+  const result = await signInWithPopup(auth, appleProvider);
+  return result.user.getIdToken();
 }
 
 export type { FirebaseUser };
