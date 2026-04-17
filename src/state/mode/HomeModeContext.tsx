@@ -2,8 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo } fro
 import { useAuth } from "../auth/AuthContext";
 import { useCompany } from "../company/CompanyContext";
 
-// "public" media mode removed — app is always in company mode.
-export type HomeAppMode = "company";
+export type HomeAppMode = "company" | "public";
 
 type HomeModeContextType = {
   mode: HomeAppMode;
