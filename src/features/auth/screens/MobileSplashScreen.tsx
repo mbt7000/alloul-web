@@ -1,12 +1,11 @@
 /**
  * MobileSplashScreen
  * ──────────────────
- * Mobile-only: Logo + tagline + two big buttons (like X/TikTok/Instagram)
- * Shown before the actual login form.
+ * Mobile-only: Logo + tagline + auth buttons
  */
 import React, { useEffect, useRef } from "react";
 import {
-  View, Image, Pressable, StyleSheet, Animated,
+  View, Image, Pressable, StyleSheet, Animated, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppText from "../../../shared/ui/AppText";
@@ -14,9 +13,15 @@ import AppText from "../../../shared/ui/AppText";
 interface Props {
   onSignIn: () => void;
   onRegister: () => void;
+  onGoogle?: () => void;
+  onApple?: () => void;
+  canGoogle?: boolean;
+  canApple?: boolean;
 }
 
-export default function MobileSplashScreen({ onSignIn, onRegister }: Props) {
+export default function MobileSplashScreen({
+  onSignIn, onRegister, onGoogle, onApple, canGoogle, canApple,
+}: Props) {
   const insets = useSafeAreaInsets();
   const fade = useRef(new Animated.Value(0)).current;
 
@@ -26,12 +31,11 @@ export default function MobileSplashScreen({ onSignIn, onRegister }: Props) {
 
   return (
     <View style={[s.root, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
-      {/* Subtle background glow */}
       <View style={s.glow} pointerEvents="none" />
 
       <Animated.View style={[s.content, { opacity: fade }]}>
 
-        {/* ── Logo section ── */}
+        {/* ── Logo ── */}
         <View style={s.logoSection}>
           <Image
             source={require("../../../../assets/logo/alloul-logo-dark.png")}
@@ -43,6 +47,38 @@ export default function MobileSplashScreen({ onSignIn, onRegister }: Props) {
 
         {/* ── Buttons ── */}
         <View style={s.buttons}>
+
+          {/* Google */}
+          {canGoogle && onGoogle && (
+            <Pressable
+              style={({ pressed }) => [s.btnGoogle, pressed && { opacity: 0.85 }]}
+              onPress={onGoogle}
+            >
+              <AppText style={s.googleG}>G</AppText>
+              <AppText style={s.btnGoogleTxt}>المتابعة مع Google</AppText>
+            </Pressable>
+          )}
+
+          {/* Apple */}
+          {canApple && onApple && Platform.OS === "ios" && (
+            <Pressable
+              style={({ pressed }) => [s.btnApple, pressed && { opacity: 0.85 }]}
+              onPress={onApple}
+            >
+              <AppText style={s.appleIcon}></AppText>
+              <AppText style={s.btnAppleTxt}>المتابعة مع Apple</AppText>
+            </Pressable>
+          )}
+
+          {/* Divider */}
+          {(canGoogle || canApple) && (
+            <View style={s.divider}>
+              <View style={s.dividerLine} />
+              <AppText style={s.dividerText}>أو</AppText>
+              <View style={s.dividerLine} />
+            </View>
+          )}
+
           {/* Register — primary */}
           <Pressable
             style={({ pressed }) => [s.btnPrimary, pressed && { opacity: 0.9 }]}
@@ -78,75 +114,130 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
     justifyContent: "space-between",
-    alignItems: "center",
   },
   glow: {
     position: "absolute",
-    width: 320,
-    height: 320,
-    borderRadius: 160,
+    width: 400,
+    height: 400,
+    borderRadius: 200,
     backgroundColor: "#38e8ff",
-    opacity: 0.06,
-    top: 80,
+    opacity: 0.04,
+    top: -100,
     alignSelf: "center",
   },
   content: {
     flex: 1,
-    width: "100%",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
   },
-  // Logo
   logoSection: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
   },
   logo: {
     width: 180,
-    height: 70,
+    height: 65,
   },
   tagline: {
-    color: "#555",
-    fontSize: 14,
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 13,
     textAlign: "center",
+    marginTop: 12,
+    letterSpacing: 0.3,
   },
-  // Buttons
   buttons: {
-    width: "100%",
     gap: 12,
-    paddingBottom: 8,
   },
-  btnPrimary: {
-    width: "100%",
-    backgroundColor: "#38e8ff",
-    paddingVertical: 16,
-    borderRadius: 14,
+  // Google button
+  btnGoogle: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingVertical: 15,
+    gap: 10,
+  },
+  googleG: {
+    color: "#4285F4",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  btnGoogleTxt: {
+    color: "#1f1f1f",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  // Apple button
+  btnApple: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    borderRadius: 16,
+    paddingVertical: 15,
+    gap: 10,
+  },
+  appleIcon: {
+    color: "#fff",
+    fontSize: 17,
+  },
+  btnAppleTxt: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  // Divider
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  dividerText: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  // Primary button
+  btnPrimary: {
+    backgroundColor: "#38e8ff",
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: "center",
+    shadowColor: "#38e8ff",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
   btnPrimaryTxt: {
     color: "#000",
     fontSize: 16,
     fontWeight: "800",
   },
+  // Outline button
   btnOutline: {
-    width: "100%",
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: "#2a2a2a",
-    paddingVertical: 16,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    borderRadius: 16,
+    paddingVertical: 17,
     alignItems: "center",
   },
   btnOutlineTxt: {
-    color: "#fff",
+    color: "rgba(255,255,255,0.8)",
     fontSize: 16,
     fontWeight: "700",
   },
+  // Terms
   terms: {
-    color: "#444",
+    color: "rgba(255,255,255,0.2)",
     fontSize: 11,
     textAlign: "center",
     lineHeight: 18,
