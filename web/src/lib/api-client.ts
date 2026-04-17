@@ -222,3 +222,30 @@ export const summarizeTasks = (
     method: 'POST',
     body: JSON.stringify({ language: 'ar', ...opts }),
   });
+
+// ─── User profile update ──────────────────────────────────────────────────────
+export const updateUser = (fields: {
+  name?: string;
+  bio?: string;
+  location?: string;
+  skills?: string;
+  avatar_url?: string;
+}) =>
+  apiFetch<import('./auth').AuthUser>('/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(fields),
+  });
+
+// ─── Company creation ─────────────────────────────────────────────────────────
+export const createCompany = (body: {
+  name: string;
+  email?: string;
+  company_type?: string;
+  location?: string;
+  team_size?: string;
+  phone?: string;
+}) =>
+  apiFetch('/companies', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });

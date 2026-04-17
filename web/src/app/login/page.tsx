@@ -30,11 +30,15 @@ export default function LoginPage() {
     if (isAuthenticated()) router.replace('/');
   }, [router]);
 
-  const finishLogin = async (accessToken: string) => {
+  const finishLogin = async (accessToken: string, isNewUser = false) => {
     setToken(accessToken);
     const me = await getCurrentUser();
     setCachedUser(me);
-    router.replace('/');
+    if (isNewUser) {
+      router.replace('/onboarding');
+    } else {
+      router.replace('/');
+    }
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -42,10 +46,11 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = mode === 'login'
-        ? await login(email.trim(), password)
-        : await register(username.trim(), email.trim(), password);
-      await finishLogin(res.access_token);
+      const isRegister = mode === 'register';
+      const res = isRegister
+        ? await register(username.trim(), email.trim(), password)
+        : await login(email.trim(), password);
+      await finishLogin(res.access_token, isRegister);
     } catch (err: any) {
       setError(err?.message || (mode === 'login' ? 'فشل تسجيل الدخول' : 'فشل إنشاء الحساب'));
       setLoading(false);
@@ -61,10 +66,22 @@ export default function LoginPage() {
         provider === 'apple'  ? await signInWithApple() :
                                 await signInWithGithub();
       const res = await loginWithFirebase(idToken);
-      await finishLogin(res.access_token);
+      // Check if new user by looking at the response
+      const isNew = !!(res as any)?.is_new_user;
+      await finishLogin(res.access_token, isNew);
     } catch (err: any) {
       const msg = err?.message || `فشل تسجيل الدخول عبر ${provider}`;
-      if (!msg.includes('popup-closed-by-user') && !msg.includes('cancelled')) {
+      if (
+        msg.includes('popup-closed-by-user') ||
+        msg.includes('cancelled') ||
+        msg.includes('popup_closed_by_user')
+      ) {
+        // User dismissed — no error
+      } else if (msg.includes('unauthorized-domain') || msg.includes('auth/unauthorized-domain')) {
+        setError('النطاق غير مُفعَّل في Firebase. تواصل مع الدعم أو استخدم البريد الإلكتروني.');
+      } else if (msg.includes('network') || msg.includes('Network')) {
+        setError('تعذّر الاتصال. تحقق من اتصالك بالإنترنت.');
+      } else {
         setError(msg);
       }
       setOauthLoading(null);
@@ -98,7 +115,7 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div className="glass-subtle gap-2 border-accent-500/40 text-accent-500">
               <Sparkles size={14} />
-              <span>مدعوم بالذكاء الاصطناعي · Claude 4.5</span>
+              <span>مدعوم بـ ALLOUL Agent الخاص</span>
             </div>
             <h2 className="text-4xl lg:text-5xl font-black leading-tight">
               مساحة عمل واحدة

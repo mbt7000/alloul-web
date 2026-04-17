@@ -122,24 +122,30 @@ export default function WorkspacePage() {
         {/* Services grid */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-bold text-base">الخدمات</h3>
-            <button className="text-accent text-xs font-bold">عرض الكل</button>
+            <h3 className="text-white font-black text-base">الخدمات</h3>
+            <Link href="/workspace/services" className="text-primary-400 text-xs font-bold hover:text-primary-300">
+              عرض الكل
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {SERVICES.map((s) => (
+            {SERVICES.slice(0, 8).map((s) => (
               <Link
                 key={s.label}
                 href={s.href}
-                className="p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-primary/30 active:scale-[0.97] transition-all text-right min-h-[118px] flex flex-col justify-between"
+                className="group p-4 rounded-2xl border transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[118px] flex flex-col justify-between"
+                style={{
+                  borderColor: `${s.color}22`,
+                  background: `linear-gradient(135deg, ${s.color}0a, rgba(255,255,255,0.015))`,
+                }}
               >
                 <div
-                  className="w-[42px] h-[42px] rounded-xl flex items-center justify-center"
-                  style={{ background: `${s.color}22` }}
+                  className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{ background: `${s.color}22`, border: `1px solid ${s.color}33` }}
                 >
                   <s.icon size={20} style={{ color: s.color }} />
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm">{s.label}</div>
+                  <div className="text-white font-black text-sm">{s.label}</div>
                   <div className="text-white/40 text-[11px] mt-0.5">{s.sub}</div>
                 </div>
               </Link>
