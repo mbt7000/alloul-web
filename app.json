@@ -1,83 +1,16 @@
 {
   "expo": {
-    "name": "ALLOUL&Q",
-    "slug": "alloul-one",
-    "owner": "mbtalm1",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "scheme": [
-      "alloul",
-      "com.googleusercontent.apps.458917264125-2evr00j6a8j43a1nqkmr02evbhm92gck"
-    ],
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#04070f"
+    "extra": {
+      "eas": {
+        "projectId": "0b7b9938-77bb-4493-877a-8dfb6bdd3d87"
+      }
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.alloul.one",
-      "googleServicesFile": "./GoogleService-Info.plist",
+      "bundleIdentifier": "com.mbtalm1.t",
       "infoPlist": {
-        "NSCameraUsageDescription": "Upload photos and stories",
-        "NSPhotoLibraryUsageDescription": "Share photos in posts",
-        "NSMicrophoneUsageDescription": "Required for video and audio calls",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "31",
-      "runtimeVersion": "1.0.0"
-    },
-    "android": {
-      "package": "com.alloul.one",
-      "adaptiveIcon": {
-        "backgroundColor": "#04070f",
-        "foregroundImage": "./assets/icon.png"
-      },
-      "versionCode": 3,
-      "runtimeVersion": {
-        "policy": "appVersion"
-      }
-    },
-    "plugins": [
-      "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#0ea5e9",
-          "sounds": [],
-          "mode": "production"
-        }
-      ]
-    ],
-    "extra": {
-      "apiUrl": "https://api.alloul.app",
-      "apiDocsUrl": "https://api.alloul.app/docs",
-      "apiOpenapiUrl": "https://api.alloul.app/openapi.json",
-      "firebase": {
-        "apiKey": "AIzaSyDJ3ekWJLQXVZuTfqOFxNqFSIlKyIe5CiU",
-        "authDomain": "alloul.firebaseapp.com",
-        "projectId": "alloul",
-        "storageBucket": "alloul.appspot.com",
-        "messagingSenderId": "458917264125",
-        "appId": "1:458917264125:web:12e01e5c281f9ef5411c94"
-      },
-      "googleAuth": {
-        "iosClientId": "458917264125-2evr00j6a8j43a1nqkmr02evbhm92gck.apps.googleusercontent.com",
-        "androidClientId": "",
-        "webClientId": "458917264125-4b56p5dbgk10bvamo6k4oifegg2cnqio.apps.googleusercontent.com"
-      },
-      "githubAuth": {
-        "clientId": "Ov23lilP6oyNimxHqyXB"
-      },
-      "eas": {
-        "projectId": "17794375-d9c2-403a-890a-9c6037cb9990"
-      }
-    },
-    "updates": {
-      "url": "https://u.expo.dev/17794375-d9c2-403a-890a-9c6037cb9990"
+      "buildNumber": "32"
     }
   }
 }
