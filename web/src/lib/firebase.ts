@@ -1,10 +1,10 @@
 // ALLOUL&Q — Firebase Web SDK init
-// Same project as the mobile app (see app.json extra.firebase)
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getAuth, GoogleAuthProvider, GithubAuthProvider, OAuthProvider,
-  signInWithPopup, type User as FirebaseUser,
+  getAuth, GoogleAuthProvider, OAuthProvider,
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  type User as FirebaseUser,
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -24,33 +24,47 @@ export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-const githubProvider = new GithubAuthProvider();
-githubProvider.addScope('read:user');
-githubProvider.addScope('user:email');
-
-// Apple Sign In
 const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
 
-// ─── Sign-in functions ─────────────────────────────────────────────────────
-
-export async function signInWithGoogle(): Promise<string> {
-  const result = await signInWithPopup(auth, googleProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
+// ─── Helper: try popup, fall back to redirect ────────────────────────────────
+async function signInWithProvider(provider: GoogleAuthProvider | OAuthProvider): Promise<string> {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return result.user.getIdToken();
+  } catch (err: any) {
+    // Popup blocked by browser — use redirect instead
+    if (
+      err?.code === 'auth/popup-blocked' ||
+      err?.code === 'auth/popup-closed-by-user'
+    ) {
+      await signInWithRedirect(auth, provider);
+      return ''; // page will reload
+    }
+    throw err;
+  }
 }
 
-export async function signInWithGithub(): Promise<string> {
-  const result = await signInWithPopup(auth, githubProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
+export async function signInWithGoogle(): Promise<string> {
+  return signInWithProvider(googleProvider);
 }
 
 export async function signInWithApple(): Promise<string> {
-  const result = await signInWithPopup(auth, appleProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
+  return signInWithProvider(appleProvider);
+}
+
+// Call this on page load to handle redirect result
+export async function getOAuthRedirectResult(): Promise<{ idToken: string; isNew: boolean } | null> {
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
+    const idToken = await result.user.getIdToken();
+    const isNew = (result as any)._tokenResponse?.isNewUser ?? false;
+    return { idToken, isNew };
+  } catch {
+    return null;
+  }
 }
 
 export type { FirebaseUser };
