@@ -90,7 +90,8 @@ export default function AiAssistantPage() {
       });
 
       if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`);
+        const err = Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
+        throw err;
       }
 
       const reader = res.body.getReader();

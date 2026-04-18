@@ -3,8 +3,13 @@
     "name": "ALLOUL&Q",
     "slug": "t",
     "scheme": "alloul",
-    "runtimeVersion": {
-      "policy": "appVersion"
+    "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/0b7b9938-77bb-4493-877a-8dfb6bdd3d87",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "extra": {
       "eas": {
@@ -26,6 +31,10 @@
     },
     "ios": {
       "bundleIdentifier": "com.mbtalm1.t",
+      "entitlements": {
+        "aps-environment": "production",
+        "com.apple.developer.applesignin": ["Default"]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleURLTypes": [
@@ -37,7 +46,7 @@
           }
         ]
       },
-      "buildNumber": "34"
+      "buildNumber": "35"
     }
   }
 }

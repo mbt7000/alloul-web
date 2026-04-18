@@ -70,15 +70,21 @@ export default function LoginPage() {
     setError(null);
     setOauthLoading(provider);
     try {
-      // signInWithRedirect navigates the page away — result handled in useEffect on return
-      if (provider === 'google') await signInWithGoogle();
-      else await signInWithApple();
+      const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
+      const idToken = await fn();
+      if (!idToken) return; // redirect flow — page navigates away
+      const res = await loginWithFirebase(idToken);
+      const isNew = !!(res as any)?.is_new_user;
+      await finishLogin(res.access_token, isNew);
     } catch (err: any) {
+      const code = err?.code || '';
       const msg = err?.message || '';
-      if (!msg.includes('unauthorized-domain') && !msg.includes('auth/unauthorized-domain')) {
-        // most errors are silent (user cancelled, navigated away, etc.)
-      } else {
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        // user cancelled — no error shown
+      } else if (msg.includes('unauthorized-domain') || code === 'auth/unauthorized-domain') {
         setError('يرجى تفعيل النطاق في Firebase Console أو استخدم البريد الإلكتروني');
+      } else {
+        setError(msg || 'فشل الدخول عبر OAuth');
       }
       setOauthLoading(null);
     }

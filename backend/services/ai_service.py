@@ -417,7 +417,11 @@ class AIServiceProvider:
             max_tokens=max_tokens,
             temperature=temperature,
         ):
-            if chunk.get("content"):
+            # ollama_client.stream_chat yields plain strings
+            if isinstance(chunk, str):
+                if chunk:
+                    yield chunk
+            elif isinstance(chunk, dict) and chunk.get("content"):
                 yield chunk["content"]
 
 

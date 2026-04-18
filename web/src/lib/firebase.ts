@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth, GoogleAuthProvider, OAuthProvider,
-  signInWithRedirect, getRedirectResult,
+  signInWithPopup, signInWithRedirect, getRedirectResult,
   type User as FirebaseUser,
 } from 'firebase/auth';
 
@@ -26,22 +26,45 @@ const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
 
-// Redirect-based flow: navigates to provider, returns on completion
+// Popup-based flow (primary). Falls back to redirect if popups are blocked.
 export async function signInWithGoogle(): Promise<string> {
-  await signInWithRedirect(auth, googleProvider);
-  return ''; // page redirects away — never reached
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user.getIdToken();
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    // If popup was blocked, fall back to redirect
+    if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+      await signInWithRedirect(auth, googleProvider);
+      return ''; // page navigates away
+    }
+    throw err;
+  }
 }
 
 export async function signInWithApple(): Promise<string> {
-  await signInWithRedirect(auth, appleProvider);
-  return ''; // page redirects away — never reached
+  try {
+    const result = await signInWithPopup(auth, appleProvider);
+    return result.user.getIdToken();
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+      await signInWithRedirect(auth, appleProvider);
+      return '';
+    }
+    throw err;
+  }
 }
 
-// Called on page mount to pick up the result after redirect returns
+// Called on page mount to pick up redirect result (fallback path only)
 export async function getOAuthRedirectResult(): Promise<string | null> {
-  const result = await getRedirectResult(auth);
-  if (!result) return null;
-  return result.user.getIdToken();
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
+    return result.user.getIdToken();
+  } catch {
+    return null;
+  }
 }
 
 export type { FirebaseUser };

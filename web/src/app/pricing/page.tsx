@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Check,
   X,
@@ -12,15 +13,60 @@ import {
   Shield,
   Zap,
   Star,
+  Loader2,
 } from 'lucide-react';
+import { getToken, isAuthenticated } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
 
 export default function PricingPage() {
+  const router = useRouter();
   const [isYearly, setIsYearly] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const toggleFAQ = (index: number) => {
     setOpenFAQ(openFAQ === index ? null : index);
+  };
+
+  const handleSubscribe = async (planId: string) => {
+    if (!isAuthenticated()) {
+      router.push('/login?redirect=/pricing');
+      return;
+    }
+    setLoadingPlan(planId);
+    try {
+      const token = getToken();
+      // Ensure company exists
+      const companyRes = await fetch(`${API_BASE}/companies/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!companyRes.ok || !(await companyRes.json())) {
+        // Create company first
+        await fetch(`${API_BASE}/companies`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: 'شركتي', company_type: 'startup', size: '1-10' }),
+        });
+      }
+      const res = await fetch(`${API_BASE}/companies/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan_id: planId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'حدث خطأ');
+      }
+      const data = await res.json() as { checkout_url: string };
+      if (data.checkout_url) window.location.href = data.checkout_url;
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert(err?.message || 'حدث خطأ، أعد المحاولة');
+    } finally {
+      setLoadingPlan(null);
+    }
   };
 
   // ALLOUL&Q — real prices from Stripe Dashboard (via Cowork setup)
@@ -272,7 +318,12 @@ export default function PricingPage() {
                 )}
               </div>
 
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8">
+              <button
+                onClick={() => handleSubscribe('starter')}
+                disabled={!!loadingPlan}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loadingPlan === 'starter' ? <Loader2 size={18} className="animate-spin" /> : null}
                 ابدأ التجربة المجانية
               </button>
 
@@ -312,7 +363,12 @@ export default function PricingPage() {
                 )}
               </div>
 
-              <button className="w-full bg-gradient-to-l from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 rounded-lg transition-colors mb-8">
+              <button
+                onClick={() => handleSubscribe('pro')}
+                disabled={!!loadingPlan}
+                className="w-full bg-gradient-to-l from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 rounded-lg transition-colors mb-8 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loadingPlan === 'pro' ? <Loader2 size={18} className="animate-spin" /> : null}
                 اشترك الآن
               </button>
 
@@ -348,7 +404,12 @@ export default function PricingPage() {
                 )}
               </div>
 
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8">
+              <button
+                onClick={() => handleSubscribe('pro_plus')}
+                disabled={!!loadingPlan}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loadingPlan === 'pro_plus' ? <Loader2 size={18} className="animate-spin" /> : null}
                 اشترك الآن
               </button>
 

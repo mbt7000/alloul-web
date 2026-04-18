@@ -10,6 +10,14 @@ export interface CompanyInfo {
 export const getMyCompany = () =>
   apiFetch<CompanyInfo | null>("/companies/me").catch(() => null);
 
+export const createCompany = (body: {
+  name: string;
+  company_type?: string;
+  size?: string;
+  founder_name?: string;
+  founder_email?: string;
+}) => apiFetch<CompanyInfo>("/companies", { method: "POST", body: JSON.stringify(body) });
+
 export const getSubscriptionStatus = () =>
   apiFetch<{ status: string | null; plan_id: string | null }>("/companies/subscription-status").catch(() => ({
     status: null,
