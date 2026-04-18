@@ -161,7 +161,7 @@ def _build_system_prompt(mode: str, user: User, db: Session) -> str:
     if mode == "company":
         from models import (
             Company, CompanyMember, HandoverRecord, MemoryRecord,
-            Meeting, Project, ProjectTask, Deal, Department,
+            Meeting, Project, ProjectTask, DealRecord as Deal, Department,
         )
 
         member = db.query(CompanyMember).filter(CompanyMember.user_id == user.id).first()
@@ -334,12 +334,15 @@ async def chat(
             user_msg = m.get("content", "")
             break
 
-    # Save user message
+    # Save user message (best-effort — skip if table missing)
     if user_msg:
-        db.add(AgentMessageModel(
-            user_id=current_user.id, role="user", content=user_msg, mode=body.mode,
-        ))
-        db.commit()
+        try:
+            db.add(AgentMessageModel(
+                user_id=current_user.id, role="user", content=user_msg, mode=body.mode,
+            ))
+            db.commit()
+        except Exception:
+            db.rollback()
 
     # ── ALLOUL Agent (primary provider) ──────────────────────────────────────
     # Try ALLOUL Agent first — it's our private SQL/data agent on the server.
@@ -370,7 +373,14 @@ async def chat(
                 full_reply.append(err_msg)
                 yield f"data: {json.dumps({'text': err_msg})}\n\n"
             else:
-                system_prompt = _build_system_prompt(body.mode, current_user, db)
+                try:
+                    system_prompt = _build_system_prompt(body.mode, current_user, db)
+                except Exception:
+                    system_prompt = (
+                        "You are Alloul One AI — an intelligent business assistant. "
+                        "Be concise, insightful, and professional. "
+                        "Respond in the same language the user writes in (Arabic or English)."
+                    )
                 api_messages = []
                 for m in body.messages:
                     role = m.get("role", "user")
@@ -396,13 +406,16 @@ async def chat(
                     yield f"data: {json.dumps({'text': error_text})}\n\n"
                     full_reply.append(error_text)
 
-        # Save assistant response
+        # Save assistant response (best-effort — skip if table missing)
         final_text = "".join(full_reply)
         if final_text:
-            db.add(AgentMessageModel(
-                user_id=current_user.id, role="assistant", content=final_text, mode=body.mode,
-            ))
-            db.commit()
+            try:
+                db.add(AgentMessageModel(
+                    user_id=current_user.id, role="assistant", content=final_text, mode=body.mode,
+                ))
+                db.commit()
+            except Exception:
+                db.rollback()
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
@@ -422,7 +435,7 @@ async def analyze(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Generate a focused AI analysis for a specific workspace topic."""
-    from models import Company, CompanyMember, Project, ProjectTask, Deal, Meeting, HandoverRecord
+    from models import Company, CompanyMember, Project, ProjectTask, DealRecord as Deal, Meeting, HandoverRecord
 
     member = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
     if not member:
@@ -738,7 +751,7 @@ async def company_insights(
     Feature gate: ai_chat
     """
     from models import (
-        Company, CompanyMember, Project, ProjectTask, Deal, Meeting, HandoverRecord,
+        Company, CompanyMember, Project, ProjectTask, DealRecord as Deal, Meeting, HandoverRecord,
     )
 
     member = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
