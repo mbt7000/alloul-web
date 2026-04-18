@@ -1,8 +1,11 @@
 {
   "expo": {
     "name": "ALLOUL&Q",
-    "slug": "alloul-mobile",
+    "slug": "t",
     "scheme": "alloul",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "eas": {
         "projectId": "0b7b9938-77bb-4493-877a-8dfb6bdd3d87"

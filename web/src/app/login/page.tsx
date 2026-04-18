@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { login, register, loginWithFirebase, getCurrentUser } from '@/lib/api-client';
 import { setToken, setCachedUser, isAuthenticated } from '@/lib/auth';
-import { signInWithGoogle, signInWithApple } from '@/lib/firebase';
+import { signInWithGoogle, signInWithApple, getOAuthRedirectResult } from '@/lib/firebase';
 
 type Mode = 'login' | 'register';
 type OAuthProvider = 'google' | 'apple' | null;
@@ -27,7 +27,20 @@ export default function LoginPage() {
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider>(null);
 
   useEffect(() => {
-    if (isAuthenticated()) router.replace('/');
+    if (isAuthenticated()) { router.replace('/'); return; }
+    // Pick up result after OAuth redirect returns to this page
+    getOAuthRedirectResult().then(async (idToken) => {
+      if (!idToken) return;
+      setOauthLoading('google');
+      try {
+        const res = await loginWithFirebase(idToken);
+        const isNew = !!(res as any)?.is_new_user;
+        await finishLogin(res.access_token, isNew);
+      } catch (err: any) {
+        setError(err?.message || 'فشل الدخول عبر OAuth');
+        setOauthLoading(null);
+      }
+    }).catch(() => {});
   }, [router]);
 
   const finishLogin = async (accessToken: string, isNewUser = false) => {
@@ -57,20 +70,15 @@ export default function LoginPage() {
     setError(null);
     setOauthLoading(provider);
     try {
-      const idToken = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
-      const res = await loginWithFirebase(idToken);
-      const isNew = !!(res as any)?.is_new_user;
-      await finishLogin(res.access_token, isNew);
+      // signInWithRedirect navigates the page away — result handled in useEffect on return
+      if (provider === 'google') await signInWithGoogle();
+      else await signInWithApple();
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('popup-closed-by-user') || msg.includes('popup_closed_by_user') || msg.includes('cancelled')) {
-        // user dismissed — silent
-      } else if (msg.includes('unauthorized-domain') || msg.includes('auth/unauthorized-domain')) {
-        setError('يرجى تفعيل النطاق في Firebase Console أو استخدم البريد الإلكتروني');
-      } else if (msg.includes('network') || msg.includes('Network')) {
-        setError('تعذّر الاتصال. تحقق من اتصالك بالإنترنت.');
+      if (!msg.includes('unauthorized-domain') && !msg.includes('auth/unauthorized-domain')) {
+        // most errors are silent (user cancelled, navigated away, etc.)
       } else {
-        setError(msg || `فشل الدخول عبر ${provider === 'google' ? 'Google' : 'Apple'}`);
+        setError('يرجى تفعيل النطاق في Firebase Console أو استخدم البريد الإلكتروني');
       }
       setOauthLoading(null);
     }

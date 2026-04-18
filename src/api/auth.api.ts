@@ -71,6 +71,15 @@ export async function loginWithFirebase(idToken: string) {
   return res;
 }
 
+export async function loginWithAppleNative(identityToken: string, nonce: string) {
+  const res = await apiFetch<{ access_token: string }>("/auth/apple-native", {
+    method: "POST",
+    body: JSON.stringify({ identity_token: identityToken, nonce }),
+  });
+  await persistAccessToken(res.access_token);
+  return res;
+}
+
 export async function loginWithAzureAd(idToken: string) {
   const res = await apiFetch<{ access_token: string }>("/auth/azure-ad", {
     method: "POST",

@@ -18,7 +18,7 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
-import { login, register, loginWithFirebase, getApiBaseUrl } from "../../../api";
+import { login, register, loginWithFirebase, loginWithAppleNative, getApiBaseUrl } from "../../../api";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import Constants from "expo-constants";
@@ -202,8 +202,7 @@ export default function LoginScreen() {
         nonce: nonceSha256,
       });
       if (!appleCred.identityToken) { setError(t("auth.appleTokenMissing")); return; }
-      const firebaseIdToken = await exchangeAppleIdTokenForFirebaseIdToken(appleCred.identityToken, rawNonce);
-      await loginWithFirebase(firebaseIdToken);
+      await loginWithAppleNative(appleCred.identityToken, rawNonce);
       await refresh();
     } catch (e: unknown) {
       const coded = e as { code?: string; message?: string };

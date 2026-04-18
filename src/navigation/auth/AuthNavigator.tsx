@@ -8,7 +8,7 @@ import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 import LoginScreen from "../../features/auth/screens/LoginScreen";
 import MobileSplashScreen from "../../features/auth/screens/MobileSplashScreen";
-import { loginWithFirebase } from "../../api";
+import { loginWithAppleNative } from "../../api";
 import { useAuth } from "../../state/auth/AuthContext";
 import {
   exchangeAppleIdTokenForFirebaseIdToken,
@@ -115,8 +115,7 @@ export default function AuthNavigator() {
         nonce: nonceSha256,
       });
       if (!appleCred.identityToken) return;
-      const firebaseIdToken = await exchangeAppleIdTokenForFirebaseIdToken(appleCred.identityToken, rawNonce);
-      await loginWithFirebase(firebaseIdToken);
+      await loginWithAppleNative(appleCred.identityToken, rawNonce);
       await refresh();
     } catch (e: unknown) {
       const coded = e as { code?: string };

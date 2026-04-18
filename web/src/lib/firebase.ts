@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth, GoogleAuthProvider, OAuthProvider,
-  signInWithPopup,
+  signInWithRedirect, getRedirectResult,
   type User as FirebaseUser,
 } from 'firebase/auth';
 
@@ -26,13 +26,21 @@ const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
 
+// Redirect-based flow: navigates to provider, returns on completion
 export async function signInWithGoogle(): Promise<string> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user.getIdToken();
+  await signInWithRedirect(auth, googleProvider);
+  return ''; // page redirects away — never reached
 }
 
 export async function signInWithApple(): Promise<string> {
-  const result = await signInWithPopup(auth, appleProvider);
+  await signInWithRedirect(auth, appleProvider);
+  return ''; // page redirects away — never reached
+}
+
+// Called on page mount to pick up the result after redirect returns
+export async function getOAuthRedirectResult(): Promise<string | null> {
+  const result = await getRedirectResult(auth);
+  if (!result) return null;
   return result.user.getIdToken();
 }
 

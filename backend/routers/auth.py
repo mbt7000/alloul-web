@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import random
-from typing import Annotated
+from typing import Annotated, Any, Dict
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from jose import jwk, jwt, JWTError
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -25,6 +29,47 @@ from schemas import (
     UserResponse,
     UserUpdate,
 )
+
+
+# ── Apple native sign-in ──────────────────────────────────────────────────────
+
+class AppleNativeRequest(BaseModel):
+    identity_token: str
+    nonce: str  # raw nonce (unhashed)
+    bundle_id: str = "com.mbtalm1.t"
+
+
+_apple_keys_cache: Dict[str, Any] = {}
+
+
+async def _get_apple_public_key(kid: str) -> Any:
+    global _apple_keys_cache
+    if kid not in _apple_keys_cache:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get("https://appleid.apple.com/auth/keys")
+            resp.raise_for_status()
+            for k in resp.json().get("keys", []):
+                _apple_keys_cache[k["kid"]] = k
+    return _apple_keys_cache.get(kid)
+
+
+async def verify_apple_identity_token(identity_token: str, raw_nonce: str, bundle_id: str) -> dict:
+    header = jwt.get_unverified_header(identity_token)
+    apple_jwk = await _get_apple_public_key(header["kid"])
+    if not apple_jwk:
+        raise ValueError("Apple public key not found")
+    public_key = jwk.construct(apple_jwk, algorithm="RS256")
+    claims = jwt.decode(
+        identity_token,
+        public_key,
+        algorithms=["RS256"],
+        audience=bundle_id,
+        issuer="https://appleid.apple.com",
+    )
+    expected_nonce = hashlib.sha256(raw_nonce.encode()).hexdigest()
+    if claims.get("nonce") != expected_nonce:
+        raise ValueError("Nonce mismatch")
+    return claims
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -318,6 +363,59 @@ def firebase(
         token_type="bearer",
         user=_user_to_response(user),
     )
+
+
+@router.post("/apple-native", response_model=FirebaseResponse)
+async def apple_native(
+    body: AppleNativeRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Verify Apple identity token directly (for native iOS — bundle ID audience)."""
+    try:
+        claims = await verify_apple_identity_token(body.identity_token, body.nonce, body.bundle_id)
+    except (JWTError, ValueError, httpx.HTTPError) as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid Apple token: {exc}")
+
+    apple_uid = claims.get("sub")
+    email = claims.get("email") or ""
+    name = (email.split("@")[0] if email else f"apple_{apple_uid[:8]}") if apple_uid else "apple_user"
+
+    uid_key = f"apple:{apple_uid}"
+    user = db.query(User).filter(User.firebase_uid == uid_key).first()
+    if user:
+        if email: user.email = email
+        _ensure_icode(user, db)
+        db.commit()
+        db.refresh(user)
+    else:
+        existing = db.query(User).filter(User.email == email).first() if email else None
+        if existing:
+            existing.firebase_uid = uid_key
+            _ensure_icode(existing, db)
+            db.commit()
+            db.refresh(existing)
+            user = existing
+        else:
+            username = name.replace(".", "_")
+            base_username = username
+            n = 0
+            while db.query(User).filter(User.username == username).first():
+                n += 1
+                username = f"{base_username}_{n}"
+            user = User(
+                email=email or f"{apple_uid}@apple.local",
+                username=username,
+                hashed_password=None,
+                name=name,
+                firebase_uid=uid_key,
+                i_code=_generate_user_icode(db),
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+    token = create_access_token(data={"sub": str(user.id)})
+    return FirebaseResponse(access_token=token, token_type="bearer", user=_user_to_response(user))
 
 
 @router.post("/azure-ad", response_model=FirebaseResponse)
