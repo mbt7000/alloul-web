@@ -1,10 +1,8 @@
 'use client';
 
 /**
- * شكرة — AI Accountant Dashboard
- * --------------------------------
- * Privacy-first: invoice details stay in company's Google Sheets.
- * Supports Telegram Bot & WhatsApp Cloud API — company uses their own credentials.
+ * شكرة — نظام المحاسبة الذكي
+ * نظام محاسبة متكامل: مبيعات، مشتريات، رأس المال، تقارير، صلاحيات
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -12,14 +10,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, TrendingUp, TrendingDown, DollarSign, AlertCircle,
-  ExternalLink, Plus, RefreshCw, Loader2, CheckCircle, Clock,
+  ExternalLink, Plus, RefreshCw, Loader2, CheckCircle,
   BarChart3, Settings, Copy, Check, MessageCircle, Phone,
-  Shield, Users, Trash2, UserPlus, Eye, EyeOff, Lock, Unlock,
+  Shield, Users, Trash2, UserPlus, Eye, Lock,
+  Search, Wallet, ShoppingBag, List, LayoutDashboard,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { getToken, isAuthenticated } from '@/lib/auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 type DashboardData = {
   period: { year: number; month: number };
@@ -32,38 +33,48 @@ type DashboardData = {
     show_balances?: boolean; show_profits?: boolean;
     show_amounts?: boolean; show_vendors?: boolean;
     show_reports?: boolean; employees_can_add?: boolean;
+    initial_capital?: number; current_balance?: number;
   };
   is_founder?: boolean;
 };
 
+type Rec = {
+  id: number; record_type: 'income' | 'expense';
+  amount: number; currency: string; category: string | null;
+  vendor: string | null; description: string | null;
+  payment_status: string; recorded_at: string;
+  source: string; external_ref: string | null;
+  ai_confidence: number | null; needs_review: boolean;
+  created_at: string;
+};
+
 type BotInfo = {
-  service_email: string;
-  webhook_telegram: string;
-  webhook_whatsapp: string;
-  verify_token: string;
-  telegram_active: boolean;
-  whatsapp_active: boolean;
+  service_email: string; webhook_telegram: string; webhook_whatsapp: string;
+  verify_token: string; telegram_active: boolean; whatsapp_active: boolean;
 };
 
 type Permission = {
-  user_id: number;
-  name: string;
-  username?: string;
-  avatar?: string;
-  can_view_dashboard: boolean;
-  can_view_amounts: boolean;
-  can_view_profits: boolean;
-  can_view_reports: boolean;
-  can_view_vendors: boolean;
-  can_add_records: boolean;
-  can_edit_records: boolean;
-  can_delete_records: boolean;
-  can_use_bot: boolean;
+  user_id: number; name: string; username?: string;
+  can_view_dashboard: boolean; can_view_amounts: boolean; can_view_profits: boolean;
+  can_view_reports: boolean; can_view_vendors: boolean; can_add_records: boolean;
+  can_edit_records: boolean; can_delete_records: boolean; can_use_bot: boolean;
 };
 
+type Tab = 'overview' | 'sales' | 'purchases' | 'records' | 'settings';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const ARABIC_MONTHS = ['','يناير','فبراير','مارس','إبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-const INCOME_CATS  = ['مبيعات','خدمات','استثمارات','أخرى'];
-const EXPENSE_CATS = ['رواتب','إيجار','مشتريات','مصاريف تشغيل','تسويق','أخرى'];
+const INCOME_CATS   = ['مبيعات','خدمات','استثمارات','عمولة','أخرى'];
+const EXPENSE_CATS  = ['رواتب','إيجار','مشتريات','مصاريف تشغيل','تسويق','ضرائب','أخرى'];
+const CURRENCIES    = ['SAR','AED','USD','EUR','KWD','BHD','OMR','QAR','JOD','EGP','GBP'];
+const PAY_STATUS: Record<string,{label:string;cls:string}> = {
+  paid:    { label: 'مدفوع', cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+  pending: { label: 'معلق',  cls: 'bg-amber-500/20  text-amber-400  border-amber-500/30'  },
+  partial: { label: 'جزئي',  cls: 'bg-blue-500/20   text-blue-400   border-blue-500/30'   },
+};
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Toggle({ label, desc, value, onChange }: { label: string; desc?: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -72,184 +83,266 @@ function Toggle({ label, desc, value, onChange }: { label: string; desc?: string
         <p className="text-sm font-medium">{label}</p>
         {desc && <p className="text-xs text-white/40 mt-0.5">{desc}</p>}
       </div>
-      <button
-        onClick={() => onChange(!value)}
-        className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${value ? 'bg-emerald-500' : 'bg-white/20'}`}
-      >
+      <button onClick={() => onChange(!value)}
+        className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${value ? 'bg-emerald-500' : 'bg-white/20'}`}>
         <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${value ? 'right-0.5' : 'left-0.5'}`} />
       </button>
     </div>
   );
 }
 
+function PayBadge({ status }: { status: string }) {
+  const s = PAY_STATUS[status] ?? PAY_STATUS.paid;
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${s.cls}`}>{s.label}</span>;
+}
+
+function RecordRow({ rec, fmt, showAmt, showVen }: { rec: Rec; fmt: (n:number)=>string; showAmt: boolean; showVen: boolean }) {
+  const isInc = rec.record_type === 'income';
+  const dateStr = new Date(rec.recorded_at).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+  return (
+    <div className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0">
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isInc ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}>
+        {isInc ? <TrendingUp className="w-4 h-4 text-emerald-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {showVen && rec.vendor && <span className="text-sm font-medium truncate max-w-[140px]">{rec.vendor}</span>}
+          {rec.category && (
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${isInc ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+              {rec.category}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-white/40 mt-0.5">
+          {dateStr}
+          {rec.needs_review && <span className="text-amber-400 mr-2">⚠ مراجعة</span>}
+        </p>
+      </div>
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className={`text-sm font-bold ${isInc ? 'text-emerald-400' : 'text-red-400'}`}>
+          {showAmt ? `${isInc ? '+' : '-'}${fmt(rec.amount)}` : '••••'}
+        </span>
+        <PayBadge status={rec.payment_status ?? 'paid'} />
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function AccountingPage() {
   const router = useRouter();
-  const [data,      setData]      = useState<DashboardData | null>(null);
-  const [botInfo,   setBotInfo]   = useState<BotInfo | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [addOpen,   setAddOpen]   = useState(false);
-  const [setupOpen, setSetupOpen] = useState(false);
-  const [setupTab,  setSetupTab]  = useState<'telegram'|'whatsapp'|'sheet'|'privacy'|'permissions'>('sheet');
-  const [saving,    setSaving]    = useState(false);
-  const [copied,    setCopied]    = useState<string|null>(null);
 
-  const [recordForm, setRecordForm] = useState({ record_type: 'expense' as 'income'|'expense', amount: '', category: '', external_ref: '' });
-  const [tgToken,    setTgToken]    = useState('');
-  const [waNumId,    setWaNumId]    = useState('');
-  const [waToken,    setWaToken]    = useState('');
-  const [sheetUrl,   setSheetUrl]   = useState('');
-  const [currency,   setCurrency]   = useState('SAR');
+  const [data,       setData]       = useState<DashboardData | null>(null);
+  const [botInfo,    setBotInfo]    = useState<BotInfo | null>(null);
+  const [records,    setRecords]    = useState<Rec[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [recLoading, setRecLoading] = useState(false);
+  const [activeTab,  setActiveTab]  = useState<Tab>('overview');
+  const [addOpen,    setAddOpen]    = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [copied,     setCopied]     = useState<string|null>(null);
 
-  // Privacy toggles
-  const [privShowBalances,    setPrivShowBalances]    = useState(true);
-  const [privShowProfits,     setPrivShowProfits]     = useState(true);
-  const [privShowAmounts,     setPrivShowAmounts]     = useState(true);
-  const [privShowVendors,     setPrivShowVendors]     = useState(true);
-  const [privShowReports,     setPrivShowReports]     = useState(true);
-  const [privEmployeesCanAdd, setPrivEmployeesCanAdd] = useState(true);
+  // Record form
+  const emptyForm = () => ({
+    record_type: 'expense' as 'income'|'expense',
+    amount: '', currency: 'SAR', category: '',
+    vendor: '', description: '', payment_status: 'paid',
+    external_ref: '', recorded_at: new Date().toISOString().split('T')[0],
+  });
+  const [form, setForm] = useState(emptyForm());
 
-  // Permissions management
-  const [permissions,    setPermissions]    = useState<Permission[]>([]);
-  const [permLoading,    setPermLoading]    = useState(false);
-  const [newUserId,      setNewUserId]      = useState('');
-  const [grantPreset,    setGrantPreset]    = useState<'viewer'|'editor'|'full'>('viewer');
-  const [grantSaving,    setGrantSaving]    = useState(false);
+  // Filter / search
+  const [search,     setSearch]     = useState('');
+  const [filterType, setFilterType] = useState<'all'|'income'|'expense'>('all');
+
+  // Setup form
+  const [tgToken,         setTgToken]         = useState('');
+  const [waNumId,         setWaNumId]         = useState('');
+  const [waToken,         setWaToken]         = useState('');
+  const [sheetUrl,        setSheetUrl]        = useState('');
+  const [currency,        setCurrency]        = useState('SAR');
+  const [initialCapital,  setInitialCapital]  = useState('');
+  const [settingsTab,     setSettingsTab]     = useState<'sheet'|'telegram'|'whatsapp'|'privacy'|'permissions'>('sheet');
+
+  // Privacy
+  const [pShowBal,  setPShowBal]  = useState(true);
+  const [pShowProf, setPShowProf] = useState(true);
+  const [pShowAmt,  setPShowAmt]  = useState(true);
+  const [pShowVen,  setPShowVen]  = useState(true);
+  const [pShowRep,  setPShowRep]  = useState(true);
+  const [pEmpAdd,   setPEmpAdd]   = useState(true);
+
+  // Permissions
+  const [perms,       setPerms]       = useState<Permission[]>([]);
+  const [permLoad,    setPermLoad]    = useState(false);
+  const [newUserId,   setNewUserId]   = useState('');
+  const [preset,      setPreset]      = useState<'viewer'|'editor'|'full'>('viewer');
+  const [grantSaving, setGrantSaving] = useState(false);
 
   useEffect(() => { if (!isAuthenticated()) router.replace('/login'); }, [router]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const token = getToken();
-      const h = token ? { Authorization: `Bearer ${token}` } : {};
+      const h = getToken() ? { Authorization: `Bearer ${getToken()}` } : {} as Record<string,string>;
       const [d1, d2] = await Promise.all([
         fetch(`${API_BASE}/accounting/dashboard`, { headers: h }).then(r => r.ok ? r.json() : null),
         fetch(`${API_BASE}/accounting/bot/info`,  { headers: h }).then(r => r.ok ? r.json() : null),
       ]);
-      setData(d1);
-      setBotInfo(d2);
-      if (d1?.setup?.google_sheet_url) setSheetUrl(d1.setup.google_sheet_url);
+      setData(d1); setBotInfo(d2);
       if (d1?.setup) {
-        setPrivShowBalances(d1.setup.show_balances ?? true);
-        setPrivShowProfits(d1.setup.show_profits ?? true);
-        setPrivShowAmounts(d1.setup.show_amounts ?? true);
-        setPrivShowVendors(d1.setup.show_vendors ?? true);
-        setPrivShowReports(d1.setup.show_reports ?? true);
-        setPrivEmployeesCanAdd(d1.setup.employees_can_add ?? true);
+        if (d1.setup.google_sheet_url) setSheetUrl(d1.setup.google_sheet_url);
+        if (d1.setup.initial_capital != null) setInitialCapital(String(d1.setup.initial_capital));
+        setPShowBal(d1.setup.show_balances ?? true);
+        setPShowProf(d1.setup.show_profits ?? true);
+        setPShowAmt(d1.setup.show_amounts ?? true);
+        setPShowVen(d1.setup.show_vendors ?? true);
+        setPShowRep(d1.setup.show_reports ?? true);
+        setPEmpAdd(d1.setup.employees_can_add ?? true);
       }
     } catch { /* empty */ }
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  const loadPermissions = useCallback(async () => {
-    setPermLoading(true);
+  const loadRecs = useCallback(async (type?: 'income'|'expense') => {
+    setRecLoading(true);
     try {
-      const token = getToken();
-      const r = await fetch(`${API_BASE}/accounting/permissions`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (r.ok) setPermissions(await r.json());
+      const h = getToken() ? { Authorization: `Bearer ${getToken()}` } : {} as Record<string,string>;
+      const url = `${API_BASE}/accounting/records/recent?limit=50${type ? `&record_type=${type}` : ''}`;
+      const r = await fetch(url, { headers: h });
+      if (r.ok) setRecords(await r.json());
     } catch { /* empty */ }
-    finally { setPermLoading(false); }
+    finally { setRecLoading(false); }
   }, []);
 
-  useEffect(() => {
-    if (setupOpen && setupTab === 'permissions') loadPermissions();
-  }, [setupOpen, setupTab, loadPermissions]);
+  const loadPerms = useCallback(async () => {
+    setPermLoad(true);
+    try {
+      const h = getToken() ? { Authorization: `Bearer ${getToken()}` } : {} as Record<string,string>;
+      const r = await fetch(`${API_BASE}/accounting/permissions`, { headers: h });
+      if (r.ok) setPerms(await r.json());
+    } catch { /* empty */ }
+    finally { setPermLoad(false); }
+  }, []);
 
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(key);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (activeTab === 'sales')     loadRecs('income');
+    else if (activeTab === 'purchases') loadRecs('expense');
+    else if (activeTab === 'records')   loadRecs();
+  }, [activeTab, loadRecs]);
+  useEffect(() => {
+    if (activeTab === 'settings' && settingsTab === 'permissions') loadPerms();
+  }, [activeTab, settingsTab, loadPerms]);
+
+  const copyText = (t: string, k: string) => {
+    navigator.clipboard.writeText(t); setCopied(k);
     setTimeout(() => setCopied(null), 2000);
   };
 
   const saveSetup = async () => {
     setSaving(true);
     try {
-      const token = getToken();
+      const h = { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
       await fetch(`${API_BASE}/accounting/setup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        method: 'POST', headers: h,
         body: JSON.stringify({
-          google_sheet_url:           sheetUrl || null,
-          telegram_bot_token:         tgToken  || null,
-          whatsapp_phone_number_id:   waNumId  || null,
-          whatsapp_access_token:      waToken  || null,
+          google_sheet_url: sheetUrl || null,
+          telegram_bot_token: tgToken || null,
+          whatsapp_phone_number_id: waNumId || null,
+          whatsapp_access_token: waToken || null,
           currency,
-          show_balances:    privShowBalances,
-          show_profits:     privShowProfits,
-          show_amounts:     privShowAmounts,
-          show_vendors:     privShowVendors,
-          show_reports:     privShowReports,
-          employees_can_add: privEmployeesCanAdd,
+          initial_capital: initialCapital ? parseFloat(initialCapital) : null,
+          show_balances: pShowBal, show_profits: pShowProf, show_amounts: pShowAmt,
+          show_vendors: pShowVen, show_reports: pShowRep, employees_can_add: pEmpAdd,
         }),
       });
-      setSetupOpen(false);
       load();
     } catch { alert('تعذر الحفظ.'); }
     finally { setSaving(false); }
   };
 
-  const grantPermission = async () => {
+  const saveRecord = async () => {
+    if (!form.amount || !form.category) return;
+    setSaving(true);
+    try {
+      const h = { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
+      await fetch(`${API_BASE}/accounting/records`, {
+        method: 'POST', headers: h,
+        body: JSON.stringify({
+          ...form,
+          amount: parseFloat(form.amount),
+          recorded_at: form.recorded_at ? new Date(form.recorded_at).toISOString() : new Date().toISOString(),
+          vendor: form.vendor || null, description: form.description || null,
+          external_ref: form.external_ref || null, source: 'manual',
+        }),
+      });
+      setAddOpen(false); setForm(emptyForm()); load();
+      if (activeTab === 'sales') loadRecs('income');
+      else if (activeTab === 'purchases') loadRecs('expense');
+      else if (activeTab === 'records') loadRecs();
+    } catch { alert('تعذر الحفظ.'); }
+    finally { setSaving(false); }
+  };
+
+  const grantPerm = async () => {
     if (!newUserId.trim()) return;
     setGrantSaving(true);
     const presets = {
-      viewer: { can_view_dashboard: true, can_view_amounts: false, can_view_profits: false, can_view_reports: false, can_view_vendors: false, can_add_records: false, can_edit_records: false, can_delete_records: false, can_use_bot: false },
-      editor: { can_view_dashboard: true, can_view_amounts: true,  can_view_profits: false, can_view_reports: false, can_view_vendors: true,  can_add_records: true,  can_edit_records: false, can_delete_records: false, can_use_bot: true  },
-      full:   { can_view_dashboard: true, can_view_amounts: true,  can_view_profits: true,  can_view_reports: true,  can_view_vendors: true,  can_add_records: true,  can_edit_records: true,  can_delete_records: false, can_use_bot: true  },
+      viewer: { can_view_dashboard:true, can_view_amounts:false, can_view_profits:false, can_view_reports:false, can_view_vendors:false, can_add_records:false, can_edit_records:false, can_delete_records:false, can_use_bot:false },
+      editor: { can_view_dashboard:true, can_view_amounts:true,  can_view_profits:false, can_view_reports:false, can_view_vendors:true,  can_add_records:true,  can_edit_records:false, can_delete_records:false, can_use_bot:true  },
+      full:   { can_view_dashboard:true, can_view_amounts:true,  can_view_profits:true,  can_view_reports:true,  can_view_vendors:true,  can_add_records:true,  can_edit_records:true,  can_delete_records:false, can_use_bot:true  },
     };
     try {
-      const token = getToken();
+      const h = { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
       const r = await fetch(`${API_BASE}/accounting/permissions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ user_id: parseInt(newUserId), ...presets[grantPreset] }),
+        method: 'POST', headers: h,
+        body: JSON.stringify({ user_id: parseInt(newUserId), ...presets[preset] }),
       });
-      if (r.ok) { setNewUserId(''); loadPermissions(); }
+      if (r.ok) { setNewUserId(''); loadPerms(); }
       else { const e = await r.json(); alert(e.detail || 'تعذر الإضافة'); }
     } catch { alert('تعذر الإضافة.'); }
     finally { setGrantSaving(false); }
   };
 
-  const revokePermission = async (userId: number) => {
-    if (!confirm('هل تريد إلغاء صلاحيات هذا الموظف؟')) return;
+  const revokePerm = async (uid: number) => {
+    if (!confirm('إلغاء صلاحيات هذا الموظف؟')) return;
     try {
-      const token = getToken();
-      await fetch(`${API_BASE}/accounting/permissions/${userId}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      loadPermissions();
-    } catch { alert('تعذر الحذف.'); }
+      const h = getToken() ? { Authorization: `Bearer ${getToken()}` } : {} as Record<string,string>;
+      await fetch(`${API_BASE}/accounting/permissions/${uid}`, { method: 'DELETE', headers: h });
+      loadPerms();
+    } catch { /* empty */ }
   };
 
-  const saveRecord = async () => {
-    if (!recordForm.amount || !recordForm.category) return;
-    setSaving(true);
-    try {
-      const token = getToken();
-      await fetch(`${API_BASE}/accounting/records`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ...recordForm, amount: parseFloat(recordForm.amount), source: 'manual', recorded_at: new Date().toISOString() }),
-      });
-      setAddOpen(false);
-      setRecordForm({ record_type: 'expense', amount: '', category: '', external_ref: '' });
-      load();
-    } catch { alert('تعذر الحفظ.'); }
-    finally { setSaving(false); }
-  };
+  // Derived
+  const isFounder  = data?.is_founder ?? false;
+  const showAmt    = isFounder || (data?.setup.show_amounts ?? true);
+  const showVen    = isFounder || (data?.setup.show_vendors ?? true);
+  const showBal    = isFounder || (data?.setup.show_balances ?? true);
+  const showProf   = isFounder || (data?.setup.show_profits ?? true);
 
   const fmt = (n: number) => {
     try { return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: data?.setup.currency || 'SAR', maximumFractionDigits: 0 }).format(n); }
     catch { return n.toFixed(0); }
   };
+  const mask = (n: number, show: boolean) => show ? fmt(n) : '••••';
 
   const maxTrend = data ? Math.max(...data.trend.map(t => Math.max(t.income, t.expense)), 1) : 1;
-  const now = new Date();
-  const isFounder = data?.is_founder ?? false;
+  const top5 = [...(data?.breakdown ?? [])].sort((a,b) => b.total - a.total).slice(0, 5);
+  const filtered = records.filter(r => {
+    const okType = filterType === 'all' || r.record_type === (filterType === 'income' ? 'income' : 'expense');
+    const q = search.toLowerCase();
+    return okType && (!q || r.vendor?.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q) || r.category?.toLowerCase().includes(q));
+  });
+
+  const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview',   label: 'الرئيسية', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'sales',      label: 'مبيعات',   icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'purchases',  label: 'مشتريات',  icon: <ShoppingBag className="w-4 h-4" /> },
+    { id: 'records',    label: 'السجلات',  icon: <List className="w-4 h-4" /> },
+    { id: 'settings',   label: 'إعداد',    icon: <Settings className="w-4 h-4" /> },
+  ];
 
   return (
     <AppShell>
@@ -260,426 +353,545 @@ export default function AccountingPage() {
           <Link href="/workspace" className="p-2 rounded-full hover:bg-white/5 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg">ش</div>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">ش</div>
           <div className="flex-1">
-            <h1 className="text-base font-bold">شكرة — المحاسب الذكي</h1>
-            <p className="text-xs text-white/60">بياناتك تبقى في Google Sheet الخاص بك</p>
+            <h1 className="text-sm font-bold">شكرة — المحاسب الذكي</h1>
+            {data?.setup.google_sheet_url && (
+              <a href={data.setup.google_sheet_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-emerald-400">
+                <ExternalLink className="w-3 h-3" /> Google Sheet
+              </a>
+            )}
           </div>
-          <button onClick={() => setSetupOpen(true)} className="p-2 rounded-full hover:bg-white/5 transition-colors">
-            <Settings className="w-5 h-5" />
-          </button>
-          <button onClick={load} className="p-2 rounded-full hover:bg-white/5 transition-colors">
+          <button onClick={load} className="p-2 rounded-full hover:bg-white/5">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5 max-w-3xl mx-auto w-full">
+        {/* Tab Bar */}
+        <div className="glass-chrome sticky top-[57px] z-10 flex border-b border-white/5">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`flex-1 py-2.5 text-[11px] font-semibold flex flex-col items-center gap-0.5 transition-colors ${activeTab === t.id ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-white/40'}`}>
+              {t.icon}
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 max-w-3xl mx-auto w-full pb-24">
 
           {loading ? (
-            <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>
+            <div className="flex justify-center py-20"><Loader2 className="w-7 h-7 animate-spin text-primary-500" /></div>
           ) : (
+
             <>
-              {/* Bot Status */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className={`glass p-3 flex items-center gap-2 ${botInfo?.telegram_active ? 'border border-emerald-500/30' : 'border border-white/5'}`}>
-                  <MessageCircle className={`w-4 h-4 ${botInfo?.telegram_active ? 'text-emerald-400' : 'text-white/30'}`} />
-                  <div>
-                    <p className="text-xs font-semibold">Telegram Bot</p>
-                    <p className={`text-[10px] ${botInfo?.telegram_active ? 'text-emerald-400' : 'text-white/40'}`}>
-                      {botInfo?.telegram_active ? 'مفعّل ✓' : 'غير مفعّل'}
-                    </p>
-                  </div>
-                </div>
-                <div className={`glass p-3 flex items-center gap-2 ${botInfo?.whatsapp_active ? 'border border-emerald-500/30' : 'border border-white/5'}`}>
-                  <Phone className={`w-4 h-4 ${botInfo?.whatsapp_active ? 'text-emerald-400' : 'text-white/30'}`} />
-                  <div>
-                    <p className="text-xs font-semibold">WhatsApp Business</p>
-                    <p className={`text-[10px] ${botInfo?.whatsapp_active ? 'text-emerald-400' : 'text-white/40'}`}>
-                      {botInfo?.whatsapp_active ? 'مفعّل ✓' : 'غير مفعّل'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* ── Overview Tab ── */}
+              {activeTab === 'overview' && (
+                <div className="space-y-4">
 
-              {/* Setup Banner */}
-              {!botInfo?.telegram_active && !botInfo?.whatsapp_active && (
-                <button onClick={() => setSetupOpen(true)} className="w-full glass border border-amber-500/30 p-4 flex items-start gap-3 text-right">
-                  <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-300">فعّل استقبال الفواتير</p>
-                    <p className="text-xs text-white/60 mt-1">ربط Telegram Bot أو WhatsApp Business لاستقبال الفواتير تلقائياً</p>
-                  </div>
-                </button>
-              )}
-
-              {/* Period */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm text-white/50">{ARABIC_MONTHS[now.getMonth() + 1]} {now.getFullYear()}</h2>
-                {data?.setup.google_sheet_url && (
-                  <a href={data.setup.google_sheet_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-emerald-400 hover:underline">
-                    <ExternalLink className="w-3 h-3" /> Google Sheet
-                  </a>
-                )}
-              </div>
-
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'الإيرادات',       value: fmt(data?.summary.total_income ?? 0),  icon: TrendingUp,   color: 'text-emerald-400' },
-                  { label: 'المصروفات',        value: fmt(data?.summary.total_expense ?? 0), icon: TrendingDown, color: 'text-red-400' },
-                  { label: 'صافي الربح',       value: fmt(data?.summary.net_profit ?? 0),    icon: DollarSign,   color: (data?.summary.net_profit ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400' },
-                  { label: 'بانتظار مراجعة',   value: String(data?.summary.pending_review ?? 0), icon: Clock, color: 'text-amber-400' },
-                ].map(item => (
-                  <div key={item.label} className="glass p-4">
+                  {/* رأس المال الحالي */}
+                  <div className="glass p-5 rounded-2xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <item.icon className={`w-4 h-4 ${item.color}`} />
-                      <span className="text-xs text-white/60">{item.label}</span>
+                      <Wallet className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs text-white/60">رأس المال الحالي</span>
                     </div>
-                    <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
+                    <p className="text-3xl font-black text-violet-400">
+                      {mask(data?.setup.current_balance ?? 0, showBal)}
+                    </p>
+                    <p className="text-[11px] text-white/30 mt-1.5">
+                      رأس المال الأولي: {mask(data?.setup.initial_capital ?? 0, showBal)}
+                    </p>
+                    <div className="mt-3 flex items-center gap-4 border-t border-white/5 pt-3">
+                      <div>
+                        <p className="text-[10px] text-white/40">إجمالي الوارد</p>
+                        <p className="text-sm font-bold text-emerald-400">{mask(data?.summary.total_income ?? 0, showBal)}</p>
+                      </div>
+                      <div className="w-px h-6 bg-white/10" />
+                      <div>
+                        <p className="text-[10px] text-white/40">إجمالي الصادر</p>
+                        <p className="text-sm font-bold text-red-400">{mask(data?.summary.total_expense ?? 0, showBal)}</p>
+                      </div>
+                      <div className="w-px h-6 bg-white/10" />
+                      <div>
+                        <p className="text-[10px] text-white/40">صافي الشهر</p>
+                        <p className={`text-sm font-bold ${(data?.summary.net_profit ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {mask(data?.summary.net_profit ?? 0, showProf)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Trend */}
-              {data && data.trend.length > 0 && (
-                <div className="glass p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="w-4 h-4 text-primary-400" />
-                    <h3 className="text-sm font-semibold">الاتجاه — آخر 6 أشهر</h3>
-                  </div>
-                  <div className="flex items-end gap-2 h-28">
-                    {data.trend.map((t, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full flex gap-0.5 items-end h-20">
-                          <div className="flex-1 bg-emerald-500/60 rounded-t" style={{ height: `${(t.income / maxTrend) * 100}%` }} />
-                          <div className="flex-1 bg-red-500/60 rounded-t"     style={{ height: `${(t.expense / maxTrend) * 100}%` }} />
+                  {/* 6-month Trend */}
+                  {data && data.trend.length > 0 && (
+                    <div className="glass p-5 rounded-2xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="w-4 h-4 text-primary-400" />
+                          <h3 className="text-sm font-semibold">آخر 6 أشهر</h3>
                         </div>
-                        <span className="text-[9px] text-white/40">{ARABIC_MONTHS[t.month]?.slice(0, 3)}</span>
+                        <div className="flex gap-3 text-[10px] text-white/40">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>إيرادات</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>مصروفات</span>
+                        </div>
+                      </div>
+                      <div className="flex items-end gap-2 h-28">
+                        {data.trend.map((t, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex gap-0.5 items-end h-20">
+                              <div className="flex-1 bg-emerald-500/60 rounded-t" style={{ height: `${(t.income / maxTrend) * 100}%` }} />
+                              <div className="flex-1 bg-red-500/60 rounded-t"     style={{ height: `${(t.expense / maxTrend) * 100}%` }} />
+                            </div>
+                            <span className="text-[9px] text-white/40">{ARABIC_MONTHS[t.month]?.slice(0,3)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Categories */}
+                  {top5.length > 0 && (
+                    <div className="glass p-5 rounded-2xl">
+                      <h3 className="text-sm font-semibold mb-3">أكثر الفئات نشاطاً</h3>
+                      {top5.map((b, i) => (
+                        <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${b.type === 'income' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                            <span className="text-sm">{b.category}</span>
+                            <span className="text-xs text-white/30">({b.count})</span>
+                          </div>
+                          <span className={`text-sm font-bold ${b.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {mask(b.total, showAmt)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Bot Status */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { icon: MessageCircle, label: 'Telegram Bot', active: botInfo?.telegram_active },
+                      { icon: Phone,         label: 'WhatsApp',      active: botInfo?.whatsapp_active },
+                    ].map(b => (
+                      <div key={b.label} className={`glass p-3 flex items-center gap-2 rounded-xl border ${b.active ? 'border-emerald-500/30' : 'border-white/5'}`}>
+                        <b.icon className={`w-4 h-4 ${b.active ? 'text-emerald-400' : 'text-white/20'}`} />
+                        <div>
+                          <p className="text-xs font-semibold">{b.label}</p>
+                          <p className={`text-[10px] ${b.active ? 'text-emerald-400' : 'text-white/30'}`}>{b.active ? 'مفعّل ✓' : 'غير مفعّل'}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Pending review warning */}
+                  {(data?.summary.pending_review ?? 0) > 0 && (
+                    <div className="glass border border-amber-500/20 p-4 rounded-2xl flex items-center gap-3">
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                      <p className="text-sm text-amber-300">{data?.summary.pending_review} سجل بانتظار المراجعة</p>
+                    </div>
+                  )}
+
+                  {/* Privacy note */}
+                  <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/5">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-white/40">تفاصيل الفواتير محفوظة في Google Sheet الخاص بشركتك — ALLOUL لا يراها.</p>
+                  </div>
                 </div>
               )}
 
-              {/* Breakdown */}
-              {data && data.breakdown.length > 0 && (
-                <div className="glass p-5">
-                  <h3 className="text-sm font-semibold mb-4">التفاصيل حسب الفئة</h3>
-                  {data.breakdown.map((b, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${b.type === 'income' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                        <span className="text-sm">{b.category}</span>
-                        <span className="text-xs text-white/40">({b.count})</span>
+              {/* ── Sales Tab ── */}
+              {activeTab === 'sales' && (
+                <div className="space-y-4">
+                  <div className="glass p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-white/50">إجمالي المبيعات — هذا الشهر</p>
+                      <p className="text-2xl font-black text-emerald-400">{mask(data?.summary.total_income ?? 0, showAmt)}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-emerald-400" />
+                    </div>
+                  </div>
+                  <div className="glass p-4 rounded-2xl">
+                    <h3 className="text-sm font-semibold mb-3">آخر المبيعات</h3>
+                    {recLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+                    ) : records.length === 0 ? (
+                      <p className="text-sm text-white/30 text-center py-6">لا توجد مبيعات بعد</p>
+                    ) : records.map(r => <RecordRow key={r.id} rec={r} fmt={fmt} showAmt={showAmt} showVen={showVen} />)}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Purchases Tab ── */}
+              {activeTab === 'purchases' && (
+                <div className="space-y-4">
+                  <div className="glass p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-white/50">إجمالي المشتريات — هذا الشهر</p>
+                      <p className="text-2xl font-black text-red-400">{mask(data?.summary.total_expense ?? 0, showAmt)}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center">
+                      <ShoppingBag className="w-6 h-6 text-red-400" />
+                    </div>
+                  </div>
+                  <div className="glass p-4 rounded-2xl">
+                    <h3 className="text-sm font-semibold mb-3">آخر المشتريات</h3>
+                    {recLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+                    ) : records.length === 0 ? (
+                      <p className="text-sm text-white/30 text-center py-6">لا توجد مشتريات بعد</p>
+                    ) : records.map(r => <RecordRow key={r.id} rec={r} fmt={fmt} showAmt={showAmt} showVen={showVen} />)}
+                  </div>
+                </div>
+              )}
+
+              {/* ── All Records Tab ── */}
+              {activeTab === 'records' && (
+                <div className="space-y-4">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input type="text" placeholder="ابحث بالجهة أو الوصف أو الفئة..." value={search}
+                      onChange={e => setSearch(e.target.value)} dir="rtl"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pr-10 pl-4 py-3 text-sm text-white placeholder-white/30 focus:border-emerald-500 focus:outline-none" />
+                  </div>
+                  {/* Filter chips */}
+                  <div className="flex gap-2">
+                    {([['all','الكل'],['income','إيرادات'],['expense','مصروفات']] as const).map(([t,l]) => (
+                      <button key={t} onClick={() => setFilterType(t)}
+                        className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${filterType === t
+                          ? t === 'income' ? 'bg-emerald-500 border-emerald-500 text-white'
+                          : t === 'expense' ? 'bg-red-500 border-red-500 text-white'
+                          : 'bg-white/10 border-white/20 text-white'
+                          : 'border-white/10 text-white/50'}`}>
+                        {l}
+                      </button>
+                    ))}
+                    <span className="mr-auto text-xs text-white/30 self-center">{filtered.length} سجل</span>
+                  </div>
+                  {/* List */}
+                  <div className="glass p-4 rounded-2xl">
+                    {recLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+                    ) : filtered.length === 0 ? (
+                      <p className="text-sm text-white/30 text-center py-6">لا توجد سجلات</p>
+                    ) : filtered.map(r => <RecordRow key={r.id} rec={r} fmt={fmt} showAmt={showAmt} showVen={showVen} />)}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Settings Tab ── */}
+              {activeTab === 'settings' && (
+                <div className="space-y-4">
+                  {/* Sub-tabs */}
+                  <div className="flex gap-1 bg-white/5 rounded-xl p-1 overflow-x-auto">
+                    {([
+                      ['sheet',       '📊 شيت'],
+                      ['telegram',    '✈️ تلغرام'],
+                      ['whatsapp',    '📱 واتساب'],
+                      ...(isFounder ? [['privacy','🔒 خصوصية'],['permissions','👥 صلاحيات']] as const : []),
+                    ] as [string,string][]).map(([k,label]) => (
+                      <button key={k} onClick={() => setSettingsTab(k as typeof settingsTab)}
+                        className={`py-2 px-3 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${settingsTab === k ? 'bg-emerald-500 text-white' : 'text-white/60'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sheet tab */}
+                  {settingsTab === 'sheet' && (
+                    <div className="space-y-3">
+                      <div className="glass p-4 rounded-2xl space-y-2 text-xs text-white/60">
+                        <p className="font-semibold text-white">خطوات ربط Google Sheet:</p>
+                        <p>١. أنشئ ملفاً في <a href="https://sheets.google.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">sheets.google.com</a></p>
+                        <p>٢. اضغط <strong>Share</strong> وأضف هذا الإيميل كـ Editor:</p>
+                        <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2">
+                          <code className="text-emerald-400 text-[11px] flex-1 break-all">{botInfo?.service_email || 'firebase-adminsdk-fbsvc@alloul.iam.gserviceaccount.com'}</code>
+                          <button onClick={() => copyText(botInfo?.service_email || 'firebase-adminsdk-fbsvc@alloul.iam.gserviceaccount.com', 'email')} className="text-white/40 hover:text-white">
+                            {copied === 'email' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                        <p>٣. الصق رابط الشيت أدناه</p>
                       </div>
-                      <span className={`text-sm font-semibold ${b.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(b.total)}</span>
+                      <input type="url" placeholder="https://docs.google.com/spreadsheets/d/..." value={sheetUrl} onChange={e => setSheetUrl(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-white/40 mb-1.5">العملة الافتراضية</p>
+                          <select value={currency} onChange={e => setCurrency(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white focus:outline-none text-sm">
+                            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/40 mb-1.5">رأس المال الأولي</p>
+                          <input type="number" placeholder="0" value={initialCapital} onChange={e => setInitialCapital(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none text-sm" />
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Telegram tab */}
+                  {settingsTab === 'telegram' && (
+                    <div className="space-y-3">
+                      <div className="glass p-4 rounded-2xl space-y-2 text-xs text-white/60">
+                        <p className="font-semibold text-white">ربط Telegram Bot:</p>
+                        <p>١. ابحث عن <strong className="text-white">@BotFather</strong> في تيلغرام</p>
+                        <p>٢. أرسل <code className="bg-white/10 px-1 rounded">/newbot</code></p>
+                        <p>٣. انسخ الـ Token والصقه أدناه</p>
+                        <p className="text-emerald-400">✅ الـ Webhook يُضبط تلقائياً</p>
+                      </div>
+                      <input type="text" placeholder="1234567890:AAFxxxxxxxxxx" value={tgToken} onChange={e => setTgToken(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none font-mono" />
+                      {botInfo?.webhook_telegram && (
+                        <div className="glass-subtle p-3 rounded-xl">
+                          <p className="text-xs text-white/40 mb-1">Webhook URL</p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-[10px] text-white/60 flex-1 break-all">{botInfo.webhook_telegram}</code>
+                            <button onClick={() => copyText(botInfo.webhook_telegram, 'tg')} className="text-white/30 hover:text-white flex-shrink-0">
+                              {copied === 'tg' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* WhatsApp tab */}
+                  {settingsTab === 'whatsapp' && (
+                    <div className="space-y-3">
+                      <div className="glass p-4 rounded-2xl space-y-2 text-xs text-white/60">
+                        <p className="font-semibold text-white">ربط WhatsApp Business API:</p>
+                        <p>١. افتح <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">Meta Developers</a></p>
+                        <p>٢. أضف منتج WhatsApp وأنشئ تطبيقاً</p>
+                        <p>٣. احصل على Phone Number ID و Access Token</p>
+                        {botInfo?.webhook_whatsapp && (
+                          <>
+                            <p>٤. Webhook URL:</p>
+                            <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2">
+                              <code className="text-emerald-400 text-[10px] flex-1 break-all">{botInfo.webhook_whatsapp}</code>
+                              <button onClick={() => copyText(botInfo.webhook_whatsapp, 'wa')} className="text-white/30 hover:text-white">
+                                {copied === 'wa' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                        {botInfo?.verify_token && (
+                          <>
+                            <p>٥. Verify Token:</p>
+                            <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2">
+                              <code className="text-emerald-400 text-[11px] flex-1">{botInfo.verify_token}</code>
+                              <button onClick={() => copyText(botInfo.verify_token, 'vt')} className="text-white/30 hover:text-white">
+                                {copied === 'vt' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <input type="text" placeholder="Phone Number ID" value={waNumId} onChange={e => setWaNumId(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none font-mono" />
+                      <input type="text" placeholder="Access Token" value={waToken} onChange={e => setWaToken(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none font-mono" />
+                    </div>
+                  )}
+
+                  {/* Privacy tab */}
+                  {settingsTab === 'privacy' && isFounder && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-white/40">تنطبق على الموظفين بشكل افتراضي. صلاحيات فردية من تبويب الصلاحيات.</p>
+                      <div className="glass p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Eye className="w-4 h-4 text-violet-400" />
+                          <p className="text-sm font-semibold">ما يراه الموظفون</p>
+                        </div>
+                        <Toggle label="إظهار الأرصدة" desc="إيرادات ومصروفات الشهر" value={pShowBal}  onChange={setPShowBal} />
+                        <Toggle label="إظهار نسبة الربح" desc="صافي الربح"             value={pShowProf} onChange={setPShowProf} />
+                        <Toggle label="إظهار المبالغ"  desc="مبلغ كل معاملة"          value={pShowAmt}  onChange={setPShowAmt} />
+                        <Toggle label="إظهار أسماء الجهات" desc="الموردون والعملاء"   value={pShowVen}  onChange={setPShowVen} />
+                        <Toggle label="إظهار التقارير"  desc="الرسوم البيانية"         value={pShowRep}  onChange={setPShowRep} />
+                      </div>
+                      <div className="glass p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Lock className="w-4 h-4 text-blue-400" />
+                          <p className="text-sm font-semibold">صلاحيات الإضافة</p>
+                        </div>
+                        <Toggle label="الموظفون يضيفون سجلات" desc="عبر البوت أو يدوياً" value={pEmpAdd} onChange={setPEmpAdd} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Permissions tab */}
+                  {settingsTab === 'permissions' && isFounder && (
+                    <div className="space-y-4">
+                      {/* Grant */}
+                      <div className="glass p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="w-4 h-4 text-blue-400" />
+                          <p className="text-sm font-semibold">منح صلاحية لموظف</p>
+                        </div>
+                        <input type="number" placeholder="User ID للموظف" value={newUserId} onChange={e => setNewUserId(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none" />
+                        <div className="grid grid-cols-3 gap-2">
+                          {([['viewer','👁 مشاهد','يرى فقط'],['editor','✏️ محرر','يرى ويضيف'],['full','⚡ كامل','كل الصلاحيات']] as const).map(([k,l,d]) => (
+                            <button key={k} onClick={() => setPreset(k)}
+                              className={`p-2 rounded-xl border text-center transition-colors ${preset === k ? 'bg-blue-500/20 border-blue-500/50' : 'border-white/10'}`}>
+                              <p className="text-xs font-semibold">{l}</p>
+                              <p className="text-[10px] text-white/40 mt-0.5">{d}</p>
+                            </button>
+                          ))}
+                        </div>
+                        <button onClick={grantPerm} disabled={grantSaving || !newUserId.trim()}
+                          className="w-full bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                          {grantSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} منح الصلاحية
+                        </button>
+                      </div>
+                      {/* List */}
+                      <div className="glass p-4 rounded-2xl">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-white/40" />
+                            <p className="text-sm font-semibold">الموظفون الحاليون</p>
+                          </div>
+                          <button onClick={loadPerms}><RefreshCw className={`w-3.5 h-3.5 text-white/30 ${permLoad ? 'animate-spin' : ''}`} /></button>
+                        </div>
+                        {permLoad ? (
+                          <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+                        ) : perms.length === 0 ? (
+                          <p className="text-xs text-white/30 text-center py-4">لا يوجد موظفون بصلاحيات مخصصة</p>
+                        ) : perms.map(p => (
+                          <div key={p.user_id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                {p.name?.charAt(0) || '?'}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{p.name || `#${p.user_id}`}</p>
+                                <div className="flex gap-1 flex-wrap mt-0.5">
+                                  {p.can_view_amounts && <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full">مبالغ</span>}
+                                  {p.can_view_profits && <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full">أرباح</span>}
+                                  {p.can_add_records  && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">إضافة</span>}
+                                  {p.can_edit_records && <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">تعديل</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <button onClick={() => revokePerm(p.user_id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/30 hover:text-red-400">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Save button (not on permissions tab) */}
+                  {settingsTab !== 'permissions' && (
+                    <button onClick={saveSetup} disabled={saving}
+                      className="w-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                      {saving && <Loader2 className="w-4 h-4 animate-spin" />} حفظ الإعداد
+                    </button>
+                  )}
                 </div>
               )}
-
-              {/* Founder shortcuts */}
-              {isFounder && (
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => { setSetupTab('privacy'); setSetupOpen(true); }} className="glass p-4 flex items-center gap-3 text-right hover:border-emerald-500/30 border border-white/5 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-4 h-4 text-violet-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">الخصوصية</p>
-                      <p className="text-xs text-white/40">تحكم بما يُرى</p>
-                    </div>
-                  </button>
-                  <button onClick={() => { setSetupTab('permissions'); setSetupOpen(true); }} className="glass p-4 flex items-center gap-3 text-right hover:border-emerald-500/30 border border-white/5 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                      <Users className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">الصلاحيات</p>
-                      <p className="text-xs text-white/40">إدارة الموظفين</p>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Privacy note */}
-              <div className="glass-subtle p-4 flex items-start gap-3">
-                <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-white/50">تفاصيل الفواتير (أسماء الموردين، المبالغ التفصيلية) مخزّنة في Google Sheet الخاص بك فقط — ALLOUL لا يراها.</p>
-              </div>
             </>
           )}
         </div>
 
         {/* FAB */}
-        <button onClick={() => setAddOpen(true)} className="fixed bottom-6 left-6 w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform z-30">
-          <Plus className="w-6 h-6 text-white" />
-        </button>
+        {activeTab !== 'settings' && (
+          <button onClick={() => {
+            setForm(f => ({ ...emptyForm(), record_type: activeTab === 'sales' ? 'income' : 'expense' }));
+            setAddOpen(true);
+          }}
+            className="fixed bottom-6 left-6 w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform z-30">
+            <Plus className="w-6 h-6 text-white" />
+          </button>
+        )}
       </div>
 
       {/* ── Add Record Modal ── */}
       {addOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setAddOpen(false)}>
-          <div className="w-full max-w-lg glass-chrome rounded-t-2xl p-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold">إضافة سجل يدوي</h2>
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end justify-center" onClick={() => setAddOpen(false)}>
+          <div className="w-full max-w-lg glass-chrome rounded-t-2xl p-6 pb-10 space-y-4 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold">إضافة سجل</h2>
+              <button onClick={() => setAddOpen(false)} className="text-white/40 hover:text-white text-xl leading-none">✕</button>
+            </div>
+
+            {/* Type */}
             <div className="grid grid-cols-2 gap-2">
               {(['income','expense'] as const).map(t => (
-                <button key={t} onClick={() => setRecordForm(f => ({ ...f, record_type: t, category: '' }))}
-                  className={`py-2 rounded-lg text-sm font-semibold transition-colors ${recordForm.record_type === t ? (t === 'income' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white') : 'glass'}`}>
-                  {t === 'income' ? 'إيراد' : 'مصروف'}
+                <button key={t} onClick={() => setForm(f => ({ ...f, record_type: t, category: '' }))}
+                  className={`py-2.5 rounded-xl text-sm font-semibold transition-colors ${form.record_type === t ? (t === 'income' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white') : 'glass text-white/60'}`}>
+                  {t === 'income' ? '📈 إيراد / مبيعات' : '📉 مصروف / مشتريات'}
                 </button>
               ))}
             </div>
-            <input type="number" placeholder="المبلغ" value={recordForm.amount} onChange={e => setRecordForm(f => ({ ...f, amount: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:border-primary-500 focus:outline-none" />
-            <div className="flex gap-2 flex-wrap">
-              {(recordForm.record_type === 'income' ? INCOME_CATS : EXPENSE_CATS).map(c => (
-                <button key={c} onClick={() => setRecordForm(f => ({ ...f, category: c }))}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${recordForm.category === c ? 'bg-primary-500 border-primary-500 text-white' : 'border-white/20'}`}>{c}</button>
-              ))}
+
+            {/* Vendor */}
+            <input type="text" placeholder="اسم الجهة / المورد / العميل (اختياري)" dir="rtl"
+              value={form.vendor} onChange={e => setForm(f => ({ ...f, vendor: e.target.value }))}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:border-emerald-500 focus:outline-none" />
+
+            {/* Amount + Currency */}
+            <div className="flex gap-2">
+              <input type="number" placeholder="المبلغ" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:border-emerald-500 focus:outline-none" />
+              <select value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+                className="w-[90px] bg-white/5 border border-white/10 rounded-xl px-2 py-3 text-white text-sm focus:outline-none">
+                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-            <button onClick={saveRecord} disabled={saving || !recordForm.amount || !recordForm.category}
-              className="w-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold py-3 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+
+            {/* Category */}
+            <div>
+              <p className="text-xs text-white/40 mb-2">الفئة *</p>
+              <div className="flex gap-2 flex-wrap">
+                {(form.record_type === 'income' ? INCOME_CATS : EXPENSE_CATS).map(c => (
+                  <button key={c} onClick={() => setForm(f => ({ ...f, category: c }))}
+                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${form.category === c ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-white/20 text-white/60'}`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Payment status */}
+            <div>
+              <p className="text-xs text-white/40 mb-2">حالة الدفع</p>
+              <div className="grid grid-cols-3 gap-2">
+                {(['paid','pending','partial'] as const).map(s => (
+                  <button key={s} onClick={() => setForm(f => ({ ...f, payment_status: s }))}
+                    className={`py-2 rounded-xl text-xs font-semibold border transition-colors ${form.payment_status === s ? PAY_STATUS[s].cls + ' border-current' : 'border-white/10 text-white/50'}`}>
+                    {PAY_STATUS[s].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date */}
+            <div>
+              <p className="text-xs text-white/40 mb-2">التاريخ</p>
+              <input type="date" value={form.recorded_at} onChange={e => setForm(f => ({ ...f, recorded_at: e.target.value }))}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-emerald-500 focus:outline-none" />
+            </div>
+
+            {/* Description */}
+            <textarea placeholder="الوصف (اختياري)" dir="rtl" rows={2} value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:border-emerald-500 focus:outline-none resize-none" />
+
+            {/* Invoice # */}
+            <input type="text" placeholder="رقم الفاتورة (اختياري)" value={form.external_ref}
+              onChange={e => setForm(f => ({ ...f, external_ref: e.target.value }))}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/30 focus:border-emerald-500 focus:outline-none" />
+
+            {/* Submit */}
+            <button onClick={saveRecord} disabled={saving || !form.amount || !form.category}
+              className="w-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />} حفظ السجل
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Setup Modal ── */}
-      {setupOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setSetupOpen(false)}>
-          <div className="w-full max-w-lg glass-chrome rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold mb-4">إعداد شكرة</h2>
-
-            {/* Tabs */}
-            <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-5 overflow-x-auto">
-              {([
-                ['sheet',       '📊 شيت'],
-                ['telegram',    '✈️ تلغرام'],
-                ['whatsapp',    '📱 واتساب'],
-                ...(isFounder ? [['privacy', '🔒 خصوصية'], ['permissions', '👥 صلاحيات']] as const : []),
-              ] as [string, string][]).map(([k, label]) => (
-                <button key={k} onClick={() => setSetupTab(k as typeof setupTab)}
-                  className={`py-2 px-3 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${setupTab === k ? 'bg-emerald-500 text-white' : 'text-white/60'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* ── Sheet Tab ── */}
-            {setupTab === 'sheet' && (
-              <div className="space-y-4">
-                <div className="glass p-4 rounded-xl space-y-2 text-xs text-white/70">
-                  <p className="font-semibold text-white">خطوات ربط Google Sheet:</p>
-                  <p>١. افتح <a href="https://sheets.google.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">sheets.google.com</a> وأنشئ ملفاً جديداً</p>
-                  <p>٢. اضغط <strong>Share</strong> وأضف هذا الإيميل كـ Editor:</p>
-                  <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2 mt-1">
-                    <code className="text-emerald-400 text-[11px] flex-1 break-all">{botInfo?.service_email || 'shukra@alloul-ai.iam.gserviceaccount.com'}</code>
-                    <button onClick={() => copyToClipboard(botInfo?.service_email || 'shukra@alloul-ai.iam.gserviceaccount.com', 'email')} className="text-white/40 hover:text-white">
-                      {copied === 'email' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    </button>
-                  </div>
-                  <p>٣. الصق رابط الشيت أدناه</p>
-                </div>
-                <input type="url" placeholder="https://docs.google.com/spreadsheets/d/..." value={sheetUrl} onChange={e => setSheetUrl(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none" />
-                <select value={currency} onChange={e => setCurrency(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none">
-                  {['SAR','AED','KWD','BHD','OMR','QAR','JOD','EGP','USD','EUR','GBP'].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* ── Telegram Tab ── */}
-            {setupTab === 'telegram' && (
-              <div className="space-y-4">
-                <div className="glass p-4 rounded-xl space-y-2 text-xs text-white/70">
-                  <p className="font-semibold text-white">خطوات ربط Telegram Bot (دقيقتان):</p>
-                  <p>١. افتح Telegram وابحث عن <strong className="text-white">@BotFather</strong></p>
-                  <p>٢. أرسل <code className="bg-white/10 px-1 rounded">/newbot</code></p>
-                  <p>٣. اختر اسماً للبوت مثل: <em>فواتير شركتي</em></p>
-                  <p>٤. انسخ الـ Token الذي يرسله BotFather والصقه أدناه</p>
-                  <p className="text-emerald-400">✅ ALLOUL سيضبط الـ Webhook تلقائياً</p>
-                </div>
-                <input type="text" placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value={tgToken} onChange={e => setTgToken(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none font-mono" />
-                {botInfo?.webhook_telegram && (
-                  <div className="glass-subtle p-3 rounded-lg">
-                    <p className="text-xs text-white/50 mb-1">Webhook URL (يُضبط تلقائياً)</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-[10px] text-white/70 flex-1 break-all">{botInfo.webhook_telegram}</code>
-                      <button onClick={() => copyToClipboard(botInfo.webhook_telegram, 'tg')} className="text-white/40 hover:text-white flex-shrink-0">
-                        {copied === 'tg' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── WhatsApp Tab ── */}
-            {setupTab === 'whatsapp' && (
-              <div className="space-y-4">
-                <div className="glass p-4 rounded-xl space-y-2 text-xs text-white/70">
-                  <p className="font-semibold text-white">خطوات ربط WhatsApp Business API:</p>
-                  <p>١. افتح <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">Meta Developers</a> وأنشئ تطبيقاً</p>
-                  <p>٢. أضف منتج <strong>WhatsApp</strong> للتطبيق</p>
-                  <p>٣. من لوحة WhatsApp احصل على:</p>
-                  <p className="pr-3">• <strong>Phone Number ID</strong></p>
-                  <p className="pr-3">• <strong>Permanent Access Token</strong></p>
-                  <p>٤. في إعدادات Webhook أدخل هذا الرابط:</p>
-                  {botInfo?.webhook_whatsapp && (
-                    <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2">
-                      <code className="text-emerald-400 text-[10px] flex-1 break-all">{botInfo.webhook_whatsapp}</code>
-                      <button onClick={() => copyToClipboard(botInfo.webhook_whatsapp, 'wa')} className="text-white/40 hover:text-white flex-shrink-0">
-                        {copied === 'wa' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      </button>
-                    </div>
-                  )}
-                  {botInfo?.verify_token && (
-                    <>
-                      <p>٥. Verify Token:</p>
-                      <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2">
-                        <code className="text-emerald-400 text-[11px] flex-1 break-all">{botInfo.verify_token}</code>
-                        <button onClick={() => copyToClipboard(botInfo.verify_token, 'vt')} className="text-white/40 hover:text-white flex-shrink-0">
-                          {copied === 'vt' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <input type="text" placeholder="Phone Number ID" value={waNumId} onChange={e => setWaNumId(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none font-mono" />
-                <input type="text" placeholder="Access Token" value={waToken} onChange={e => setWaToken(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none font-mono" />
-              </div>
-            )}
-
-            {/* ── Privacy Tab ── */}
-            {setupTab === 'privacy' && (
-              <div className="space-y-2">
-                <p className="text-xs text-white/50 mb-3">هذه الإعدادات تنطبق على جميع الموظفين بشكل افتراضي. يمكنك منح أذونات خاصة لأفراد معينين من تبويب "الصلاحيات".</p>
-
-                <div className="glass p-4 rounded-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Eye className="w-4 h-4 text-violet-400" />
-                    <p className="text-sm font-semibold">ما يراه الموظفون</p>
-                  </div>
-                  <Toggle label="إظهار الأرصدة" desc="إيرادات ومصروفات الشهر" value={privShowBalances} onChange={setPrivShowBalances} />
-                  <Toggle label="إظهار نسبة الربح" desc="صافي الربح والهامش" value={privShowProfits} onChange={setPrivShowProfits} />
-                  <Toggle label="إظهار المبالغ التفصيلية" desc="مبلغ كل معاملة" value={privShowAmounts} onChange={setPrivShowAmounts} />
-                  <Toggle label="إظهار أسماء الموردين" desc="الجهة في كل معاملة" value={privShowVendors} onChange={setPrivShowVendors} />
-                  <Toggle label="إظهار التقارير" desc="الرسوم البيانية والملخصات" value={privShowReports} onChange={setPrivShowReports} />
-                </div>
-
-                <div className="glass p-4 rounded-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Unlock className="w-4 h-4 text-blue-400" />
-                    <p className="text-sm font-semibold">صلاحيات الإضافة</p>
-                  </div>
-                  <Toggle label="الموظفون يمكنهم إضافة سجلات" desc="عبر البوت أو يدوياً" value={privEmployeesCanAdd} onChange={setPrivEmployeesCanAdd} />
-                </div>
-
-                <div className="glass-subtle p-3 rounded-xl flex items-start gap-2">
-                  <Lock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-white/40">المؤسس دائماً يرى كل شيء بغض النظر عن هذه الإعدادات.</p>
-                </div>
-              </div>
-            )}
-
-            {/* ── Permissions Tab ── */}
-            {setupTab === 'permissions' && (
-              <div className="space-y-4">
-                <p className="text-xs text-white/50">امنح موظفاً معيناً صلاحيات مخصصة بغض النظر عن الإعدادات العامة.</p>
-
-                {/* Grant section */}
-                <div className="glass p-4 rounded-xl space-y-3">
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-blue-400" />
-                    <p className="text-sm font-semibold">منح صلاحية</p>
-                  </div>
-                  <input
-                    type="number"
-                    placeholder="User ID للموظف"
-                    value={newUserId}
-                    onChange={e => setNewUserId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none"
-                  />
-                  <div className="grid grid-cols-3 gap-2">
-                    {([
-                      ['viewer', '👁 مشاهد',   'يرى اللوحة فقط'],
-                      ['editor', '✏️ محرر',    'يرى ويضيف'],
-                      ['full',   '⚡ كامل',   'كل الصلاحيات'],
-                    ] as const).map(([k, label, desc]) => (
-                      <button key={k} onClick={() => setGrantPreset(k as typeof grantPreset)}
-                        className={`p-2 rounded-lg border text-center transition-colors ${grantPreset === k ? 'bg-blue-500/20 border-blue-500/50' : 'border-white/10'}`}>
-                        <p className="text-xs font-semibold">{label}</p>
-                        <p className="text-[10px] text-white/40 mt-0.5">{desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={grantPermission} disabled={grantSaving || !newUserId.trim()}
-                    className="w-full bg-blue-500 text-white font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
-                    {grantSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} منح الصلاحية
-                  </button>
-                </div>
-
-                {/* Existing permissions */}
-                <div className="glass p-4 rounded-xl">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-white/60" />
-                      <p className="text-sm font-semibold">الموظفون الحاليون</p>
-                    </div>
-                    <button onClick={loadPermissions} className="text-white/40 hover:text-white">
-                      <RefreshCw className={`w-3.5 h-3.5 ${permLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                  </div>
-
-                  {permLoading ? (
-                    <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-white/40" /></div>
-                  ) : permissions.length === 0 ? (
-                    <p className="text-xs text-white/30 text-center py-4">لا يوجد موظفون بصلاحيات مخصصة</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {permissions.map(p => (
-                        <div key={p.user_id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                              {p.name?.charAt(0) || '?'}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{p.name || `User #${p.user_id}`}</p>
-                              <div className="flex gap-1 mt-0.5 flex-wrap">
-                                {p.can_view_amounts   && <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full">مبالغ</span>}
-                                {p.can_view_profits   && <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full">أرباح</span>}
-                                {p.can_view_reports   && <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded-full">تقارير</span>}
-                                {p.can_add_records    && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">إضافة</span>}
-                                {p.can_edit_records   && <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">تعديل</span>}
-                                {p.can_delete_records && <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">حذف</span>}
-                              </div>
-                            </div>
-                          </div>
-                          <button onClick={() => revokePermission(p.user_id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Save button (not shown on permissions tab) */}
-            {setupTab !== 'permissions' && (
-              <button onClick={saveSetup} disabled={saving}
-                className="w-full mt-5 bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold py-3 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />} حفظ الإعداد
-              </button>
-            )}
-            <button onClick={() => setSetupOpen(false)} className="w-full mt-2 text-center text-sm text-white/40 py-2">إلغاء</button>
           </div>
         </div>
       )}
