@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Briefcase, CheckSquare, Calendar, Users, Folder, BookOpen,
   TrendingUp, Video, MessageSquare, Sparkles, ArrowLeft, BarChart3, Loader2,
-  Phone, UserPlus, PieChart,
+  Phone, UserPlus, PieChart, Receipt,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import {
@@ -27,13 +27,14 @@ const QUICK_ACTIONS = [
 const SERVICES = [
   { icon: Sparkles,    label: 'المساعد الذكي', sub: 'AI للمهام والتسليمات', color: '#8B5CF6', href: '/workspace/ai' },
   { icon: Users,       label: 'الفريق',        sub: 'الموظفون والأدوار',  color: '#A78BFA', href: '/workspace/team' },
-  { icon: Folder,      label: 'المشاريع',      sub: 'كل المشاريع',        color: '#00D4FF', href: '/workspace/tasks' },
+  { icon: Receipt,     label: 'شكرة — محاسب', sub: 'AI محاسب ذكي',       color: '#10B981', href: '/workspace/accounting' },
   { icon: CheckSquare, label: 'المهام',        sub: 'قائمة كاملة',        color: '#2E8BFF', href: '/workspace/tasks' },
   { icon: Calendar,    label: 'الاجتماعات',    sub: 'الجدولة والفريق',    color: '#14E0A4', href: '/workspace/meetings' },
   { icon: Phone,       label: 'المكالمات',     sub: 'صوت وفيديو',         color: '#14E0A4', href: '/workspace/calls' },
   { icon: TrendingUp,  label: 'CRM',           sub: 'إدارة الصفقات',      color: '#FFB24D', href: '/workspace/crm' },
   { icon: MessageSquare, label: 'دردشة الشركة', sub: 'قنوات وشات',        color: '#00D4FF', href: '/workspace/chat' },
   { icon: Briefcase,   label: 'التسليمات',     sub: 'handover ذكي',       color: '#FFB24D', href: '/workspace/handover' },
+  { icon: Folder,      label: 'المشاريع',      sub: 'كل المشاريع',        color: '#00D4FF', href: '/workspace/tasks' },
   { icon: BookOpen,    label: 'قاعدة المعرفة', sub: 'مستندات + بحث ذكي',  color: '#8B5CF6', href: '/workspace/knowledge' },
   { icon: UserPlus,    label: 'التوظيف',       sub: 'مرشحون ومقابلات',    color: '#14E0A4', href: '/workspace/hiring' },
   { icon: PieChart,    label: 'التقارير',      sub: 'إحصائيات الشركة',    color: '#00D4FF', href: '/workspace/reports' },
