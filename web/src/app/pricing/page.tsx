@@ -69,22 +69,22 @@ export default function PricingPage() {
     }
   };
 
-  // ALLOUL&Q — real prices from Stripe Dashboard (via Cowork setup)
-  // starter  → prod_UB8zDoyn2YPFFY ($24/mo)
-  // pro      → prod_UB90ckEsKlawsj ($59/mo)
-  // pro_plus → prod_UB91gU3Z32gHKq ($289/mo)
+  // ALLOUL&Q — updated pricing 2025
+  // starter  → prod_UB8zDoyn2YPFFY ($49/mo)
+  // pro      → prod_UB90ckEsKlawsj ($129/mo)
+  // pro_plus → prod_UB91gU3Z32gHKq ($399/mo)
   const prices = {
-    starter:      { monthly: 24,  yearly: 240,  employees: 5 },
-    professional: { monthly: 59,  yearly: 590,  employees: 21 },
-    business:     { monthly: 289, yearly: 2890, employees: 33 },
+    starter:      { monthly: 49,  yearly: 470,  employees: 10 },
+    professional: { monthly: 129, yearly: 1240, employees: 30 },
+    business:     { monthly: 399, yearly: 3830, employees: -1 },
   };
 
   const monthlyPrice = isYearly ? 'سنوي' : 'شهري';
-  const savingsPercent = 17;
+  const savingsPercent = 20;
 
   const features = {
     starter: [
-      'حتى 5 موظفين',
+      'حتى 10 موظفين',
       'Media World كامل',
       'Corporate World أساسي',
       '10GB تخزين',
@@ -94,18 +94,22 @@ export default function PricingPage() {
     ],
     professional: [
       'كل ميزات Starter',
-      'حتى 21 موظف',
+      'حتى 30 موظف',
       'Corporate World كامل',
       '50GB تخزين',
       'AI Assistant (500 رسالة/شهر)',
+      'شكرة AI Accountant — محاسب ذكي',
+      'WhatsApp Bot محاسب',
       'مكالمات فيديو عبر Daily.co',
       'دعم أولوية',
       'تحليلات أساسية',
     ],
     business: [
       'كل ميزات Professional',
-      'حتى 33 موظف',
+      'موظفون غير محدودون',
       'AI Assistant غير محدود',
+      'شكرة AI Accountant — متقدم',
+      'WhatsApp Bot محاسب + تقارير تلقائية',
       '200GB تخزين',
       'SSO + 2FA',
       'API Access',
@@ -163,7 +167,7 @@ export default function PricingPage() {
     },
     {
       q: 'هل هناك خصم للدفع السنوي؟',
-      a: 'نعم! الدفع السنوي يوفر 17% مقارنة بالدفع الشهري.',
+      a: 'نعم! الدفع السنوي يوفر 20% مقارنة بالدفع الشهري.',
     },
   ];
 
@@ -189,11 +193,13 @@ export default function PricingPage() {
   ];
 
   const comparisonData = [
-    { label: 'عدد الموظفين', starter: '5', professional: '15', business: '32', enterprise: 'غير محدود' },
+    { label: 'عدد الموظفين', starter: '10', professional: '30', business: 'غير محدود', enterprise: 'غير محدود' },
     { label: 'التخزين', starter: '10GB', professional: '50GB', business: '200GB', enterprise: 'غير محدود' },
     { label: 'AI Messages', starter: '50/شهر', professional: '500/شهر', business: 'غير محدود', enterprise: 'غير محدود' },
     { label: 'Media World', starter: true, professional: true, business: true, enterprise: true },
     { label: 'Corporate World', starter: 'أساسي', professional: 'كامل', business: 'كامل', enterprise: 'كامل' },
+    { label: 'شكرة AI Accountant', starter: false, professional: 'أساسي', business: 'متقدم', enterprise: 'متقدم' },
+    { label: 'WhatsApp Bot محاسب', starter: false, professional: true, business: true, enterprise: true },
     { label: 'CRM', starter: false, professional: true, business: true, enterprise: true },
     { label: 'Video Meetings', starter: false, professional: true, business: true, enterprise: true },
     { label: 'API Access', starter: false, professional: false, business: true, enterprise: true },
@@ -313,7 +319,7 @@ export default function PricingPage() {
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    أو <span className="line-through">$360</span> شهرياً
+                    أو <span className="line-through">$588</span> شهرياً
                   </p>
                 )}
               </div>
@@ -358,7 +364,7 @@ export default function PricingPage() {
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    أو <span className="line-through">$1080</span> شهرياً
+                    أو <span className="line-through">$1548</span> شهرياً
                   </p>
                 )}
               </div>
@@ -399,7 +405,7 @@ export default function PricingPage() {
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    أو <span className="line-through">$2520</span> شهرياً
+                    أو <span className="line-through">$4788</span> شهرياً
                   </p>
                 )}
               </div>
@@ -435,7 +441,7 @@ export default function PricingPage() {
               <div>
                 <h3 className="text-3xl font-bold">ALLOUL&Q Enterprise</h3>
                 <p className={`text-lg mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  للشركات أكثر من 32 موظف - حلول مخصصة لمؤسستك
+                  للمؤسسات الكبيرة - حلول مخصصة بلا حدود
                 </p>
               </div>
             </div>

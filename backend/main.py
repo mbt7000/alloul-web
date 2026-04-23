@@ -25,6 +25,7 @@ from routers import (
     projects, notifications, phone,
     meetings, channels, cv, job_postings, calls,
     ai_extract, ai_confirm, security, ai_system, ai_monitoring, settings as settings_router, employees,
+    accounting,
 )
 
 @asynccontextmanager
@@ -182,6 +183,7 @@ app.include_router(ai_monitoring.router)
 app.include_router(settings_router.router)
 app.include_router(calls.router)
 app.include_router(employees.router)
+app.include_router(accounting.router)
 
 
 @app.get("/")

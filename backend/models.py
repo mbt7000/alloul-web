@@ -817,6 +817,125 @@ class OtpCode(Base):
 # Securely store encrypted API keys for platform integrations (OpenAI, Slack, Gmail, etc).
 # Keys are encrypted at rest and should only be decrypted when actually used.
 
+# ─────────────────────────────────────────────────────────────
+# شكرة — AI Accountant (metadata only; details live in Google Sheets)
+# ─────────────────────────────────────────────────────────────
+
+class AccountingSetup(Base):
+    """Per-company accounting config."""
+    __tablename__ = "accounting_setup"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, unique=True, index=True)
+
+    # Google Sheets — company owns it, ALLOUL appends via service account
+    google_sheet_id  = Column(String(256), nullable=True)
+    google_sheet_url = Column(String(512), nullable=True)
+
+    # Telegram Bot — company creates bot via @BotFather, pastes token here
+    telegram_bot_token = Column(String(512), nullable=True)   # encrypted in prod
+    telegram_active    = Column(Boolean, default=False)
+
+    # WhatsApp Business Cloud API — company's own Meta credentials
+    whatsapp_phone_number_id = Column(String(64),  nullable=True)
+    whatsapp_access_token    = Column(Text,         nullable=True)   # encrypted in prod
+    whatsapp_verify_token    = Column(String(128),  nullable=True)   # random secret
+    whatsapp_active          = Column(Boolean, default=False)
+
+    # Currency default
+    currency  = Column(String(8), default="SAR")
+    is_active = Column(Boolean,   default=True)
+
+    # ── Privacy Settings (founder controls) ──────────────────────────────────
+    # ما يشوفه الموظفون في داشبورد شكرة
+    show_balances    = Column(Boolean, default=True)   # إخفاء/إظهار الأرصدة
+    show_profits     = Column(Boolean, default=True)   # إخفاء/إظهار الأرباح
+    show_amounts     = Column(Boolean, default=True)   # إخفاء/إظهار المبالغ
+    show_vendors     = Column(Boolean, default=True)   # إخفاء/إظهار أسماء الجهات
+    show_reports     = Column(Boolean, default=True)   # إخفاء/إظهار التقارير
+    employees_can_add = Column(Boolean, default=True)  # هل الموظف يقدر يضيف معاملة
+
+    # Capital tracking
+    initial_capital = Column(Float, default=0.0)       # رأس المال الابتدائي
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AccountingRecord(Base):
+    """
+    Metadata-only ledger row.
+    Sensitive invoice details (vendor name, description, line items) are in Google Sheets.
+    ALLOUL stores: amount, date, category, type — enough for dashboards and reports.
+    """
+    __tablename__ = "accounting_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    # Core financials (safe to store — no PII)
+    record_type = Column(String(16), nullable=False, index=True)   # income | expense
+    amount = Column(Float, nullable=False)
+    currency = Column(String(8), default="SAR")
+    category = Column(String(64), nullable=True, index=True)        # rent, salary, sales, utilities…
+    sub_category = Column(String(64), nullable=True)
+    recorded_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # Extended metadata
+    vendor       = Column(String(255), nullable=True)               # vendor / customer name
+    description  = Column(Text, nullable=True)                      # free-form note
+    payment_status = Column(String(16), default="paid")             # paid | pending | partial
+
+    # Source tracing (no sensitive content)
+    source = Column(String(32), default="manual")                   # manual | whatsapp | n8n | api
+    sheet_row_ref = Column(String(64), nullable=True)               # row ID in Google Sheets (pointer)
+    external_ref = Column(String(128), nullable=True)               # invoice # or PO #
+
+    # AI confidence from n8n OCR pipeline
+    ai_confidence = Column(Float, nullable=True)                    # 0.0–1.0
+    needs_review = Column(Boolean, default=False)                   # flagged for human review
+
+    # Soft delete
+    is_deleted = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AccountingPermission(Base):
+    """
+    صلاحيات موظف معين في نظام شكرة.
+    المؤسس يمنح / يسحب الصلاحيات لكل موظف بشكل مستقل.
+    """
+    __tablename__ = "accounting_permissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id  = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id"),     nullable=False, index=True)
+    granted_by  = Column(Integer, ForeignKey("users.id"),     nullable=False)  # المؤسس
+
+    # ── ما يقدر يشوفه الموظف ─────────────────────────────────────────────────
+    can_view_dashboard = Column(Boolean, default=True)   # يشوف الداشبورد
+    can_view_amounts   = Column(Boolean, default=False)  # يشوف المبالغ
+    can_view_profits   = Column(Boolean, default=False)  # يشوف الأرباح
+    can_view_reports   = Column(Boolean, default=False)  # يشوف التقارير
+    can_view_vendors   = Column(Boolean, default=False)  # يشوف أسماء الجهات
+
+    # ── ما يقدر يفعله الموظف ──────────────────────────────────────────────────
+    can_add_records    = Column(Boolean, default=True)   # يضيف معاملة
+    can_edit_records   = Column(Boolean, default=False)  # يعدل معاملة
+    can_delete_records = Column(Boolean, default=False)  # يحذف معاملة
+    can_use_bot        = Column(Boolean, default=True)   # يستخدم بوت Telegram/WhatsApp
+
+    is_active  = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "user_id", name="uq_accounting_perm"),
+    )
+
+
 class APICredential(Base):
     __tablename__ = "api_credentials"
 

@@ -40,6 +40,7 @@ import JobApplicationsScreen from "../../features/companies/screens/JobApplicati
 import JobsScreen from "../../features/companies/screens/JobsScreen";
 import WorkIdScreen from "../../features/companies/screens/WorkIdScreen";
 import CallHistoryScreen from "../../screens/calls/CallHistoryScreen";
+import AccountingScreen from "../../features/companies/screens/AccountingScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -127,6 +128,7 @@ export default function CompanyNavigator() {
       <Stack.Screen name="JobApplications" component={JobApplicationsScreen} />
       <Stack.Screen name="WorkId" component={WorkIdScreen} />
       <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
+      <Stack.Screen name="Accounting" component={AccountingScreen} />
     </Stack.Navigator>
   );
 }

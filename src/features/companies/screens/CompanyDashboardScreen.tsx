@@ -42,7 +42,8 @@ const QUICK_ACTIONS = [
   { key: "meet",     icon: "videocam"          as const, label: "اجتماع",     route: "Meetings",     color: "#10b981" },
   { key: "task",     icon: "checkmark-circle"  as const, label: "مهمة",       route: "Tasks",        color: "#3b82f6" },
   { key: "handover", icon: "swap-horizontal"   as const, label: "تسليم",      route: "Handover",     color: "#f59e0b" },
-  { key: "deals",    icon: "trending-up"       as const, label: "صفقات",      route: "CRM",          color: "#ef4444" },
+  { key: "deals",       icon: "trending-up"       as const, label: "صفقات",      route: "CRM",          color: "#ef4444" },
+  { key: "accounting", icon: "receipt"           as const, label: "شكرة",       route: "Accounting",   color: "#10b981" },
 ];
 
 const MAIN_SERVICES = [
@@ -50,8 +51,9 @@ const MAIN_SERVICES = [
   { key: "projects", icon: "folder"           as const, label: "المشاريع",    sub: "كل المشاريع",       route: "Projects",   color: "#06b6d4" },
   { key: "tasks",    icon: "list"             as const, label: "المهام",      sub: "قائمة كاملة",       route: "Tasks",      color: "#3b82f6" },
   { key: "meetings", icon: "calendar"         as const, label: "الاجتماعات",  sub: "الجدولة والفريق",   route: "Meetings",   color: "#10b981" },
-  { key: "knowledge",icon: "book"             as const, label: "المعرفة",     sub: "الملفات والوثائق",  route: "Knowledge",  color: "#f59e0b" },
-  { key: "reports",  icon: "bar-chart"        as const, label: "التقارير",    sub: "الأداء والتحليل",   route: "Reports",    color: "#ef4444" },
+  { key: "knowledge",   icon: "book"             as const, label: "المعرفة",     sub: "الملفات والوثائق",  route: "Knowledge",  color: "#f59e0b" },
+  { key: "reports",    icon: "bar-chart"        as const, label: "التقارير",    sub: "الأداء والتحليل",   route: "Reports",    color: "#ef4444" },
+  { key: "accounting", icon: "receipt"          as const, label: "شكرة",        sub: "محاسب AI ذكي",      route: "Accounting", color: "#10b981" },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
