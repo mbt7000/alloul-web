@@ -1,12 +1,38 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import random
+import time
+from collections import defaultdict
+from threading import Lock
 from typing import Annotated, Any, Dict
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import jwk, jwt, JWTError
+
+logger = logging.getLogger(__name__)
+
+# ── In-memory rate limiter (login brute-force protection) ────────────────────
+# Limits: 10 attempts per IP per 5 minutes
+_rate_lock = Lock()
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_RATE_WINDOW = 300   # 5 minutes
+_RATE_MAX    = 10    # max attempts per window
+
+
+def _check_login_rate(ip: str) -> None:
+    now = time.time()
+    with _rate_lock:
+        attempts = [t for t in _login_attempts[ip] if now - t < _RATE_WINDOW]
+        if len(attempts) >= _RATE_MAX:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many login attempts. Please try again in 5 minutes.",
+            )
+        attempts.append(now)
+        _login_attempts[ip] = attempts
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -36,7 +62,7 @@ from schemas import (
 class AppleNativeRequest(BaseModel):
     identity_token: str
     nonce: str  # raw nonce (unhashed)
-    bundle_id: str = "com.mbtalm1.t"
+    bundle_id: str = "app.alloul.mobile"
 
 
 _apple_keys_cache: Dict[str, Any] = {}
@@ -120,8 +146,11 @@ def _user_to_response(user: User) -> UserResponse:
 @router.post("/login", response_model=TokenResponse)
 def login(
     body: LoginRequest,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
 ):
+    ip = request.client.host if request.client else "unknown"
+    _check_login_rate(ip)
     try:
         user = db.query(User).filter(User.email == body.email).first()
         if not user or not user.hashed_password:
@@ -194,9 +223,10 @@ def register(
     except HTTPException:
         raise
     except ValueError as exc:
+        logger.warning("Registration validation error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc) or "Invalid registration data",
+            detail="Invalid registration data",
         ) from exc
 
 
@@ -374,7 +404,8 @@ async def apple_native(
     try:
         claims = await verify_apple_identity_token(body.identity_token, body.nonce, body.bundle_id)
     except (JWTError, ValueError, httpx.HTTPError) as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid Apple token: {exc}")
+        logger.warning("Apple token verification failed: %s", exc)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired Apple token")
 
     apple_uid = claims.get("sub")
     email = claims.get("email") or ""

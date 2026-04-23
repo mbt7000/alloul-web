@@ -95,7 +95,7 @@ class Settings(BaseSettings):
 
     # ALLOUL Agent (custom private SQL/data agent on the company server)
     ALLOUL_AGENT_URL: str = "http://34.147.168.15:8001"
-    ALLOUL_AGENT_KEY: str = "ALLOUL_AGENT_43245c238018ed6795aa47bbb9ea0b9d"
+    ALLOUL_AGENT_KEY: Optional[str] = None  # Set via ALLOUL_AGENT_KEY env var — never hardcode
 
     # AI System
     AI_DEFAULT_PROVIDER: str = "auto"  # auto, claude, ollama
