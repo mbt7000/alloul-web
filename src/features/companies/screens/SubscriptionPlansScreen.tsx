@@ -146,12 +146,18 @@ export default function SubscriptionPlansScreen({ navigation }: { navigation: an
       const msg = e?.detail || e?.message || "حدث خطأ. أعد المحاولة.";
       if (msg.includes("Stripe not configured") || msg.includes("503")) {
         Alert.alert(
-          "المدفوعات غير مفعّلة",
-          "يرجى التواصل مع الدعم لتفعيل الاشتراك.",
-          [{ text: "حسناً" }]
+          "الاشتراك عبر الموقع",
+          "يمكنك الاشتراك مباشرة عبر موقعنا على الإنترنت.",
+          [
+            { text: "إلغاء", style: "cancel" },
+            { text: "فتح الموقع", onPress: () => void Linking.openURL("https://alloul.app/pricing") },
+          ]
         );
       } else {
-        Alert.alert("خطأ", msg);
+        Alert.alert("خطأ", msg, [
+          { text: "حسناً", style: "cancel" },
+          { text: "اشترك عبر الموقع", onPress: () => void Linking.openURL("https://alloul.app/pricing") },
+        ]);
       }
     }
     setLoading(null);
