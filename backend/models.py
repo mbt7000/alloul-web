@@ -31,6 +31,8 @@ class User(Base):
     expo_push_token = Column(String(512), nullable=True)
     presence_status = Column(String(16), default="offline")  # online, busy, offline, away
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # رقم المستخدم — unique 5-digit ID visible in profile, used for Shukra bot login
+    employee_no = Column(String(8), unique=True, index=True, nullable=True)
 
 
 # ─── Follows ─────────────────────────────────────────────────────────────────

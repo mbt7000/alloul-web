@@ -115,9 +115,34 @@ def _generate_user_icode(db: Session) -> str:
     raise RuntimeError("Unable to generate unique i_code")
 
 
+def _generate_employee_no(db: Session) -> str:
+    """Generate a unique sequential 5-digit employee number starting at 10001."""
+    # Get the highest existing employee_no
+    from sqlalchemy import func as _func
+    last = db.query(_func.max(User.employee_no)).scalar()
+    if last and str(last).isdigit():
+        next_no = int(last) + 1
+    else:
+        # Count existing users and start from 10001
+        count = db.query(User).count()
+        next_no = 10001 + count
+    # Ensure uniqueness
+    for delta in range(1000):
+        candidate = str(next_no + delta)
+        if not db.query(User).filter(User.employee_no == candidate).first():
+            return candidate
+    raise RuntimeError("Unable to generate unique employee_no")
+
+
 def _ensure_icode(user: User, db: Session) -> None:
+    changed = False
     if not user.i_code:
         user.i_code = _generate_user_icode(db)
+        changed = True
+    if not getattr(user, "employee_no", None):
+        user.employee_no = _generate_employee_no(db)
+        changed = True
+    if changed:
         db.commit()
         db.refresh(user)
 
@@ -131,6 +156,7 @@ def _user_to_response(user: User) -> UserResponse:
         avatar_url=user.avatar_url,
         bio=user.bio,
         i_code=user.i_code,
+        employee_no=getattr(user, "employee_no", None),
         cover_url=user.cover_url,
         location=getattr(user, "location", None),
         skills=getattr(user, "skills", None),
@@ -201,6 +227,7 @@ def register(
             hashed_password=get_password_hash(body.password),
             name=body.username,
             i_code=_generate_user_icode(db),
+            employee_no=_generate_employee_no(db),
         )
         db.add(user)
         try:
@@ -382,6 +409,7 @@ def firebase(
                 avatar_url=picture,
                 firebase_uid=uid,
                 i_code=_generate_user_icode(db),
+                employee_no=_generate_employee_no(db),
             )
             db.add(user)
             db.commit()
@@ -440,6 +468,7 @@ async def apple_native(
                 name=name,
                 firebase_uid=uid_key,
                 i_code=_generate_user_icode(db),
+                employee_no=_generate_employee_no(db),
             )
             db.add(user)
             db.commit()
@@ -510,6 +539,7 @@ def azure_ad(
                 avatar_url=picture,
                 firebase_uid=azure_uid,
                 i_code=_generate_user_icode(db),
+                employee_no=_generate_employee_no(db),
             )
             db.add(user)
             db.commit()

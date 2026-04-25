@@ -42,6 +42,8 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
     i_code: Optional[str] = None
+    # رقم المستخدم — ظاهر في الملف الشخصي، يُستخدم للدخول لبوت شكرة
+    employee_no: Optional[str] = None
     phone: Optional[str] = None
     cover_url: Optional[str] = None
     location: Optional[str] = None

@@ -38,6 +38,9 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
     _validate_runtime_safety()
     _seed_bootstrap_users()
+    # Start Shukra daily report background loop (6 PM AST)
+    from routers.accounting import start_daily_report
+    await start_daily_report()
     yield
 
 
