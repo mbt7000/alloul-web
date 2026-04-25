@@ -12,6 +12,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -371,14 +372,25 @@ export default function TeamScreen() {
               const bg = avatarColor(member.user_id);
               const isMe = member.user_id === myRole?.member_id;
               return (
-                <View key={member.id} style={[styles.memberCard, { borderColor: c.border, backgroundColor: c.cardElevated }]}>
+                <Pressable
+                  key={member.id}
+                  onPress={() => navigation.navigate("PublicProfile", { userId: member.user_id })}
+                  style={({ pressed }) => [styles.memberCard, { borderColor: c.border, backgroundColor: pressed ? c.cardElevated + "cc" : c.cardElevated }]}
+                >
                   {/* Left: colored accent bar */}
-                  <View style={{ width: 4, height: "100%", backgroundColor: cfg.color, borderRadius: 4 }} />
+                  <View style={{ width: 4, alignSelf: "stretch", backgroundColor: cfg.color, borderRadius: 4 }} />
 
                   {/* Avatar */}
-                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: bg + "33", borderWidth: 2, borderColor: bg + "66", alignItems: "center", justifyContent: "center" }}>
-                    <AppText style={{ color: bg, fontSize: 15, fontWeight: "800" }}>{initials(member)}</AppText>
-                  </View>
+                  {member.avatar_url ? (
+                    <Image
+                      source={{ uri: member.avatar_url }}
+                      style={{ width: 46, height: 46, borderRadius: 14, borderWidth: 2, borderColor: bg + "66" }}
+                    />
+                  ) : (
+                    <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: bg + "33", borderWidth: 2, borderColor: bg + "66", alignItems: "center", justifyContent: "center" }}>
+                      <AppText style={{ color: bg, fontSize: 15, fontWeight: "800" }}>{initials(member)}</AppText>
+                    </View>
+                  )}
 
                   {/* Info */}
                   <View style={{ flex: 1, gap: 3 }}>
@@ -392,7 +404,7 @@ export default function TeamScreen() {
                         </View>
                       ) : null}
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <View style={{ backgroundColor: cfg.color + "22", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <Ionicons name={cfg.icon as any} size={10} color={cfg.color} />
                         <AppText style={{ color: cfg.color, fontSize: 11, fontWeight: "700" }}>{cfg.label}</AppText>
@@ -404,27 +416,38 @@ export default function TeamScreen() {
                     {member.user_email ? (
                       <AppText style={{ color: c.textMuted, fontSize: 11 }} numberOfLines={1}>{member.user_email}</AppText>
                     ) : null}
-                    <AppText style={{ color: c.textMuted, fontSize: 10 }}>ID: {member.i_code}</AppText>
                   </View>
 
-                  {/* Actions (manager only, not on self) */}
-                  {isManager && !isMe ? (
-                    <View style={{ gap: 6 }}>
+                  {/* Action buttons */}
+                  <View style={{ gap: 6 }}>
+                    {/* DM button — always visible (except self) */}
+                    {!isMe ? (
                       <Pressable
-                        onPress={() => openEditRole(member)}
-                        style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: c.accentBlue + "22", alignItems: "center", justifyContent: "center" }}
+                        onPress={(e) => { e.stopPropagation(); navigation.navigate("DirectMessage", { userId: member.user_id, userName: member.user_name }); }}
+                        style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: c.accentCyan + "22", alignItems: "center", justifyContent: "center" }}
                       >
-                        <Ionicons name="create-outline" size={16} color={c.accentBlue} />
+                        <Ionicons name="chatbubble-outline" size={16} color={c.accentCyan} />
                       </Pressable>
-                      <Pressable
-                        onPress={() => handleRemoveMember(member)}
-                        style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#ef444422", alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Ionicons name="person-remove-outline" size={16} color="#ef4444" />
-                      </Pressable>
-                    </View>
-                  ) : null}
-                </View>
+                    ) : null}
+                    {/* Manager-only: edit / remove */}
+                    {isManager && !isMe ? (
+                      <>
+                        <Pressable
+                          onPress={(e) => { e.stopPropagation(); openEditRole(member); }}
+                          style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: c.accentBlue + "22", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Ionicons name="create-outline" size={16} color={c.accentBlue} />
+                        </Pressable>
+                        <Pressable
+                          onPress={(e) => { e.stopPropagation(); handleRemoveMember(member); }}
+                          style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#ef444422", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Ionicons name="person-remove-outline" size={16} color="#ef4444" />
+                        </Pressable>
+                      </>
+                    ) : null}
+                  </View>
+                </Pressable>
               );
             })
           )}

@@ -24,6 +24,7 @@ import {
   getProjects,
   getProjectTasks,
   createTask,
+  createProject,
   updateTask,
   deleteTask,
   type TaskRow,
@@ -131,8 +132,21 @@ export default function TasksScreen() {
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
-    const pid = selectedProject ?? projects[0]?.id ?? projectId;
-    if (!pid) { Alert.alert("تنبيه", "اختر مشروعاً أولاً"); return; }
+    let pid = selectedProject ?? projects[0]?.id ?? projectId;
+
+    // Auto-create a default project if none exist
+    if (!pid) {
+      try {
+        const defaultProject = await createProject({ name: "مشروع عام", description: "مشروع افتراضي" });
+        setProjects((p) => [defaultProject, ...p]);
+        setSelectedProject(defaultProject.id);
+        pid = defaultProject.id;
+      } catch {
+        Alert.alert("تنبيه", "لم يتمكن النظام من إنشاء مشروع افتراضي. أنشئ مشروعاً أولاً.");
+        return;
+      }
+    }
+
     setCreating(true);
     try {
       const task = await createTask(pid, { title: newTitle.trim(), description: newDesc.trim() || undefined, priority: newPriority, due_date: newDue.trim() || undefined });
@@ -287,19 +301,25 @@ export default function TasksScreen() {
             <View style={styles.sheetHandle} />
             <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>مهمة جديدة</AppText>
 
-            {!projectId && projects.length > 0 && (
+            {!projectId && (
               <>
                 <AppText variant="caption" tone="muted" style={{ marginTop: 8, marginBottom: 6 }}>المشروع</AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 4 }}>
-                  {projects.map((p) => (
-                    <Pressable key={p.id} onPress={() => setSelectedProject(p.id)}
-                      style={[styles.projectChip, selectedProject === p.id && styles.projectChipActive]}>
-                      <AppText variant="micro" weight="bold" style={{ color: selectedProject === p.id ? colors.accentCyan : colors.textMuted }}>
-                        {p.name}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </ScrollView>
+                {projects.length === 0 ? (
+                  <View style={{ paddingVertical: 8, paddingHorizontal: 4 }}>
+                    <AppText variant="micro" tone="muted">سيتم إنشاء مشروع افتراضي تلقائياً</AppText>
+                  </View>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 4 }}>
+                    {projects.map((p) => (
+                      <Pressable key={p.id} onPress={() => setSelectedProject(p.id)}
+                        style={[styles.projectChip, selectedProject === p.id && styles.projectChipActive]}>
+                        <AppText variant="micro" weight="bold" style={{ color: selectedProject === p.id ? colors.accentCyan : colors.textMuted }}>
+                          {p.name}
+                        </AppText>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
               </>
             )}
 

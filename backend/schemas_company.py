@@ -83,6 +83,7 @@ class CompanyMemberResponse(BaseModel):
     phone: Optional[str] = None
     user_name: Optional[str] = None
     user_email: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True

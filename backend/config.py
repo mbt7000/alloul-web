@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     DEEPSEEK_MODEL: str = "deepseek-chat"
 
+    # Google Gemini — free 1500 req/day via AI Studio key
+    GEMINI_API_KEY: Optional[str] = None
+
     # Daily.co — غرف فيديو + شات داخل الجلسة (قسم الشركات)
     DAILY_API_KEY: Optional[str] = None
     # النطاق الفرعي فقط، مثال: alloul → https://alloul.daily.co

@@ -22,6 +22,14 @@ import { apiFetch } from "../../../api/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type BotEmployee = {
+  employee_no: string;
+  name: string | null;
+  email: string | null;
+  can_add_records: boolean;
+  can_view_reports: boolean;
+};
+
 type DashboardData = {
   period: { year: number; month: number };
   summary: {
@@ -67,6 +75,11 @@ const CURRENCIES = ["SAR", "AED", "KWD", "USD"];
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 const fetchDashboard = () => apiFetch<DashboardData>("/accounting/dashboard");
+const fetchBotEmployees = () => apiFetch<BotEmployee[]>("/accounting/bot/employees").catch(() => null);
+const addBotEmployee = (employee_no: string) =>
+  apiFetch("/accounting/bot/employees", { method: "POST", body: JSON.stringify({ employee_no }) });
+const removeBotEmployee = (employee_no: string) =>
+  apiFetch(`/accounting/bot/employees/${employee_no}`, { method: "DELETE" });
 
 const postRecord = (form: RecordForm) =>
   apiFetch("/accounting/records", {
@@ -117,9 +130,13 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
   const [refreshing, setRefreshing] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [staffOpen, setStaffOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingSetup, setSavingSetup] = useState(false);
   const [currencyIdx, setCurrencyIdx] = useState(0);
+  const [botEmployees, setBotEmployees] = useState<BotEmployee[] | null>(null);
+  const [addStaffNo, setAddStaffNo] = useState("");
+  const [addingStaff, setAddingStaff] = useState(false);
 
   const [form, setForm] = useState<RecordForm>({
     record_type: "expense",
@@ -137,8 +154,9 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const d = await fetchDashboard();
+      const [d, emps] = await Promise.all([fetchDashboard(), fetchBotEmployees()]);
       setData(d);
+      setBotEmployees(emps);
       setSetupForm((f) => ({
         ...f,
         google_sheet_url: d.setup.google_sheet_url || "",
@@ -153,6 +171,40 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
       setRefreshing(false);
     }
   }, []);
+
+  const handleAddStaff = async () => {
+    const no = addStaffNo.trim();
+    if (!no) return;
+    setAddingStaff(true);
+    try {
+      await addBotEmployee(no);
+      setAddStaffNo("");
+      const emps = await fetchBotEmployees();
+      setBotEmployees(emps);
+      Alert.alert("تم ✓", `تمت إضافة الموظف ${no} لبوت شكرة`);
+    } catch (e: any) {
+      Alert.alert("خطأ", e?.message || "تعذّرت الإضافة — تأكد من صحة رقم الموظف");
+    } finally {
+      setAddingStaff(false);
+    }
+  };
+
+  const handleRemoveStaff = (emp: BotEmployee) => {
+    Alert.alert("إزالة من البوت", `هل تريد إزالة ${emp.name || emp.employee_no} من بوت شكرة؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "إزالة", style: "destructive",
+        onPress: async () => {
+          try {
+            await removeBotEmployee(emp.employee_no);
+            setBotEmployees((p) => p?.filter((e) => e.employee_no !== emp.employee_no) ?? null);
+          } catch (e: any) {
+            Alert.alert("خطأ", e?.message || "تعذّرت الإزالة");
+          }
+        },
+      },
+    ]);
+  };
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -199,9 +251,16 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
       <AppHeader
         title="شكرة — المحاسب الذكي"
         rightActions={
-          <Pressable onPress={() => setSetupOpen(true)} style={{ padding: 8 }}>
-            <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            {botEmployees !== null ? (
+              <Pressable onPress={() => setStaffOpen(true)} style={{ padding: 8 }}>
+                <Ionicons name="people-outline" size={20} color={colors.textPrimary} />
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => setSetupOpen(true)} style={{ padding: 8 }}>
+              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+            </Pressable>
+          </View>
         }
       />
 
@@ -396,6 +455,62 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
             <Pressable onPress={() => setAddOpen(false)} style={S.cancelRow}>
               <AppText style={{ color: colors.textMuted }}>إلغاء</AppText>
             </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Bot Staff Modal ── */}
+      <Modal visible={staffOpen} animationType="slide" transparent onRequestClose={() => setStaffOpen(false)}>
+        <View style={S.overlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setStaffOpen(false)} />
+          <View style={[S.sheet, { backgroundColor: colors.bgCard }]}>
+            <AppText style={[S.sheetTitle, { color: colors.textPrimary }]}>فريق بوت شكرة</AppText>
+            <AppText style={[S.hint, { color: colors.textMuted, marginBottom: 14 }]}>
+              الموظفون المُضافون يستطيعون تسجيل المعاملات عبر البوت
+            </AppText>
+
+            {/* Add staff input */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              <TextInput
+                style={[S.input, { flex: 1, marginBottom: 0, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="رقم الموظف (مثال: 10001)"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                value={addStaffNo}
+                onChangeText={setAddStaffNo}
+              />
+              <Pressable
+                onPress={handleAddStaff}
+                disabled={addingStaff || !addStaffNo.trim()}
+                style={{ backgroundColor: "#10B981", borderRadius: 10, paddingHorizontal: 16, justifyContent: "center", opacity: addingStaff || !addStaffNo.trim() ? 0.5 : 1 }}
+              >
+                <AppText style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
+                  {addingStaff ? "…" : "إضافة"}
+                </AppText>
+              </Pressable>
+            </View>
+
+            {/* Staff list */}
+            {botEmployees && botEmployees.length > 0 ? (
+              botEmployees.map((emp) => (
+                <View key={emp.employee_no} style={{ flexDirection: "row-reverse", alignItems: "center", paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "#10B98122", alignItems: "center", justifyContent: "center" }}>
+                    <AppText style={{ color: "#10B981", fontWeight: "800", fontSize: 13 }}>{(emp.name || emp.employee_no).slice(0, 2)}</AppText>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "600" }}>{emp.name || `موظف #${emp.employee_no}`}</AppText>
+                    <AppText style={{ color: colors.textMuted, fontSize: 11 }}>رقم: {emp.employee_no}</AppText>
+                  </View>
+                  <Pressable onPress={() => handleRemoveStaff(emp)} style={{ padding: 6 }}>
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  </Pressable>
+                </View>
+              ))
+            ) : (
+              <View style={{ paddingVertical: 24, alignItems: "center" }}>
+                <AppText style={{ color: colors.textMuted, fontSize: 13 }}>لا يوجد موظفون مُضافون بعد</AppText>
+              </View>
+            )}
           </View>
         </View>
       </Modal>

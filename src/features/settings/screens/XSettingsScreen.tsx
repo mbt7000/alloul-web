@@ -10,12 +10,14 @@ import { View, ScrollView, Pressable, Alert, Image, Switch } from "react-native"
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import * as Updates from "expo-updates";
 import Screen from "../../../shared/layout/Screen";
 import AppText from "../../../shared/ui/AppText";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useCompany } from "../../../state/company/CompanyContext";
 import { SUPPORTED_LANGUAGES, setAppLanguage, type AppLanguage } from "../../../i18n/index";
+import { applyRtlForLanguage } from "../../../shared/utils/rtl";
 import Constants from "expo-constants";
 
 const LANG_META: Record<AppLanguage, string> = {
@@ -234,6 +236,14 @@ export default function XSettingsScreen() {
                     onPress={async () => {
                       await setAppLanguage(lang);
                       setLangOpen(false);
+                      const dirChanged = applyRtlForLanguage(lang);
+                      if (dirChanged) {
+                        Alert.alert(
+                          "تغيير اللغة",
+                          "سيتم إعادة تشغيل التطبيق لتطبيق اتجاه النص",
+                          [{ text: "حسناً", onPress: () => void Updates.reloadAsync() }]
+                        );
+                      }
                     }}
                     style={{
                       flexDirection: "row", alignItems: "center", justifyContent: "space-between",

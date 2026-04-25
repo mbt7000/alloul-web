@@ -44,15 +44,16 @@ def _member_phone_for_user(db: Session, user_id: int) -> Optional[str]:
     return p or None
 
 
-def _member_info_for_user(db: Session, user_id: int) -> tuple[Optional[str], Optional[str], Optional[str]]:
-    """Returns (name, email, phone) for a user."""
+def _member_info_for_user(db: Session, user_id: int) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """Returns (name, email, phone, avatar_url) for a user."""
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
-        return None, None, None
+        return None, None, None, None
     name = u.name or u.username or None
     email = u.email or None
     phone = (u.phone.strip() if isinstance(u.phone, str) else None) or None
-    return name, email, phone
+    avatar_url = getattr(u, "avatar_url", None)
+    return name, email, phone, avatar_url
 
 
 def _generate_icode(length: int = 8) -> str:
@@ -442,11 +443,11 @@ def list_members(
     members = db.query(CompanyMember).filter(CompanyMember.company_id == company.id).all()
     result = []
     for m in members:
-        name, email, phone = _member_info_for_user(db, m.user_id)
+        name, email, phone, avatar_url = _member_info_for_user(db, m.user_id)
         result.append(CompanyMemberResponse(
             id=m.id, company_id=m.company_id, user_id=m.user_id, role=m.role,
             department_id=m.department_id, i_code=m.i_code, manager_id=m.manager_id, job_title=m.job_title,
-            phone=phone, user_name=name, user_email=email,
+            phone=phone, user_name=name, user_email=email, avatar_url=avatar_url,
         ))
     return result
 
@@ -493,11 +494,11 @@ def add_member(
     db.commit()
     db.refresh(new_mem)
     _log_activity(db, company.id, current_user.id, "member_added", f"user_id={body.user_id}")
-    _n, _e, _p = _member_info_for_user(db, new_mem.user_id)
+    _n, _e, _p, _av = _member_info_for_user(db, new_mem.user_id)
     return CompanyMemberResponse(
         id=new_mem.id, company_id=new_mem.company_id, user_id=new_mem.user_id, role=new_mem.role,
         department_id=new_mem.department_id, i_code=new_mem.i_code, manager_id=new_mem.manager_id, job_title=new_mem.job_title,
-        phone=_p, user_name=_n, user_email=_e,
+        phone=_p, user_name=_n, user_email=_e, avatar_url=_av,
     )
 
 
@@ -529,11 +530,11 @@ def update_member(
         target.manager_id = body.manager_id
     db.commit()
     db.refresh(target)
-    _n, _e, _p = _member_info_for_user(db, target.user_id)
+    _n, _e, _p, _av = _member_info_for_user(db, target.user_id)
     return CompanyMemberResponse(
         id=target.id, company_id=target.company_id, user_id=target.user_id, role=target.role,
         department_id=target.department_id, i_code=target.i_code, manager_id=target.manager_id, job_title=target.job_title,
-        phone=_p, user_name=_n, user_email=_e,
+        phone=_p, user_name=_n, user_email=_e, avatar_url=_av,
     )
 
 

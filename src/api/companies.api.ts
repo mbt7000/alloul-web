@@ -91,8 +91,20 @@ export interface TaskRow {
 }
 
 export const getProjects = (companyId?: number) => {
+  // Always include company projects when companyId is available
   const q = companyId != null ? `?company_id=${companyId}` : "";
-  return apiFetch<ProjectRow[]>(`/projects/${q}`);
+  return apiFetch<ProjectRow[]>(`/projects/${q}`).then((list) => {
+    // If we got company projects, also merge personal projects so nothing is hidden
+    if (companyId != null) {
+      return apiFetch<ProjectRow[]>("/projects/")
+        .then((personal) => {
+          const ids = new Set(list.map((p) => p.id));
+          return [...list, ...personal.filter((p) => !ids.has(p.id))];
+        })
+        .catch(() => list);
+    }
+    return list;
+  });
 };
 
 export const createProject = (body: {
@@ -152,6 +164,7 @@ export interface CompanyMemberRow {
   phone?: string | null;
   user_name?: string | null;
   user_email?: string | null;
+  avatar_url?: string | null;
 }
 
 export const getCompanyMembers = () => apiFetch<CompanyMemberRow[]>("/companies/members");
