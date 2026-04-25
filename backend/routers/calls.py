@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from auth import decode_token, get_current_user
 from database import get_db
-from models import User, CallLog
+from models import User, CallLog, DirectConversation, DirectMessage
 
 router = APIRouter(tags=["calls"])
 
@@ -112,6 +112,47 @@ def save_push_token(
     return {"ok": True}
 
 
+@router.get("/users/{user_id}/profile")
+def get_user_public_profile(
+    user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Return a public profile for a user (name, avatar, bio, work_id, company)."""
+    from models import CompanyMember, Company  # local import to avoid circular
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    # Try to find their membership in any company
+    membership = (
+        db.query(CompanyMember)
+        .filter(CompanyMember.user_id == user_id)
+        .order_by(CompanyMember.id.desc())
+        .first()
+    )
+    company_name = None
+    role = None
+    job_title = None
+    if membership:
+        company = db.query(Company).filter(Company.id == membership.company_id).first()
+        company_name = company.name if company else None
+        role = membership.role
+        job_title = membership.job_title
+
+    return {
+        "id": user.id,
+        "name": user.name or user.username or f"مستخدم #{user.id}",
+        "email": user.email,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio,
+        "work_id": getattr(user, "employee_no", None),
+        "job_title": job_title,
+        "company_name": company_name,
+        "role": role,
+    }
+
+
 @router.get("/users/{user_id}/presence")
 def get_user_presence(
     user_id: int,
@@ -122,6 +163,86 @@ def get_user_presence(
     if not user:
         raise HTTPException(404, "User not found")
     return {"user_id": user_id, "presence_status": user.presence_status or "offline"}
+
+
+# ─── Direct Messages ─────────────────────────────────────────────────────────
+
+class DMBody(BaseModel):
+    content: str
+
+
+def _get_or_create_conversation(db: Session, user1_id: int, user2_id: int) -> DirectConversation:
+    """Get or create a DM conversation between two users (ordered IDs)."""
+    lo, hi = min(user1_id, user2_id), max(user1_id, user2_id)
+    conv = (
+        db.query(DirectConversation)
+        .filter(DirectConversation.user1_id == lo, DirectConversation.user2_id == hi)
+        .first()
+    )
+    if not conv:
+        conv = DirectConversation(user1_id=lo, user2_id=hi)
+        db.add(conv)
+        db.commit()
+        db.refresh(conv)
+    return conv
+
+
+@router.get("/chat/dm/{user_id}")
+def get_dm_messages(
+    user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Return DM messages between current user and user_id."""
+    conv = _get_or_create_conversation(db, current_user.id, user_id)
+    msgs = (
+        db.query(DirectMessage)
+        .filter(DirectMessage.conversation_id == conv.id)
+        .order_by(DirectMessage.created_at.asc())
+        .all()
+    )
+    return [
+        {
+            "id": m.id,
+            "sender_id": m.sender_id,
+            "content": m.content,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in msgs
+    ]
+
+
+@router.post("/chat/dm/{user_id}")
+def send_dm_message(
+    user_id: int,
+    body: DMBody,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Send a DM from current user to user_id."""
+    if not body.content.strip():
+        raise HTTPException(400, "Content cannot be empty")
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(404, "User not found")
+    conv = _get_or_create_conversation(db, current_user.id, user_id)
+    msg = DirectMessage(
+        conversation_id=conv.id,
+        sender_id=current_user.id,
+        content=body.content.strip(),
+    )
+    db.add(msg)
+    # Update conversation last_message_at
+    from datetime import datetime, timezone as _tz
+    conv.last_message_at = datetime.now(_tz.utc)
+    db.commit()
+    db.refresh(msg)
+    return {
+        "id": msg.id,
+        "sender_id": msg.sender_id,
+        "content": msg.content,
+        "created_at": msg.created_at.isoformat() if msg.created_at else None,
+    }
 
 
 # ─── WebSocket ───────────────────────────────────────────────────────────────

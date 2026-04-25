@@ -41,6 +41,9 @@ import JobsScreen from "../../features/companies/screens/JobsScreen";
 import WorkIdScreen from "../../features/companies/screens/WorkIdScreen";
 import CallHistoryScreen from "../../screens/calls/CallHistoryScreen";
 import AccountingScreen from "../../features/companies/screens/AccountingScreen";
+import DirectMessageScreen from "../../features/chat/screens/DirectMessageScreen";
+import PublicProfileScreen from "../../features/profile/screens/PublicProfileScreen";
+import InfoPlaceholderScreen from "../../shared/screens/InfoPlaceholderScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -129,6 +132,11 @@ export default function CompanyNavigator() {
       <Stack.Screen name="WorkId" component={WorkIdScreen} />
       <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
       <Stack.Screen name="Accounting" component={AccountingScreen} />
+      <Stack.Screen name="DirectMessage" component={DirectMessageScreen} />
+      <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
+      <Stack.Screen name="UserProfile" component={PublicProfileScreen} />
+      <Stack.Screen name="Conversation" component={DirectMessageScreen} />
+      <Stack.Screen name="PostDetail" component={InfoPlaceholderScreen} />
     </Stack.Navigator>
   );
 }
