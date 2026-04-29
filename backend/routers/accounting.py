@@ -1233,6 +1233,45 @@ async def telegram_webhook(
     state = sess.get("state", "init")
 
     # ══════════════════════════════════════════════════════════
+    # AUTO-LOGIN: إذا كان chat_id محفوظ في DB → دخول تلقائي
+    # ══════════════════════════════════════════════════════════
+    if state == "init" and text_msg != "/logout":
+        linked_user = db.query(User).filter(
+            User.telegram_chat_id == str(chat_id)
+        ).first()
+        if linked_user:
+            # تحقق أنه لا يزال عضواً في الشركة
+            member = db.query(CompanyMember).filter(
+                CompanyMember.company_id == company_id,
+                CompanyMember.user_id == linked_user.id,
+            ).first()
+            is_founder_role = member and member.role in ("owner", "admin")
+            has_perm = is_founder_role or db.query(AccountingPermission).filter(
+                AccountingPermission.company_id == company_id,
+                AccountingPermission.user_id == linked_user.id,
+                AccountingPermission.can_use_bot == True,
+                AccountingPermission.is_active == True,
+            ).first()
+            if member and has_perm:
+                sess["state"]         = "ready"
+                sess["user_id"]       = linked_user.id
+                sess["employee_no"]   = linked_user.employee_no
+                sess["employee_name"] = linked_user.name or linked_user.username
+                sess["is_founder"]    = bool(is_founder_role)
+                state = "ready"
+                if is_founder_role:
+                    _tg_founders[company_id] = str(chat_id)
+                    _save_company(company_id)
+                if text_msg == "/start":
+                    await send_telegram_message(
+                        token, chat_id,
+                        f"👋 مرحباً <b>{sess['employee_name']}</b>!\n"
+                        "✅ تم تسجيل دخولك تلقائياً.\n\n"
+                        "أرسل فاتورة أو معاملة للبدء 📊"
+                    )
+                    return {"ok": True}
+
+    # ══════════════════════════════════════════════════════════
     # FOUNDER COMMANDS (always available regardless of auth state)
     # ══════════════════════════════════════════════════════════
 
@@ -1539,6 +1578,20 @@ async def telegram_webhook(
         sess["employee_name"] = target_user.name or target_user.username
         sess["is_founder"]    = is_founder_role
         sess.pop("pending_user_id", None)
+        # ── حفظ chat_id في DB عشان الدخول التلقائي في المرات القادمة ──
+        try:
+            # إذا chat_id مسجل لشخص آخر نمسحه أولاً
+            old = db.query(User).filter(
+                User.telegram_chat_id == str(chat_id),
+                User.id != target_user.id,
+            ).first()
+            if old:
+                old.telegram_chat_id = None
+            target_user.telegram_chat_id = str(chat_id)
+            db.commit()
+        except Exception as _e:
+            logger.warning(f"Could not save telegram_chat_id: {_e}")
+            db.rollback()
         if is_founder_role:
             _tg_founders[company_id] = str(chat_id)
             _save_company(company_id)

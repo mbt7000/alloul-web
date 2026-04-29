@@ -33,6 +33,8 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # رقم المستخدم — unique 5-digit ID visible in profile, used for Shukra bot login
     employee_no = Column(String(8), unique=True, index=True, nullable=True)
+    # Telegram chat ID — saved after first login, used for auto-auth
+    telegram_chat_id = Column(String(32), unique=True, index=True, nullable=True)
 
 
 # ─── Follows ─────────────────────────────────────────────────────────────────
