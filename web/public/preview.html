@@ -538,10 +538,10 @@ body::before{
   </nav>
   <div class="sfooter">
     <div class="urow">
-      <div class="uav">مح</div>
+      <div class="uav" id="u-av">—</div>
       <div>
-        <div class="uname">محمد الحربي</div>
-        <div class="urole">مؤسس الشركة</div>
+        <div class="uname" id="u-name">جارٍ التحميل...</div>
+        <div class="urole" id="u-role">—</div>
       </div>
       <div class="odot"></div>
     </div>
@@ -575,7 +575,7 @@ body::before{
     <div class="stats">
       <div class="sc sc-c">
         <div class="st"><div class="sic sic-c">◉</div><div class="sdlt dup">↑ 12%</div></div>
-        <div class="sval">84</div><div class="slbl">مهمة نشطة</div>
+        <div class="sval" id="stat-tasks">—</div><div class="slbl">مهمة نشطة</div>
         <div class="spark">
           <div class="sb sb-c" style="height:40%"></div><div class="sb sb-c" style="height:60%"></div>
           <div class="sb sb-c" style="height:45%"></div><div class="sb sb-c" style="height:80%"></div>
@@ -585,7 +585,7 @@ body::before{
       </div>
       <div class="sc sc-v">
         <div class="st"><div class="sic sic-v">◎</div><div class="sdlt dup">↑ 3</div></div>
-        <div class="sval">23</div><div class="slbl">عضو نشط</div>
+        <div class="sval" id="stat-members">—</div><div class="slbl">عضو نشط</div>
         <div class="spark">
           <div class="sb sb-v" style="height:50%"></div><div class="sb sb-v" style="height:55%"></div>
           <div class="sb sb-v" style="height:60%"></div><div class="sb sb-v" style="height:65%"></div>
@@ -595,7 +595,7 @@ body::before{
       </div>
       <div class="sc sc-g">
         <div class="st"><div class="sic sic-g">◈</div><div class="sdlt dup">↑ 28%</div></div>
-        <div class="sval" style="font-size:22px">٢٤٧k</div><div class="slbl">إيرادات الشهر — ر.س</div>
+        <div class="sval" id="stat-handovers" style="font-size:22px">—</div><div class="slbl">تسليم نشط</div>
         <div class="spark">
           <div class="sb sb-g" style="height:35%"></div><div class="sb sb-g" style="height:50%"></div>
           <div class="sb sb-g" style="height:45%"></div><div class="sb sb-g" style="height:70%"></div>
@@ -605,7 +605,7 @@ body::before{
       </div>
       <div class="sc sc-a">
         <div class="st"><div class="sic sic-a">◐</div><div class="sdlt ddn">↓ 2%</div></div>
-        <div class="sval">91%</div><div class="slbl">رضا العملاء</div>
+        <div class="sval" id="stat-meetings">—</div><div class="slbl">اجتماع قادم</div>
         <div class="spark">
           <div class="sb sb-a" style="height:90%"></div><div class="sb sb-a" style="height:88%"></div>
           <div class="sb sb-a" style="height:93%"></div><div class="sb sb-a" style="height:91%"></div>
@@ -624,7 +624,7 @@ body::before{
           <span class="nbdg nbr" style="font-size:11px;padding:3px 9px">5 متأخرة</span>
           <div class="pha" onclick="go('tasks')">عرض الكل</div>
         </div>
-        <div class="pb" style="padding:0 20px">
+        <div class="pb" style="padding:0 20px" id="tasks-list">
           <div class="ti"><div class="tch dn"></div><div style="flex:1"><div class="tnm dx">مراجعة تقرير الربع الأول</div><div class="tmeta"><span class="ttag tg">مكتمل</span><span class="tdt">9:00 ص</span></div></div><div class="tav" style="background:var(--g)">أح</div></div>
           <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">تحديث لوحة البيانات للعميل</div><div class="tmeta"><span class="ttag tr">عاجل</span><span class="tdt">2:00 م</span></div></div><div class="tav" style="background:var(--r)">سا</div></div>
           <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">اجتماع فريق التصميم</div><div class="tmeta"><span class="ttag tp">اجتماع</span><span class="tdt">4:00 م</span></div></div><div class="tav" style="background:var(--v)">عم</div></div>
@@ -656,7 +656,7 @@ body::before{
         <!-- Activity -->
         <div class="panel">
           <div class="ph"><div class="ph-t">آخر الأحداث</div><div class="ph-s">منذ ساعتين</div></div>
-          <div class="pb" style="padding:0 20px">
+          <div class="pb" style="padding:0 20px" id="activity-list">
             <div class="ai-item"><div class="aic" style="background:var(--gg);color:var(--g)">✓</div><div><div class="atx"><strong>أحمد</strong> أكمل مهمة التقرير</div><div class="atm">منذ 14 دقيقة</div></div></div>
             <div class="ai-item"><div class="aic" style="background:var(--vg);color:var(--v)">◎</div><div><div class="atx"><strong>سارة</strong> انضمت للاجتماع</div><div class="atm">منذ 25 دقيقة</div></div></div>
             <div class="ai-item"><div class="aic" style="background:var(--ag);color:var(--a)">◈</div><div><div class="atx">عميل جديد <strong>شركة النخيل</strong></div><div class="atm">منذ ساعة</div></div></div>
@@ -688,7 +688,7 @@ body::before{
       <!-- Progress -->
       <div class="panel">
         <div class="ph"><div class="ph-t">إنجاز المشاريع</div></div>
-        <div class="pb">
+        <div class="pb" id="projects-list">
           <div class="pw"><div class="ptop"><span class="plbl">تطوير التطبيق</span><span class="pval">72%</span></div><div class="ptrack"><div class="pfill pf-c" style="width:72%"></div></div></div>
           <div class="pw"><div class="ptop"><span class="plbl">تصميم الهوية</span><span class="pval">90%</span></div><div class="ptrack"><div class="pfill pf-g" style="width:90%"></div></div></div>
           <div class="pw"><div class="ptop"><span class="plbl">حملة التسويق</span><span class="pval">48%</span></div><div class="ptrack"><div class="pfill pf-a" style="width:48%"></div></div></div>
@@ -1578,6 +1578,187 @@ const SERVICES = [
   { key:'knowledge',icon:'📚', nm:'قاعدة المعرفة',    ds:'وثائق ومراجع الشركة',     col:'#f43f5e',  on:false },
   { key:'ads',      icon:'📣', nm:'الإعلانات',        ds:'إعلانات مساحة العمل',    col:'#f97316',  on:false },
 ];
+
+// ══════════════════════════════════════════════
+// API INTEGRATION — يجلب بيانات حقيقية من الباكند
+// ══════════════════════════════════════════════
+const API = 'https://api.alloul.app';
+const TOKEN_KEY = 'alloul_token';
+const USER_KEY  = 'alloul_user';
+
+function getToken() { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } }
+function getCachedUser() { try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch { return null; } }
+
+async function apiFetch(endpoint) {
+  const tok = getToken();
+  const res = await fetch(API + endpoint, {
+    headers: tok ? { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' } : {},
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+function initials(name) {
+  if (!name) return '—';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2 ? parts[0][0] + parts[1][0] : name.slice(0, 2);
+}
+
+function avatarColors(i) {
+  const grads = [
+    'linear-gradient(135deg,var(--c),var(--b))',
+    'linear-gradient(135deg,var(--v),oklch(60% .22 310))',
+    'linear-gradient(135deg,var(--g),oklch(68% .2 175))',
+    'linear-gradient(135deg,var(--r),oklch(60% .22 35))',
+    'linear-gradient(135deg,var(--a),oklch(75% .18 55))',
+    'linear-gradient(135deg,var(--b),oklch(65% .2 265))',
+  ];
+  return grads[i % grads.length];
+}
+
+async function initDashboard() {
+  const tok = getToken();
+  if (!tok) { window.location.replace('/login'); return; }
+
+  // ── اجلب كل شيء بالتوازي ──
+  const [me, stats, activity, members, projects, meetings, handovers] = await Promise.allSettled([
+    apiFetch('/auth/me'),
+    apiFetch('/dashboard/stats'),
+    apiFetch('/dashboard/activity?limit=4'),
+    apiFetch('/companies/members'),
+    apiFetch('/projects/'),
+    apiFetch('/meetings/?upcoming=true'),
+    apiFetch('/handover/'),
+  ]);
+
+  const val = r => r.status === 'fulfilled' ? r.value : null;
+
+  // ── مستخدم (Sidebar) ──
+  const user = val(me) || getCachedUser();
+  if (user) {
+    const nm = user.name || user.username || user.email || '';
+    const av = document.getElementById('u-av');
+    const un = document.getElementById('u-name');
+    const ur = document.getElementById('u-role');
+    if (av) av.textContent = initials(nm);
+    if (un) un.textContent = nm;
+    if (ur) ur.textContent = user.job_title || (user.is_admin ? 'مسؤول' : 'عضو');
+  }
+
+  // ── إحصائيات ──
+  const st = val(stats) || {};
+  const mb = val(members) || [];
+  const mt = val(meetings) || [];
+  const hd = val(handovers) || [];
+  const el = id => document.getElementById(id);
+  if (el('stat-tasks'))    el('stat-tasks').textContent    = st.pending_tasks ?? '—';
+  if (el('stat-members'))  el('stat-members').textContent  = mb.length || st.team_size || '—';
+  if (el('stat-handovers'))el('stat-handovers').textContent= hd.length || st.total_handovers || '—';
+  if (el('stat-meetings')) el('stat-meetings').textContent = mt.length || '—';
+
+  // ── قائمة الأنشطة ──
+  const acts = val(activity) || [];
+  const actEl = el('activity-list');
+  if (actEl && acts.length) {
+    const icons = { task:'✓', handover:'◈', meeting:'◷', system:'✦', default:'◉' };
+    const colors = { task:'var(--gg),color:var(--g)', handover:'var(--ag),color:var(--a)', meeting:'var(--vg),color:var(--v)', system:'var(--cg),color:var(--c)', default:'var(--cg),color:var(--c)' };
+    actEl.innerHTML = acts.map((a, i) => {
+      const k = a.type in icons ? a.type : 'default';
+      const [bg, col] = colors[k].split(',color:');
+      return `<div class="ai-item" ${i === acts.length-1 ? 'style="border:none"':''}>
+        <div class="aic" style="background:${bg};color:${col}">${icons[k]}</div>
+        <div><div class="atx">${a.title}</div><div class="atm">${a.time || ''}</div></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── المشاريع (progress bars) ──
+  const projs = val(projects) || [];
+  const projEl = el('projects-list');
+  if (projEl && projs.length) {
+    const pColors = ['pf-c','pf-g','pf-a','pf-v'];
+    projEl.innerHTML = projs.slice(0, 5).map((p, i) => {
+      const done = p.completed_count || 0;
+      const total = p.tasks_count || 1;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      return `<div class="pw">
+        <div class="ptop"><span class="plbl">${p.name}</span><span class="pval">${pct}%</span></div>
+        <div class="ptrack"><div class="pfill ${pColors[i % pColors.length]}" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── قائمة الفريق في صفحة الاتصال ──
+  if (mb.length) renderTeamContacts(mb, user);
+
+  // ── الاجتماعات في صفحة الاتصال ──
+  renderMeetings(mt);
+}
+
+function renderTeamContacts(members, me) {
+  // احذف النفس من القائمة
+  const others = members.filter(m => me ? m.user_id !== me.id : true);
+  // قسّم: إدارة (owner/admin) وفريق (member)
+  const admins = others.filter(m => m.role === 'owner' || m.role === 'admin');
+  const staff  = others.filter(m => m.role !== 'owner' && m.role !== 'admin');
+
+  function memberCard(m, i) {
+    const nm = m.user_name || m.user_email || '—';
+    const av = initials(nm);
+    const role = m.job_title || (m.role === 'owner' ? 'مالك' : m.role === 'admin' ? 'مشرف' : 'عضو');
+    const col = avatarColors(i);
+    return `<div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s">
+      <div style="position:relative;flex-shrink:0">
+        <div style="width:38px;height:38px;border-radius:11px;background:${col};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">${av}</div>
+        <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #080c14;box-shadow:0 0 6px var(--g)"></span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</div>
+        <div style="font-size:10px;color:var(--c);font-weight:700;margin-top:1px">${role}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <button onclick="startCall('${nm}')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" title="مكالمة">📹</button>
+        <button onclick="sendMsg('${nm}')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" title="رسالة">💬</button>
+      </div>
+    </div>`;
+  }
+
+  const admEl = document.getElementById('tc-managers');
+  const stfEl = document.getElementById('tc-staff');
+  const ldEl  = document.getElementById('tc-leadership');
+  // اجمع الكل في أقسام
+  if (admins.length && admEl)  admEl.innerHTML  = admins.map((m,i) => memberCard(m, i)).join('');
+  if (staff.length  && stfEl)  stfEl.innerHTML  = staff.map((m,i)  => memberCard(m, i+admins.length)).join('');
+  if (ldEl && !admins.length && !staff.length) ldEl.innerHTML = '<p style="color:var(--t3);font-size:12px;padding:12px">لا يوجد أعضاء آخرون</p>';
+}
+
+function renderMeetings(meetings) {
+  // صفحة الاجتماعات المجدولة في page-call
+  const el = document.querySelector('#page-call .panel:last-of-type .pb, #page-call .txn-item');
+  // نترك الاجتماعات الوهمية ونضيف فوقها الحقيقية إذا وُجدت
+  if (!meetings || !meetings.length) return;
+  const container = document.querySelector('#page-call .panel .ph')?.closest('.panel')?.querySelector('div[style*="padding:0 20px"]');
+  if (!container) return;
+  const provColors = { teams: 'rgba(100,65,165,.15)', meet: 'rgba(15,157,88,.1)', daily: 'rgba(6,182,212,.1)', default: 'var(--cg)' };
+  const provEmoji  = { teams: '🟣', meet: '🟢', daily: '🔵', default: '📹' };
+  container.innerHTML = meetings.slice(0, 4).map((m, i) => {
+    const pr = m.provider || 'default';
+    return `<div class="txn-item" ${i === meetings.length-1 ? 'style="border:none"' : ''}>
+      <div style="width:42px;height:42px;border-radius:11px;background:${provColors[pr]||provColors.default};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${provEmoji[pr]||'📹'}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;margin-bottom:3px">${m.title}</div>
+        <div style="font-size:11px;color:var(--t2)">${m.meeting_date || ''} ${m.meeting_time ? '· '+m.meeting_time : ''}</div>
+      </div>
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--gg);color:var(--g)">● قادم</span>
+    </div>`;
+  }).join('');
+}
+
+// ── تشغيل ──
+initDashboard().catch(err => {
+  console.warn('API error:', err);
+  // بيانات وهمية تبقى كاحتياطي
+});
 
 const grid = document.getElementById('svc-grid');
 SERVICES.forEach(s => {
