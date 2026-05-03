@@ -535,16 +535,20 @@ body::before{
     <div class="nav-lbl">الإعدادات</div>
     <div class="ni" onclick="go('services')"><span class="ni-ic">⊞</span> إدارة الخدمات</div>
     <div class="ni" onclick="go('ai')"><span class="ni-ic">✦</span> مساعد AI <span class="nbdg nba">جديد</span></div>
+    <div class="ni" onclick="go('profile')"><span class="ni-ic">◯</span> الملف الشخصي</div>
   </nav>
   <div class="sfooter">
-    <div class="urow">
+    <div class="urow" onclick="go('profile')" style="cursor:pointer">
       <div class="uav" id="u-av">—</div>
-      <div>
+      <div style="flex:1">
         <div class="uname" id="u-name">جارٍ التحميل...</div>
         <div class="urole" id="u-role">—</div>
       </div>
       <div class="odot"></div>
     </div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:7px;border-radius:9px;background:oklch(64% .24 25 / .1);border:1px solid oklch(64% .24 25 / .25);color:var(--r);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='oklch(64% .24 25 / .2)'" onmouseout="this.style.background='oklch(64% .24 25 / .1)'">
+      تسجيل الخروج ←
+    </button>
   </div>
 </aside>
 
@@ -858,7 +862,7 @@ body::before{
   <div class="content">
     <div class="panel">
       <div class="ph"><div class="ph-t">جميع المهام</div><div class="pha">تصفية</div></div>
-      <div style="padding:0 20px">
+      <div id="tasks-list" style="padding:0 20px">
         <div class="ti" style="padding-top:16px"><div class="tch"></div><div style="flex:1"><div class="tnm">تحديث لوحة البيانات للعميل</div><div class="tmeta"><span class="ttag tr">عاجل جداً</span><span class="tdt">متأخر 3 أيام</span></div></div><div class="tav" style="background:var(--r)">سا</div></div>
         <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">مراجعة عقد الشراكة مع الخليج</div><div class="tmeta"><span class="ttag tp">قانوني</span><span class="tdt">اليوم</span></div></div><div class="tav" style="background:var(--v)">مح</div></div>
         <div class="ti"><div class="tch dn"></div><div style="flex:1"><div class="tnm dx">تقرير الربع الأول</div><div class="tmeta"><span class="ttag tg">مكتمل</span></div></div><div class="tav" style="background:var(--g)">أح</div></div>
@@ -900,7 +904,7 @@ body::before{
 <!-- ══════ CRM ══════ -->
 <div class="page" id="page-crm">
   <div class="topbar"><div><div class="tb-ttl">CRM — العملاء</div><div class="tb-sub">14 صفقة • ٨٤٢k ر.س</div></div><div class="sp"></div><button class="tbbtn p">+ صفقة جديدة</button></div>
-  <div class="crm-cols">
+  <div class="crm-cols" id="crm-cols">
     <div class="crm-col">
       <div class="crm-ch"><div class="crm-ct" style="color:var(--t2)">◉ محتملون</div><div class="crm-cn">4</div></div>
       <div class="crm-card"><div class="crm-co">شركة الفيصل للتقنية</div><div class="crm-vl">٤٥,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--c);width:20%"></div></div></div>
@@ -1158,7 +1162,7 @@ body::before{
   <div class="topbar">
     <div><div class="tb-ttl">الاتصال والاجتماعات</div><div class="tb-sub">Microsoft Teams · Google Meet · Daily.co</div></div>
     <div class="sp"></div>
-    <button class="tbbtn p" onclick="">+ اجتماع جديد</button>
+    <button class="tbbtn p" onclick="go('meetings')">+ اجتماع جديد</button>
   </div>
   <div class="content">
 
@@ -1504,6 +1508,68 @@ body::before{
   </div>
 </div>
 
+<!-- ══════ PROFILE ══════ -->
+<div class="page" id="page-profile">
+  <div class="topbar">
+    <div><div class="tb-ttl">الملف الشخصي</div><div class="tb-sub">إعدادات الحساب</div></div>
+    <div class="sp"></div>
+    <button class="tbbtn" onclick="go('dash')">← العودة</button>
+  </div>
+  <div class="content" style="max-width:600px">
+    <!-- Avatar Card -->
+    <div class="panel" style="margin-bottom:16px">
+      <div style="padding:28px 24px;display:flex;align-items:center;gap:20px">
+        <div id="prof-av" style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--c),var(--v));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#080c14;flex-shrink:0">—</div>
+        <div style="flex:1">
+          <div id="prof-name" style="font-size:20px;font-weight:900;margin-bottom:4px">جارٍ التحميل...</div>
+          <div id="prof-email" style="font-size:13px;color:var(--t2);margin-bottom:6px">—</div>
+          <div id="prof-role-badge" style="display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--cg);color:var(--c);border:1px solid var(--cr)">عضو</div>
+        </div>
+      </div>
+    </div>
+    <!-- Details -->
+    <div class="panel" style="margin-bottom:16px">
+      <div class="ph"><div class="ph-t">بيانات الحساب</div></div>
+      <div style="padding:4px 20px 16px">
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--glass);border:1px solid var(--rim);border-radius:11px">
+            <span style="font-size:16px">👤</span>
+            <div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:2px">الاسم الكامل</div>
+              <div id="prof-detail-name" style="font-size:13px;font-weight:700">—</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--glass);border:1px solid var(--rim);border-radius:11px">
+            <span style="font-size:16px">📧</span>
+            <div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:2px">البريد الإلكتروني</div>
+              <div id="prof-detail-email" style="font-size:13px;font-weight:700">—</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--glass);border:1px solid var(--rim);border-radius:11px">
+            <span style="font-size:16px">💼</span>
+            <div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:2px">المسمى الوظيفي</div>
+              <div id="prof-detail-title" style="font-size:13px;font-weight:700">—</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--glass);border:1px solid var(--rim);border-radius:11px">
+            <span style="font-size:16px">🏢</span>
+            <div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:2px">الدور</div>
+              <div id="prof-detail-role" style="font-size:13px;font-weight:700">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Logout -->
+    <button onclick="doLogout()" style="width:100%;padding:14px;border-radius:13px;background:oklch(64% .24 25 / .1);border:1px solid oklch(64% .24 25 / .3);color:var(--r);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='oklch(64% .24 25 / .2)'" onmouseout="this.style.background='oklch(64% .24 25 / .1)'">
+      تسجيل الخروج من الحساب ←
+    </button>
+  </div>
+</div>
+
 <script>
 // ── Navigation ──
 function go(id) {
@@ -1511,8 +1577,14 @@ function go(id) {
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
   const pg = document.getElementById('page-' + id);
   if (pg) pg.classList.add('on');
-  const map = {dash:'لوحة التحكم',tasks:'المهام',projects:'المشاريع',team:'شجرة الفريق',chat:'المحادثات',call:'الاتصال',crm:'CRM',finance:'الرقابة',report:'التقرير',services:'إدارة الخدمات',ai:'مساعد'};
+  const map = {dash:'لوحة التحكم',tasks:'المهام',projects:'المشاريع',team:'شجرة الفريق',chat:'المحادثات',call:'الاتصال',crm:'CRM',finance:'الرقابة',report:'التقرير',services:'إدارة الخدمات',ai:'مساعد',profile:'الملف الشخصي'};
   document.querySelectorAll('.ni').forEach(n => { if (n.textContent.includes(map[id]||'___')) n.classList.add('on'); });
+}
+
+// ── Logout ──
+function doLogout() {
+  try { localStorage.removeItem('alloul_token'); localStorage.removeItem('alloul_user'); } catch {}
+  window.location.replace('/login');
 }
 
 // ── Team Contacts ──
@@ -1621,7 +1693,7 @@ async function initDashboard() {
   if (!tok) { window.location.replace('/login'); return; }
 
   // ── اجلب كل شيء بالتوازي ──
-  const [me, stats, activity, members, projects, meetings, handovers] = await Promise.allSettled([
+  const [me, stats, activity, members, projects, meetings, handovers, tasks, deals] = await Promise.allSettled([
     apiFetch('/auth/me'),
     apiFetch('/dashboard/stats'),
     apiFetch('/dashboard/activity?limit=4'),
@@ -1629,20 +1701,35 @@ async function initDashboard() {
     apiFetch('/projects/'),
     apiFetch('/meetings/?upcoming=true'),
     apiFetch('/handover/'),
+    apiFetch('/tasks/'),
+    apiFetch('/deals/'),
   ]);
 
   const val = r => r.status === 'fulfilled' ? r.value : null;
 
-  // ── مستخدم (Sidebar) ──
+  // ── مستخدم (Sidebar + Profile) ──
   const user = val(me) || getCachedUser();
   if (user) {
     const nm = user.name || user.username || user.email || '';
+    const email = user.email || '';
+    const roleLabel = user.job_title || (user.role === 'owner' ? 'مالك' : user.is_admin ? 'مسؤول' : 'عضو');
+    // Sidebar
     const av = document.getElementById('u-av');
     const un = document.getElementById('u-name');
     const ur = document.getElementById('u-role');
     if (av) av.textContent = initials(nm);
     if (un) un.textContent = nm;
-    if (ur) ur.textContent = user.job_title || (user.is_admin ? 'مسؤول' : 'عضو');
+    if (ur) ur.textContent = roleLabel;
+    // Profile page
+    const el2 = id => document.getElementById(id);
+    if (el2('prof-av'))          el2('prof-av').textContent          = initials(nm);
+    if (el2('prof-name'))        el2('prof-name').textContent        = nm || '—';
+    if (el2('prof-email'))       el2('prof-email').textContent       = email || '—';
+    if (el2('prof-role-badge'))  el2('prof-role-badge').textContent  = roleLabel;
+    if (el2('prof-detail-name')) el2('prof-detail-name').textContent = nm || '—';
+    if (el2('prof-detail-email'))el2('prof-detail-email').textContent= email || '—';
+    if (el2('prof-detail-title'))el2('prof-detail-title').textContent= user.job_title || '—';
+    if (el2('prof-detail-role')) el2('prof-detail-role').textContent = roleLabel;
   }
 
   // ── إحصائيات ──
@@ -1685,6 +1772,71 @@ async function initDashboard() {
         <div class="ptop"><span class="plbl">${p.name}</span><span class="pval">${pct}%</span></div>
         <div class="ptrack"><div class="pfill ${pColors[i % pColors.length]}" style="width:${pct}%"></div></div>
       </div>`;
+    }).join('');
+  }
+
+  // ── المهام ──
+  const taskList = val(tasks) || [];
+  const tasksEl = el('tasks-list');
+  if (tasksEl && taskList.length) {
+    const priorityMap = { high:'tr', medium:'ta', low:'tg', urgent:'tr' };
+    const priorityLbl = { high:'مرتفع', medium:'متوسط', low:'منخفض', urgent:'عاجل جداً' };
+    const statusLbl   = { done:'مكتمل', completed:'مكتمل', pending:'معلق', in_progress:'جارٍ' };
+    const statusCls   = { done:'tg', completed:'tg', pending:'tp', in_progress:'tc' };
+    tasksEl.innerHTML = taskList.slice(0, 8).map((t, i) => {
+      const isDone = t.status === 'done' || t.status === 'completed';
+      const pr = t.priority || 'medium';
+      const sc = t.status || 'pending';
+      const due = t.due_date ? `· ${t.due_date}` : '';
+      const av = t.assignee_name ? initials(t.assignee_name) : '—';
+      const isLast = i === Math.min(taskList.length, 8) - 1;
+      return `<div class="ti" ${isLast ? 'style="border:none;padding-bottom:16px"' : i===0 ? 'style="padding-top:16px"' : ''}>
+        <div class="tch ${isDone ? 'dn' : ''}"></div>
+        <div style="flex:1">
+          <div class="tnm ${isDone ? 'dx' : ''}">${t.title || t.name || '—'}</div>
+          <div class="tmeta">
+            <span class="ttag ${priorityMap[pr]||'tp'}">${priorityLbl[pr]||pr}</span>
+            <span class="ttag ${statusCls[sc]||'tp'}">${statusLbl[sc]||sc}</span>
+            ${due ? `<span class="tdt">${due}</span>` : ''}
+          </div>
+        </div>
+        <div class="tav" style="background:var(--b);color:#080c14">${av}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── CRM (صفقات) ──
+  const dealList = val(deals) || [];
+  const crmCols = el('crm-cols');
+  if (crmCols && dealList.length) {
+    const stages = [
+      { key:'lead',      label:'◉ محتملون',       color:'var(--t2)' },
+      { key:'negotiation',label:'◈ تفاوض',         color:'var(--a)'  },
+      { key:'proposal',  label:'◎ مقترح مرسل',    color:'var(--v)'  },
+      { key:'won',       label:'✦ مكتسب',          color:'var(--g)'  },
+      { key:'lost',      label:'✕ خسارة',          color:'var(--r)'  },
+    ];
+    const stageKeys = stages.map(s => s.key);
+    // group deals by stage
+    const grouped = {};
+    stageKeys.forEach(k => grouped[k] = []);
+    dealList.forEach(d => {
+      const k = d.stage || d.status || 'lead';
+      if (grouped[k]) grouped[k].push(d); else grouped['lead'].push(d);
+    });
+    // only show stages that have deals or are main 4
+    const mainStages = stages.filter(s => s.key !== 'lost' || grouped['lost'].length > 0);
+    crmCols.innerHTML = mainStages.map(st => {
+      const items = grouped[st.key] || [];
+      const wonStyle = st.key === 'won' ? `style="border-color:oklch(72% .2 155 / .3)"` : '';
+      const coStyle  = st.key === 'won' ? `style="color:var(--g)"` : '';
+      const pfBg     = st.key === 'won' ? 'var(--g)' : st.key === 'negotiation' ? 'var(--a)' : st.key === 'proposal' ? 'var(--v)' : st.key === 'lost' ? 'var(--r)' : 'var(--c)';
+      const cards = items.map(d => {
+        const val_fmt = d.value ? d.value.toLocaleString('ar-SA') + ' ر.س' : '—';
+        const pct = d.probability || (st.key==='won' ? 100 : st.key==='lost' ? 0 : 50);
+        return `<div class="crm-card" ${wonStyle}><div class="crm-co" ${coStyle}>${d.name||d.client_name||'—'}</div><div class="crm-vl">${val_fmt}</div><div class="crm-pr"><div class="crm-pf" style="background:${pfBg};width:${pct}%"></div></div></div>`;
+      }).join('');
+      return `<div class="crm-col"><div class="crm-ch"><div class="crm-ct" style="color:${st.color}">${st.label}</div><div class="crm-cn">${items.length}</div></div>${cards}</div>`;
     }).join('');
   }
 
