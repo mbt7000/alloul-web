@@ -6,6 +6,9 @@
   "devCommand": "next dev",
   "outputDirectory": ".next",
   "regions": ["fra1"],
+  "redirects": [
+    { "source": "/", "destination": "/preview.html", "permanent": false }
+  ],
   "headers": [
     {
       "source": "/(.*)",
