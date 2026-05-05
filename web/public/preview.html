@@ -751,8 +751,12 @@ body::before{
       </div>
     </div>
 
-    <!-- Tree -->
-    <div class="tree">
+    <!-- Team Members (API) -->
+    <div id="team-dynamic" style="display:flex;flex-direction:column;gap:10px;max-width:640px;margin:0 auto;padding:0 20px">
+      <div style="text-align:center;padding:40px;color:var(--t3);font-size:13px">جارٍ تحميل الفريق...</div>
+    </div>
+    <!-- Tree (hidden fallback) -->
+    <div class="tree" style="display:none">
       <!-- Level 0: Owner -->
       <div class="t-level">
         <div class="t-node">
@@ -876,8 +880,8 @@ body::before{
 <!-- ══════ PROJECTS ══════ -->
 <div class="page" id="page-projects">
   <div class="topbar"><div><div class="tb-ttl">المشاريع</div><div class="tb-sub">7 مشاريع نشطة</div></div><div class="sp"></div><button class="tbbtn p">+ مشروع جديد</button></div>
-  <div class="content" style="display:flex;flex-direction:column;gap:14px">
-    <div class="panel" style="overflow:hidden">
+  <div id="proj-page-list" class="content" style="display:flex;flex-direction:column;gap:14px">
+    <div class="panel" style="overflow:hidden;display:none">
       <div style="display:flex;align-items:center;gap:14px;padding:18px 20px">
         <div style="width:44px;height:44px;border-radius:12px;background:var(--cg);display:flex;align-items:center;justify-content:center;font-size:20px">📱</div>
         <div style="flex:1"><div style="font-size:14px;font-weight:800;margin-bottom:3px">تطوير تطبيق Alloul</div><div style="font-size:11px;color:var(--t2)">أحمد + سارة + 3 آخرين • يستحق 15 مايو</div><div class="ptrack" style="margin-top:8px"><div class="pfill pf-c" style="width:72%"></div></div></div>
@@ -941,20 +945,20 @@ body::before{
     <div class="fin-stats">
       <div class="fin-sc" style="border-color:oklch(72% .2 155 / .25)">
         <div class="fin-lbl">إجمالي الإيرادات — أبريل</div>
-        <div class="fin-val" style="color:var(--g)">٢٤٧,٨٠٠</div>
-        <div class="fin-sub" style="color:var(--g)">↑ 28% عن الشهر الماضي</div>
+        <div class="fin-val" id="fin-income-val" style="color:var(--g)">—</div>
+        <div class="fin-sub" style="color:var(--g)">إجمالي الإيرادات</div>
         <div class="spark" style="margin-top:12px"><div class="sb sb-g" style="height:50%"></div><div class="sb sb-g" style="height:65%"></div><div class="sb sb-g" style="height:55%"></div><div class="sb sb-g" style="height:80%"></div><div class="sb sb-g" style="height:70%"></div><div class="sb sb-g" style="height:90%"></div><div class="sb sb-g hi" style="height:100%"></div></div>
       </div>
       <div class="fin-sc" style="border-color:oklch(64% .24 25 / .25)">
         <div class="fin-lbl">إجمالي المصروفات</div>
-        <div class="fin-val" style="color:var(--r)">١٢٣,٤٠٠</div>
-        <div class="fin-sub" style="color:var(--r)">↑ 5% عن الشهر الماضي</div>
+        <div class="fin-val" id="fin-expense-val" style="color:var(--r)">—</div>
+        <div class="fin-sub" style="color:var(--r)">إجمالي المصروفات</div>
         <div class="spark" style="margin-top:12px"><div class="sb sb-a" style="height:60%"></div><div class="sb sb-a" style="height:55%"></div><div class="sb sb-a" style="height:70%"></div><div class="sb sb-a" style="height:50%"></div><div class="sb sb-a" style="height:65%"></div><div class="sb sb-a" style="height:60%"></div><div class="sb sb-a hi" style="height:63%"></div></div>
       </div>
       <div class="fin-sc" style="border-color:oklch(78% .2 200 / .3);box-shadow:0 0 30px oklch(78% .2 200 / .08)">
         <div class="fin-lbl">صافي الربح</div>
-        <div class="fin-val" style="color:var(--c)">١٢٤,٤٠٠</div>
-        <div class="fin-sub" style="color:var(--c)">هامش ٥٠٪ — ممتاز ✦</div>
+        <div class="fin-val" id="fin-profit-val" style="color:var(--c)">—</div>
+        <div class="fin-sub" id="fin-margin-txt" style="color:var(--c)">صافي الربح</div>
         <!-- Health Ring -->
         <div style="display:flex;justify-content:center;margin-top:14px">
           <div class="ring-wrap">
@@ -974,7 +978,7 @@ body::before{
       <!-- Transactions -->
       <div class="panel">
         <div class="ph"><div class="ph-t">آخر المعاملات</div><div class="pha">عرض الكل</div></div>
-        <div class="pb" style="padding:0 20px">
+        <div id="fin-txns" class="pb" style="padding:0 20px">
           <div class="txn-item"><div class="txnic" style="background:var(--gg)">↓</div><div class="txn-info"><div class="txn-nm">دفعة من الخليج للاستثمار</div><div class="txn-dt">اليوم، 10:30 ص</div></div><div class="txn-amt" style="color:var(--g)">+٨٥,٠٠٠</div></div>
           <div class="txn-item"><div class="txnic" style="background:var(--rg)">↑</div><div class="txn-info"><div class="txn-nm">رواتب شهر أبريل</div><div class="txn-dt">أمس، 2:00 م</div></div><div class="txn-amt" style="color:var(--r)">-٦٤,٠٠٠</div></div>
           <div class="txn-item"><div class="txnic" style="background:var(--gg)">↓</div><div class="txn-info"><div class="txn-nm">فاتورة نيوم تك</div><div class="txn-dt">27 أبريل</div></div><div class="txn-amt" style="color:var(--g)">+٢٤,٠٠٠</div></div>
@@ -1146,12 +1150,11 @@ body::before{
 
 <!-- ══════ CHAT ══════ -->
 <div class="page" id="page-chat">
-  <div class="topbar"><div><div class="tb-ttl">المحادثات</div><div class="tb-sub">2 رسائل جديدة</div></div></div>
+  <div class="topbar"><div><div class="tb-ttl">المحادثات</div><div class="tb-sub" id="chat-sub">أعضاء الفريق</div></div></div>
   <div class="content">
     <div class="panel">
-      <div style="padding:0 20px">
-        <div class="txn-item" style="padding:14px 0;cursor:pointer"><div style="width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--g),oklch(68% .2 175));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff">أح</div><div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:2px">أحمد الزهراني</div><div style="font-size:11px;color:var(--t2)">راجعت الكود، في ملاحظات...</div></div><div style="text-align:left"><div style="font-size:10px;color:var(--t3);margin-bottom:4px">منذ 5 دق</div><span class="nbdg nbr">2</span></div></div>
-        <div class="txn-item" style="padding:14px 0;cursor:pointer;border:none"><div style="width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--v),oklch(60% .22 310));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff">سا</div><div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:2px">سارة العتيبي</div><div style="font-size:11px;color:var(--t2)">التصميم جاهز للمراجعة 🎨</div></div><div style="font-size:10px;color:var(--t3)">منذ ساعة</div></div>
+      <div id="chat-list" style="padding:0 20px">
+        <div style="text-align:center;padding:40px;color:var(--t3);font-size:13px">جارٍ التحميل...</div>
       </div>
     </div>
   </div>
@@ -1604,7 +1607,15 @@ function showToast(msg) {
   clearTimeout(t._tid);
   t._tid = setTimeout(() => { t.style.display = 'none'; }, 2400);
 }
-function startCall(name) { showToast('📹 جارٍ فتح مكالمة مع ' + name + '...'); }
+async function startCall(name) {
+  showToast('📹 جارٍ فتح الغرفة...');
+  try {
+    const data = await apiFetch('/daily/company-join');
+    window.open(data.join_url, '_blank');
+  } catch {
+    showToast('⚠️ تعذّر فتح غرفة المكالمة');
+  }
+}
 function sendMsg(name)   { showToast('💬 فتح محادثة مع ' + name); go('chat'); }
 
 // ── Task check toggle ──
@@ -1843,8 +1854,21 @@ async function initDashboard() {
   // ── قائمة الفريق في صفحة الاتصال ──
   if (mb.length) renderTeamContacts(mb, user);
 
+  // ── صفحة الفريق ──
+  renderTeamPage(mb);
+
+  // ── صفحة المشاريع ──
+  const pj = val(projects) || [];
+  if (pj.length) renderProjectsPage(pj);
+
+  // ── صفحة المحادثات ──
+  renderChatPage(mb.filter(m => user ? m.user_id !== user.id : true));
+
   // ── الاجتماعات في صفحة الاتصال ──
   renderMeetings(mt);
+
+  // ── الصفحة المالية (استدعاء مستقل) ──
+  renderFinancePage();
 }
 
 function renderTeamContacts(members, me) {
@@ -1882,6 +1906,138 @@ function renderTeamContacts(members, me) {
   if (admins.length && admEl)  admEl.innerHTML  = admins.map((m,i) => memberCard(m, i)).join('');
   if (staff.length  && stfEl)  stfEl.innerHTML  = staff.map((m,i)  => memberCard(m, i+admins.length)).join('');
   if (ldEl && !admins.length && !staff.length) ldEl.innerHTML = '<p style="color:var(--t3);font-size:12px;padding:12px">لا يوجد أعضاء آخرون</p>';
+}
+
+function renderTeamPage(members) {
+  const container = document.getElementById('team-dynamic');
+  if (!container || !members.length) return;
+  const grads = [
+    'linear-gradient(135deg,var(--c),var(--b))',
+    'linear-gradient(135deg,var(--v),oklch(60% .22 310))',
+    'linear-gradient(135deg,var(--g),oklch(68% .2 175))',
+    'linear-gradient(135deg,var(--r),oklch(60% .22 35))',
+    'linear-gradient(135deg,var(--a),oklch(75% .18 55))',
+  ];
+  const owners  = members.filter(m => m.role === 'owner');
+  const admins  = members.filter(m => m.role === 'admin');
+  const staff   = members.filter(m => m.role !== 'owner' && m.role !== 'admin');
+  const all = [...owners, ...admins, ...staff];
+  container.innerHTML = all.map((m, i) => {
+    const nm  = m.user_name || m.user_email || '—';
+    const av  = initials(nm);
+    const col = grads[i % grads.length];
+    const roleLbl = m.role === 'owner' ? '★ مؤسس' : m.role === 'admin' ? 'مشرف' : (m.job_title || 'عضو');
+    const roleColor = m.role === 'owner' ? 'var(--c)' : m.role === 'admin' ? 'var(--v)' : 'var(--g)';
+    const roleBg    = m.role === 'owner' ? 'var(--cg)' : m.role === 'admin' ? 'var(--vg)' : 'var(--gg)';
+    return `<div style="display:flex;align-items:center;gap:13px;padding:12px 16px;background:var(--glass);border:1px solid var(--rim);border-radius:14px;transition:all .18s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">
+      <div style="position:relative;flex-shrink:0">
+        <div style="width:42px;height:42px;border-radius:12px;background:${col};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff">${av}</div>
+        <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #07090f;box-shadow:0 0 6px var(--g)"></span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</div>
+        <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:3px;background:${roleBg};color:${roleColor}">${roleLbl}</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="startCall('${nm}')" style="width:30px;height:30px;border-radius:9px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'" title="مكالمة">📹</button>
+        <button onclick="sendMsg('${nm}')" style="width:30px;height:30px;border-radius:9px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'" title="رسالة">💬</button>
+      </div>
+    </div>`;
+  }).join('');
+  // update header count
+  const subEl = document.querySelector('#page-team .tb-sub');
+  if (subEl) subEl.textContent = all.length + ' عضو';
+}
+
+function renderProjectsPage(projs) {
+  const container = document.getElementById('proj-page-list');
+  if (!container || !projs.length) return;
+  const icons  = ['📱','🎨','📢','🔧','📊','📁'];
+  const cols   = [['var(--c)','var(--cg)','pf-c'],['var(--g)','var(--gg)','pf-g'],['var(--a)','var(--ag)','pf-a'],['var(--v)','var(--vg)','pf-v']];
+  const statLbl = { active:'نشط', completed:'مكتمل', paused:'متوقف', default:'جارٍ' };
+  container.innerHTML = projs.map((p, i) => {
+    const done = p.completed_count || 0;
+    const total = p.tasks_count || 1;
+    const pct = Math.round((done / total) * 100);
+    const [clr, bg, pfCls] = cols[i % cols.length];
+    const stLbl = statLbl[p.status] || statLbl.default;
+    const stClr = p.status === 'completed' ? 'var(--g)' : p.status === 'paused' ? 'var(--a)' : clr;
+    return `<div class="panel" style="overflow:hidden">
+      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px">
+        <div style="width:44px;height:44px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${icons[i % icons.length]}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800;margin-bottom:3px">${p.name}</div>
+          <div style="font-size:11px;color:var(--t2)">${p.description || ''}${p.due_date ? ' · يستحق ' + p.due_date : ''}</div>
+          <div class="ptrack" style="margin-top:8px"><div class="pfill ${pfCls}" style="width:${pct}%"></div></div>
+        </div>
+        <div style="text-align:left;flex-shrink:0">
+          <div style="font-size:22px;font-weight:900;color:${clr}">${pct}%</div>
+          <div style="font-size:10px;color:${stClr}">${stLbl}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  const subEl = document.querySelector('#page-projects .tb-sub');
+  if (subEl) subEl.textContent = projs.filter(p => p.status === 'active').length + ' مشاريع نشطة';
+}
+
+async function renderFinancePage() {
+  try {
+    const data = await apiFetch('/accounting/dashboard');
+    const fmtNum = n => Math.round(n || 0).toLocaleString('ar-SA');
+    const income  = data.total_income  || 0;
+    const expense = data.total_expense || 0;
+    const profit  = income - expense;
+    const margin  = income > 0 ? Math.round((profit / income) * 100) : 0;
+    const el = id => document.getElementById(id);
+    if (el('fin-income-val'))  el('fin-income-val').textContent  = fmtNum(income);
+    if (el('fin-expense-val')) el('fin-expense-val').textContent = fmtNum(expense);
+    if (el('fin-profit-val'))  el('fin-profit-val').textContent  = fmtNum(profit);
+    if (el('fin-margin-txt'))  el('fin-margin-txt').textContent  = 'هامش ' + margin + '٪';
+    // Recent records
+    const recs = await apiFetch('/accounting/records/recent');
+    const txnEl = document.getElementById('fin-txns');
+    if (txnEl && recs.length) {
+      txnEl.innerHTML = recs.slice(0, 5).map((r, i) => {
+        const isIncome = r.record_type === 'income';
+        const bg = isIncome ? 'var(--gg)' : 'var(--rg)';
+        const clr = isIncome ? 'var(--g)' : 'var(--r)';
+        const sign = isIncome ? '+' : '-';
+        const isLast = i === Math.min(recs.length, 5) - 1;
+        return `<div class="txn-item" ${isLast ? 'style="border:none;padding-bottom:16px"' : ''}>
+          <div class="txnic" style="background:${bg};color:${clr}">${isIncome ? '↓' : '↑'}</div>
+          <div class="txn-info"><div class="txn-nm">${r.description || r.category || '—'}</div><div class="txn-dt">${r.recorded_at ? r.recorded_at.slice(0, 10) : ''}</div></div>
+          <div class="txn-amt" style="color:${clr}">${sign}${fmtNum(r.amount)}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) { console.warn('finance API error', e); }
+}
+
+function renderChatPage(members) {
+  const container = document.getElementById('chat-list');
+  if (!container) return;
+  if (!members || !members.length) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">لا يوجد أعضاء في الفريق بعد</div>';
+    return;
+  }
+  const grads = [
+    'linear-gradient(135deg,var(--g),oklch(68% .2 175))',
+    'linear-gradient(135deg,var(--v),oklch(60% .22 310))',
+    'linear-gradient(135deg,var(--c),var(--b))',
+    'linear-gradient(135deg,var(--a),oklch(75% .18 55))',
+    'linear-gradient(135deg,var(--r),oklch(60% .22 35))',
+  ];
+  container.innerHTML = members.slice(0, 8).map((m, i) => {
+    const nm = m.user_name || m.user_email || '—';
+    const av = initials(nm);
+    const isLast = i === Math.min(members.length, 8) - 1;
+    return `<div class="txn-item" style="padding:14px 0;cursor:pointer${isLast ? ';border:none' : ''}" onclick="sendMsg('${nm}')">
+      <div style="width:40px;height:40px;border-radius:11px;background:${grads[i % grads.length]};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff">${av}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:2px">${nm}</div><div style="font-size:11px;color:var(--t2)">${m.job_title || (m.role === 'owner' ? 'مؤسس' : m.role === 'admin' ? 'مشرف' : 'عضو')}</div></div>
+      <div style="font-size:11px;color:var(--c)">رسالة →</div>
+    </div>`;
+  }).join('');
 }
 
 function renderMeetings(meetings) {
