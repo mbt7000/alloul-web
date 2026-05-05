@@ -38,8 +38,8 @@ export async function apiFetch<T = any>(
     });
   } catch (e: any) {
     clearTimeout(timer);
-    if (e.name === 'AbortError') throw new ApiError('timeout', 0);
-    throw new ApiError('network', 0);
+    if (e.name === 'AbortError') throw new ApiError('انتهت مهلة الطلب. تحقق من اتصالك بالإنترنت.', 0);
+    throw new ApiError('تعذّر الوصول للخادم. تحقق من اتصالك بالإنترنت وأعد المحاولة.', 0);
   }
   clearTimeout(timer);
 
@@ -234,6 +234,128 @@ export const updateUser = (fields: {
   apiFetch<import('./auth').AuthUser>('/auth/me', {
     method: 'PATCH',
     body: JSON.stringify(fields),
+  });
+
+// ─── Notifications / Inbox ────────────────────────────────────────────────────
+export interface AppNotification {
+  id: number;
+  type: string;
+  title: string;
+  body?: string | null;
+  read: boolean;
+  reference_id?: string | null;
+  actor_id?: number | null;
+  actor_name?: string | null;
+  actor_avatar?: string | null;
+  created_at?: string | null;
+}
+export const getNotifications = (limit = 50) =>
+  apiFetch<AppNotification[]>(`/notifications/?limit=${limit}`);
+export const markNotificationRead = (id: number) =>
+  apiFetch<void>(`/notifications/${id}/read`, { method: 'PATCH' });
+export const markAllNotificationsRead = () =>
+  apiFetch<void>('/notifications/read-all', { method: 'POST' });
+export const getUnreadCount = () =>
+  apiFetch<{ count: number }>('/notifications/unread-count');
+
+// ─── Messages / Chat ──────────────────────────────────────────────────────────
+export interface Conversation {
+  id: number;
+  other_user_id: number;
+  other_user_name?: string | null;
+  other_user_username?: string | null;
+  other_user_avatar?: string | null;
+  last_message?: string | null;
+  last_message_at?: string | null;
+  unread_count: number;
+}
+export interface ChatMessage {
+  id: number;
+  conversation_id: number;
+  sender_id: number;
+  sender_name?: string | null;
+  content: string;
+  read_at?: string | null;
+  created_at?: string | null;
+  is_mine: boolean;
+}
+export const getConversations = () => apiFetch<Conversation[]>('/messages/');
+export const startConversation = (userId: number) =>
+  apiFetch<Conversation>(`/messages/${userId}`, { method: 'POST' });
+export const getMessages = (conversationId: number, afterId = 0) =>
+  apiFetch<ChatMessage[]>(`/messages/${conversationId}/messages?after_id=${afterId}&limit=50`);
+export const sendMessage = (conversationId: number, content: string) =>
+  apiFetch<ChatMessage>(`/messages/${conversationId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+
+// ─── Jobs / Hiring ────────────────────────────────────────────────────────────
+export interface JobPost {
+  id: number;
+  company_id?: number | null;
+  company_name?: string | null;
+  title: string;
+  industry?: string | null;
+  job_type: string;
+  location?: string | null;
+  description?: string | null;
+  requirements?: string | null;
+  salary_range?: string | null;
+  required_skills?: string[];
+  min_experience?: number | null;
+  applications_count: number;
+  is_active: boolean;
+  created_at?: string | null;
+  applied_by_me: boolean;
+}
+export interface JobApplication {
+  id: number;
+  job_id: number;
+  job_title?: string | null;
+  applicant_id: number;
+  applicant_name?: string | null;
+  applicant_username?: string | null;
+  cover_letter?: string | null;
+  status: string;
+  created_at?: string | null;
+}
+export const getMyCompanyJobs = () => apiFetch<JobPost[]>('/jobs/my-company');
+export const createJob = (body: Partial<JobPost>) =>
+  apiFetch<JobPost>('/jobs/', { method: 'POST', body: JSON.stringify(body) });
+export const deleteJob = (jobId: number) =>
+  apiFetch<void>(`/jobs/${jobId}`, { method: 'DELETE' });
+export const getJobApplications = (jobId: number) =>
+  apiFetch<JobApplication[]>(`/jobs/${jobId}/applications`);
+export const updateApplication = (jobId: number, appId: number, status: 'accepted' | 'rejected') =>
+  apiFetch<JobApplication>(`/jobs/${jobId}/applications/${appId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+
+// ─── File upload ──────────────────────────────────────────────────────────────
+export const uploadFile = async (file: File): Promise<{ url: string; filename: string }> => {
+  const token = getToken();
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${API_BASE}/upload/file`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) throw new ApiError('فشل رفع الملف', res.status);
+  return res.json();
+};
+
+// ─── Tasks (all tasks across projects) ───────────────────────────────────────
+export const getAllTasks = () => apiFetch<Task[]>('/projects/all-tasks');
+export const createTask = (projectId: number, body: Partial<Task>) =>
+  apiFetch<Task>(`/projects/${projectId}/tasks`, {
+    method: 'POST', body: JSON.stringify(body),
+  });
+export const updateTask = (projectId: number, taskId: number, body: Partial<Task>) =>
+  apiFetch<Task>(`/projects/${projectId}/tasks/${taskId}`, {
+    method: 'PATCH', body: JSON.stringify(body),
   });
 
 // ─── Company creation ─────────────────────────────────────────────────────────
