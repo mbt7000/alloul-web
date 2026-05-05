@@ -5,7 +5,7 @@
 
 export const FEATURES = {
   // Media & Social Features
-  MEDIA_WORLD: false,        // ❌ Media/Social مُعطَّل
+  MEDIA_WORLD: true,         // ✅ Media/Social مفعّل
   CORPORATE_WORLD: true,     // ✅ Business features مفعّل
   AI_HUB: true,              // ✅ AI مفعّل
 

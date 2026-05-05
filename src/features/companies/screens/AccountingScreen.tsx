@@ -43,7 +43,9 @@ type DashboardData = {
   setup: {
     has_google_sheet: boolean;
     has_whatsapp: boolean;
+    has_telegram: boolean;
     google_sheet_url: string | null;
+    telegram_bot_token: string | null;
     currency: string;
   };
 };
@@ -57,7 +59,7 @@ type RecordForm = {
 
 type SetupForm = {
   google_sheet_url: string;
-  whatsapp_number: string;
+  telegram_bot_token: string;
   currency: string;
 };
 
@@ -101,7 +103,7 @@ const postSetup = (form: SetupForm) => {
     body: JSON.stringify({
       google_sheet_id: m ? m[1] : null,
       google_sheet_url: form.google_sheet_url || null,
-      whatsapp_number: form.whatsapp_number || null,
+      telegram_bot_token: form.telegram_bot_token || null,
       currency: form.currency,
     }),
   });
@@ -146,7 +148,7 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
   });
   const [setupForm, setSetupForm] = useState<SetupForm>({
     google_sheet_url: "",
-    whatsapp_number: "",
+    telegram_bot_token: "",
     currency: "SAR",
   });
 
@@ -160,6 +162,7 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
       setSetupForm((f) => ({
         ...f,
         google_sheet_url: d.setup.google_sheet_url || "",
+        telegram_bot_token: d.setup.telegram_bot_token || "",
         currency: d.setup.currency,
       }));
       const idx = CURRENCIES.indexOf(d.setup.currency);
@@ -285,18 +288,25 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
           </AppText>
 
           {/* Setup Banner */}
-          {data && (!data.setup.has_google_sheet || !data.setup.has_whatsapp) && (
+          {data && (!data.setup.has_google_sheet || !data.setup.has_telegram) && (
             <Pressable onPress={() => setSetupOpen(true)} style={S.banner}>
               <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
               <View style={{ flex: 1, marginRight: 8 }}>
                 <AppText style={S.bannerTitle}>أكمل الإعداد</AppText>
                 <AppText style={S.bannerSub}>
                   {!data.setup.has_google_sheet ? "أضف Google Sheet · " : ""}
-                  {!data.setup.has_whatsapp ? "أضف رقم WhatsApp" : ""}
+                  {!data.setup.has_telegram ? "أضف توكن تليجرام" : ""}
                 </AppText>
               </View>
               <Ionicons name="chevron-back-outline" size={16} color="#F59E0B" />
             </Pressable>
+          )}
+          {/* Telegram Active Badge */}
+          {data?.setup.has_telegram && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, backgroundColor: "#22c55e20", borderRadius: 10, padding: 10, borderWidth: 1, borderColor: "#22c55e40" }}>
+              <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+              <AppText style={{ color: "#22c55e", fontSize: 12, fontWeight: "700" }}>بوت تليجرام مفعّل</AppText>
+            </View>
           )}
 
           {/* Period + Sheet Link */}
@@ -533,15 +543,17 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
             />
             <AppText style={[S.hint, { color: colors.textMuted }]}>التفاصيل الحساسة تُخزَّن هنا فقط — خارج ALLOUL</AppText>
 
-            <AppText style={[S.inputLabel, { color: colors.textMuted }]}>رقم WhatsApp للبوت</AppText>
+            <AppText style={[S.inputLabel, { color: colors.textMuted }]}>توكن بوت تليجرام (من @BotFather)</AppText>
             <TextInput
               style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="+966500000000"
+              placeholder="123456789:AAF..."
               placeholderTextColor={colors.textMuted}
-              keyboardType="phone-pad"
-              value={setupForm.whatsapp_number}
-              onChangeText={(v) => setSetupForm((f) => ({ ...f, whatsapp_number: v }))}
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={setupForm.telegram_bot_token}
+              onChangeText={(v) => setSetupForm((f) => ({ ...f, telegram_bot_token: v }))}
             />
+            <AppText style={[S.hint, { color: colors.textMuted }]}>أنشئ البوت عبر @BotFather في تليجرام واحفظ التوكن هنا</AppText>
 
             <AppText style={[S.inputLabel, { color: colors.textMuted }]}>العملة</AppText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
