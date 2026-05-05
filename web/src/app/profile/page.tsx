@@ -36,8 +36,8 @@ const MENU_SECTIONS = [
   {
     title: 'الأمان',
     items: [
-      { icon: Lock,      label: 'كلمة المرور',         sub: 'إنشاء أو تغيير كلمة المرور', href: '/settings/security',  color: '#EF4444' },
-      { icon: Shield,    label: 'الأمان والخصوصية',    sub: 'رقم الموظف والحماية',    href: '/settings/security',   color: '#F97316' },
+      { icon: Lock,      label: 'كلمة المرور',         sub: 'تغيير كلمة المرور',      href: '/settings/billing',    color: '#EF4444' },
+      { icon: Shield,    label: 'الأمان والخصوصية',    sub: '2FA وسجل الجلسات',       href: '/settings/billing',    color: '#F97316' },
     ],
   },
   {
@@ -79,8 +79,8 @@ export default function ProfilePage() {
           setUser(me);
           setStats(s);
           setEditName(me.name || '');
-          setEditBio(me.bio || '');
-          setEditLocation(me.location || '');
+          setEditBio((me as any).bio || '');
+          setEditLocation((me as any).location || '');
         }
       } catch {
         router.replace('/login');
@@ -204,18 +204,7 @@ export default function ProfilePage() {
                 <BadgeCheck size={20} className="text-accent flex-shrink-0" />
               )}
             </div>
-            <div className="flex items-center flex-wrap gap-2 mb-3">
-              <p className="text-white/50 text-sm">@{user.username}</p>
-              {user.employee_no && (
-                <span
-                  className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold"
-                  style={{ background: 'rgba(46,139,255,0.15)', border: '1px solid rgba(46,139,255,0.35)', color: '#7DB8FF' }}
-                >
-                  <Briefcase size={10} />
-                  رقم وظيفي: {user.employee_no}
-                </span>
-              )}
-            </div>
+            <p className="text-white/50 text-sm mb-3">@{user.username}</p>
 
             {/* Bio */}
             {(user as any).bio && (
