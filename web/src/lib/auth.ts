@@ -17,10 +17,6 @@ export interface AuthUser {
   following_count?: number;
   posts_count?: number;
   is_admin?: boolean;
-  employee_no?: string | null;
-  i_code?: string | null;
-  location?: string | null;
-  phone?: string | null;
 }
 
 export function getToken(): string | null {
