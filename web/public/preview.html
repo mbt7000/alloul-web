@@ -558,21 +558,21 @@ body::before{
 <!-- ══════ DASHBOARD ══════ -->
 <div class="page on" id="page-dash">
   <div class="topbar">
-    <div><div class="tb-ttl">لوحة التحكم</div><div class="tb-sub">الأربعاء، 29 أبريل 2026</div></div>
+    <div><div class="tb-ttl">لوحة التحكم</div><div class="tb-sub" id="dash-date">—</div></div>
     <div class="sp"></div>
     <div class="tbic">🔔<div class="ndot"></div></div>
     <button class="tbbtn p" onclick="go('tasks')">+ مهمة</button>
   </div>
   <div class="content">
     <!-- Live Banner -->
-    <div class="live">
+    <div class="live" id="live-banner" style="display:none">
       <div class="lpulse"></div>
       <div>
-        <div class="ltxt">اجتماع مباشر — مراجعة Q2</div>
-        <div class="ldsc">أحمد + سارة + 3 آخرين • بدأ منذ 12 دقيقة</div>
+        <div class="ltxt" id="live-title">اجتماع مباشر</div>
+        <div class="ldsc" id="live-desc"></div>
       </div>
       <div class="sp"></div>
-      <button class="ljoin">انضم الآن</button>
+      <button class="ljoin" id="live-join-btn">انضم الآن</button>
     </div>
 
     <!-- Stats -->
@@ -625,15 +625,11 @@ body::before{
       <div class="panel">
         <div class="ph">
           <div class="ph-t">المهام اليوم</div>
-          <span class="nbdg nbr" style="font-size:11px;padding:3px 9px">5 متأخرة</span>
+          <span class="nbdg nbr" id="tasks-late-badge" style="font-size:11px;padding:3px 9px;display:none"></span>
           <div class="pha" onclick="go('tasks')">عرض الكل</div>
         </div>
         <div class="pb" style="padding:0 20px" id="tasks-list">
-          <div class="ti"><div class="tch dn"></div><div style="flex:1"><div class="tnm dx">مراجعة تقرير الربع الأول</div><div class="tmeta"><span class="ttag tg">مكتمل</span><span class="tdt">9:00 ص</span></div></div><div class="tav" style="background:var(--g)">أح</div></div>
-          <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">تحديث لوحة البيانات للعميل</div><div class="tmeta"><span class="ttag tr">عاجل</span><span class="tdt">2:00 م</span></div></div><div class="tav" style="background:var(--r)">سا</div></div>
-          <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">اجتماع فريق التصميم</div><div class="tmeta"><span class="ttag tp">اجتماع</span><span class="tdt">4:00 م</span></div></div><div class="tav" style="background:var(--v)">عم</div></div>
-          <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">مراجعة عقد الشراكة</div><div class="tmeta"><span class="ttag ta">مهم</span><span class="tdt">غداً</span></div></div><div class="tav" style="background:var(--a);color:#080c14">خا</div></div>
-          <div class="ti" style="border:none;padding-bottom:16px"><div class="tch"></div><div style="flex:1"><div class="tnm">إرسال الفواتير الشهرية</div><div class="tmeta"><span class="ttag tc">مالي</span><span class="tdt">30 أبريل</span></div></div><div class="tav" style="background:var(--c);color:#080c14">مح</div></div>
+          <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
         </div>
       </div>
 
@@ -646,14 +642,12 @@ body::before{
             <div style="flex:1"><div class="ph-t">Alloul AI</div><div class="ph-s">مساعدك الذكي</div></div>
             <div class="pha" onclick="go('ai')">فتح</div>
           </div>
-          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px">
-            <div class="aimsg">لديك <strong style="color:var(--c)">5 مهام متأخرة</strong>. أقترح إعادة جدولة 2 منها اليوم.</div>
-            <div style="display:flex;justify-content:flex-end"><div class="aimsg aimsg-me">ما الأولوية الأعلى؟</div></div>
-            <div style="display:flex;gap:6px;padding:3px 0"><div class="aiorb" style="width:22px;height:22px;flex-shrink:0"><div class="aiorb-in" style="width:16px;height:16px;font-size:8px">✦</div></div><div style="display:flex;gap:4px;align-items:center"><div class="dotb"></div><div class="dotb"></div><div class="dotb"></div></div></div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px" id="ai-dash-msgs">
+            <div class="aimsg">مرحباً! أنا <strong style="color:var(--c)">Alloul AI</strong>. اسألني عن أي شيء في شركتك.</div>
           </div>
           <div style="padding:10px 14px;border-top:1px solid var(--rim);display:flex;gap:8px">
-            <input class="aiinp" placeholder="اسألني...">
-            <button class="aisnd">↑</button>
+            <input class="aiinp" id="ai-dash-input" placeholder="اسألني..." onkeydown="if(event.key==='Enter')sendAiDash()">
+            <button class="aisnd" onclick="sendAiDash()">↑</button>
           </div>
         </div>
 
@@ -661,10 +655,7 @@ body::before{
         <div class="panel">
           <div class="ph"><div class="ph-t">آخر الأحداث</div><div class="ph-s">منذ ساعتين</div></div>
           <div class="pb" style="padding:0 20px" id="activity-list">
-            <div class="ai-item"><div class="aic" style="background:var(--gg);color:var(--g)">✓</div><div><div class="atx"><strong>أحمد</strong> أكمل مهمة التقرير</div><div class="atm">منذ 14 دقيقة</div></div></div>
-            <div class="ai-item"><div class="aic" style="background:var(--vg);color:var(--v)">◎</div><div><div class="atx"><strong>سارة</strong> انضمت للاجتماع</div><div class="atm">منذ 25 دقيقة</div></div></div>
-            <div class="ai-item"><div class="aic" style="background:var(--ag);color:var(--a)">◈</div><div><div class="atx">عميل جديد <strong>شركة النخيل</strong></div><div class="atm">منذ ساعة</div></div></div>
-            <div class="ai-item" style="border:none"><div class="aic" style="background:var(--cg);color:var(--c)">✦</div><div><div class="atx">AI أنشأ <strong>تقرير الأداء الأسبوعي</strong></div><div class="atm">منذ ساعتين</div></div></div>
+            <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
           </div>
         </div>
       </div>
@@ -693,10 +684,7 @@ body::before{
       <div class="panel">
         <div class="ph"><div class="ph-t">إنجاز المشاريع</div></div>
         <div class="pb" id="projects-list">
-          <div class="pw"><div class="ptop"><span class="plbl">تطوير التطبيق</span><span class="pval">72%</span></div><div class="ptrack"><div class="pfill pf-c" style="width:72%"></div></div></div>
-          <div class="pw"><div class="ptop"><span class="plbl">تصميم الهوية</span><span class="pval">90%</span></div><div class="ptrack"><div class="pfill pf-g" style="width:90%"></div></div></div>
-          <div class="pw"><div class="ptop"><span class="plbl">حملة التسويق</span><span class="pval">48%</span></div><div class="ptrack"><div class="pfill pf-a" style="width:48%"></div></div></div>
-          <div class="pw"><div class="ptop"><span class="plbl">البنية التحتية</span><span class="pval">35%</span></div><div class="ptrack"><div class="pfill pf-v" style="width:35%"></div></div></div>
+          <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
         </div>
       </div>
     </div>
@@ -1074,29 +1062,25 @@ body::before{
           <div><div class="tg-bot-nm">Alloul Bot</div><div class="tg-bot-st">● نشط الآن</div></div>
         </div>
         <div class="tg-msgs">
-          <div class="tg-bubble">
+          <div class="tg-bubble" id="tg-preview-bubble">
             🌅 <strong>تقرير الصباح — Alloul</strong><br>
-            الأربعاء، 29 أبريل 2026 — 05:00 ص<br>
+            <span id="tg-date">—</span> — 05:00 ص<br>
             ─────────────────<br>
-            <strong>📊 ملخص أمس</strong><br>
-            ✅ مهام مكتملة: <code>18</code><br>
-            ⏳ مهام معلّقة: <code>5</code><br>
-            🔴 مهام متأخرة: <code>3</code><br>
+            <strong>📊 ملخص المهام</strong><br>
+            ✅ مهام مكتملة: <code id="tg-done">—</code><br>
+            ⏳ مهام معلّقة: <code id="tg-pending">—</code><br>
+            🔴 مهام متأخرة: <code id="tg-late">—</code><br>
             ─────────────────<br>
             <strong>💰 المالية</strong><br>
-            وارد: <code>+٨٥,٠٠٠ ر.س</code><br>
-            صادر: <code>-١٢,٠٠٠ ر.س</code><br>
-            صافي اليوم: <code>+٧٣,٠٠٠ ر.س</code><br>
+            وارد: <code id="tg-income">—</code><br>
+            صادر: <code id="tg-expense">—</code><br>
+            صافي: <code id="tg-profit">—</code><br>
             ─────────────────<br>
             <strong>👥 الفريق</strong><br>
-            حضر: <code>21 / 23</code><br>
-            غائب: <code>خالد، ريم</code><br>
+            الأعضاء: <code id="tg-members">—</code><br>
             ─────────────────<br>
-            <strong>🤖 تنبيه AI</strong><br>
-            ⚠️ فاتورة الفيصل متأخرة 14 يوم<br>
-            💡 أداء أحمد انخفض 15٪ هذا الأسبوع<br>
-            ─────────────────<br>
-            🏆 إجمالي الإيرادات الشهر: <code>٢٤٧,٨٠٠ ر.س</code>
+            <strong>🤖 Alloul AI</strong><br>
+            💡 يعمل بشكل طبيعي
             <div class="tg-time">05:00 ✓✓</div>
           </div>
         </div>
@@ -1699,6 +1683,30 @@ function avatarColors(i) {
   return grads[i % grads.length];
 }
 
+async function sendAiDash() {
+  const inp = document.getElementById('ai-dash-input');
+  const msgs = document.getElementById('ai-dash-msgs');
+  if (!inp || !msgs || !inp.value.trim()) return;
+  const text = inp.value.trim();
+  inp.value = '';
+  // add user message
+  msgs.innerHTML += `<div style="display:flex;justify-content:flex-end"><div class="aimsg aimsg-me">${text}</div></div>`;
+  // typing indicator
+  const typId = 'ai-typing-' + Date.now();
+  msgs.innerHTML += `<div id="${typId}" style="display:flex;gap:4px;align-items:center;padding:4px 0"><div class="dotb"></div><div class="dotb"></div><div class="dotb"></div></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  try {
+    const res = await apiFetch('/agent/chat', { method: 'POST', body: JSON.stringify({ message: text }) });
+    const reply = res.response || res.message || res.answer || JSON.stringify(res);
+    const typEl = document.getElementById(typId);
+    if (typEl) typEl.outerHTML = `<div class="aimsg">${reply}</div>`;
+  } catch {
+    const typEl = document.getElementById(typId);
+    if (typEl) typEl.outerHTML = '<div class="aimsg" style="color:var(--r);font-size:11px">تعذّر الاتصال بـ AI</div>';
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
 async function initDashboard() {
   const tok = getToken();
   if (!tok) { window.location.replace('/login'); return; }
@@ -1743,6 +1751,23 @@ async function initDashboard() {
     if (el2('prof-detail-role')) el2('prof-detail-role').textContent = roleLabel;
   }
 
+  // ── التاريخ الحالي ──
+  const dateEl = document.getElementById('dash-date');
+  if (dateEl) {
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const now = new Date();
+    dateEl.textContent = days[now.getDay()] + '، ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+  }
+  // ── تقرير Telegram (تاريخ) ──
+  const tgDate = document.getElementById('tg-date');
+  if (tgDate) {
+    const days2 = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const months2 = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const now2 = new Date();
+    tgDate.textContent = days2[now2.getDay()] + '، ' + now2.getDate() + ' ' + months2[now2.getMonth()] + ' ' + now2.getFullYear();
+  }
+
   // ── إحصائيات ──
   const st = val(stats) || {};
   const mb = val(members) || [];
@@ -1754,9 +1779,46 @@ async function initDashboard() {
   if (el('stat-handovers'))el('stat-handovers').textContent= hd.length || st.total_handovers || '—';
   if (el('stat-meetings')) el('stat-meetings').textContent = mt.length || '—';
 
+  // ── Live Banner (اجتماع قادم أو نشط) ──
+  if (mt && mt.length > 0) {
+    const next = mt[0];
+    const banner = document.getElementById('live-banner');
+    const title  = document.getElementById('live-title');
+    const desc   = document.getElementById('live-desc');
+    const joinBtn= document.getElementById('live-join-btn');
+    if (banner && title) {
+      title.textContent = (next.title || 'اجتماع قادم');
+      if (desc) desc.textContent = next.meeting_date ? (next.meeting_date + (next.meeting_time ? ' · ' + next.meeting_time : '')) : '';
+      if (joinBtn && next.meeting_link) {
+        joinBtn.onclick = () => window.open(next.meeting_link, '_blank');
+      }
+      banner.style.display = '';
+    }
+  }
+
+  // ── Telegram Preview (أرقام) ──
+  const taskList2 = val(tasks) || [];
+  if (taskList2.length) {
+    const done2    = taskList2.filter(t => t.status === 'done' || t.status === 'completed').length;
+    const pending2 = taskList2.filter(t => t.status === 'pending').length;
+    const late2    = taskList2.filter(t => t.is_late || t.overdue).length;
+    if (el('tg-done'))    el('tg-done').textContent    = done2;
+    if (el('tg-pending')) el('tg-pending').textContent = pending2;
+    if (el('tg-late'))    el('tg-late').textContent    = late2;
+    // tasks late badge on dashboard
+    if (late2 > 0 && el('tasks-late-badge')) {
+      el('tasks-late-badge').textContent = late2 + ' متأخرة';
+      el('tasks-late-badge').style.display = '';
+    }
+  }
+  if (mb.length && el('tg-members')) el('tg-members').textContent = mb.length + ' عضو';
+
   // ── قائمة الأنشطة ──
   const acts = val(activity) || [];
   const actEl = el('activity-list');
+  if (actEl && !acts.length) {
+    actEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">لا توجد أحداث حديثة</div>';
+  }
   if (actEl && acts.length) {
     const icons = { task:'✓', handover:'◈', meeting:'◷', system:'✦', default:'◉' };
     const colors = { task:'var(--gg),color:var(--g)', handover:'var(--ag),color:var(--a)', meeting:'var(--vg),color:var(--v)', system:'var(--cg),color:var(--c)', default:'var(--cg),color:var(--c)' };
@@ -1773,6 +1835,9 @@ async function initDashboard() {
   // ── المشاريع (progress bars) ──
   const projs = val(projects) || [];
   const projEl = el('projects-list');
+  if (projEl && !projs.length) {
+    projEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">لا توجد مشاريع بعد</div>';
+  }
   if (projEl && projs.length) {
     const pColors = ['pf-c','pf-g','pf-a','pf-v'];
     projEl.innerHTML = projs.slice(0, 5).map((p, i) => {
@@ -1789,6 +1854,9 @@ async function initDashboard() {
   // ── المهام ──
   const taskList = val(tasks) || [];
   const tasksEl = el('tasks-list');
+  if (tasksEl && !taskList.length) {
+    tasksEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">لا توجد مهام بعد</div>';
+  }
   if (tasksEl && taskList.length) {
     const priorityMap = { high:'tr', medium:'ta', low:'tg', urgent:'tr' };
     const priorityLbl = { high:'مرتفع', medium:'متوسط', low:'منخفض', urgent:'عاجل جداً' };
@@ -1994,6 +2062,10 @@ async function renderFinancePage() {
     if (el('fin-expense-val')) el('fin-expense-val').textContent = fmtNum(expense);
     if (el('fin-profit-val'))  el('fin-profit-val').textContent  = fmtNum(profit);
     if (el('fin-margin-txt'))  el('fin-margin-txt').textContent  = 'هامش ' + margin + '٪';
+    // Telegram preview
+    if (el('tg-income'))  el('tg-income').textContent  = '+' + fmtNum(income) + ' ر.س';
+    if (el('tg-expense')) el('tg-expense').textContent = '-' + fmtNum(expense) + ' ر.س';
+    if (el('tg-profit'))  el('tg-profit').textContent  = (profit >= 0 ? '+' : '') + fmtNum(profit) + ' ر.س';
     // Recent records
     const recs = await apiFetch('/accounting/records/recent');
     const txnEl = document.getElementById('fin-txns');
