@@ -195,12 +195,13 @@ def login(
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
+        logger.error(f"Login DB error: {exc}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
-                "Database error during login. On Postgres run: "
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(32); "
-                "and align schema with models.py — see backend/README.md"
+                "Database schema mismatch. Run: "
+                "psql $DATABASE_URL -f backend/scripts/fix_db_schema.sql "
+                "then: alembic upgrade head"
             ),
         ) from exc
 

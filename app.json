@@ -30,7 +30,7 @@
       }
     },
     "ios": {
-      "bundleIdentifier": "com.mbtalm1.t",
+      "bundleIdentifier": "app.alloul.mobile",
       "entitlements": {
         "aps-environment": "production",
         "com.apple.developer.applesignin": ["Default"]
@@ -46,7 +46,7 @@
           }
         ]
       },
-      "buildNumber": "41"
+      "buildNumber": "42"
     }
   }
 }

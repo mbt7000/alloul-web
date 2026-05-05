@@ -38,6 +38,9 @@ try:
         write_to_google_sheet,
         download_telegram_file,
         send_telegram_message,
+        send_telegram_keyboard,
+        edit_telegram_message,
+        answer_callback_query,
         set_telegram_webhook,
         download_whatsapp_media,
         send_whatsapp_message,
@@ -364,21 +367,30 @@ def save_setup(
     db.commit()
     db.refresh(setup)
 
-    # Auto-register Telegram webhook
+    # Auto-register Telegram webhook (non-blocking background task)
     company = db.query(Company).filter(Company.id == company_id).first()
     if setup.telegram_bot_token and company and BOT_SERVICE_AVAILABLE:
         import asyncio
         from config import settings
         api_base = getattr(settings, "API_BASE_URL", "https://api.alloul.app")
         webhook_url = f"{api_base}/accounting/bot/telegram/{company.i_code}"
+        _token = setup.telegram_bot_token
+        _wh_url = webhook_url
+        _cid = company_id
+        async def _register_webhook():
+            try:
+                ok = await set_telegram_webhook(_token, _wh_url)
+                if ok:
+                    logger.info(f"Telegram webhook set for company {_cid}")
+                else:
+                    logger.warning(f"Telegram webhook registration returned False for company {_cid}")
+            except Exception as e:
+                logger.warning(f"Could not set Telegram webhook: {e}")
         try:
-            loop = asyncio.new_event_loop()
-            ok = loop.run_until_complete(set_telegram_webhook(setup.telegram_bot_token, webhook_url))
-            loop.close()
-            if ok:
-                logger.info(f"Telegram webhook set for company {company_id}")
+            loop = asyncio.get_event_loop()
+            loop.create_task(_register_webhook())
         except Exception as e:
-            logger.warning(f"Could not set Telegram webhook: {e}")
+            logger.warning(f"Could not schedule Telegram webhook task: {e}")
 
     logger.info(f"Accounting setup saved for company {company_id}")
 
@@ -665,6 +677,8 @@ def dashboard(
         "setup": {
             "has_google_sheet":  bool(setup and setup.google_sheet_id),
             "has_whatsapp":      bool(setup and setup.whatsapp_active),
+            "has_telegram":      bool(setup and setup.telegram_active),
+            "telegram_bot_token": setup.telegram_bot_token if setup else None,
             "google_sheet_url":  setup.google_sheet_url if setup else None,
             "currency":          setup.currency if setup else "SAR",
             "show_balances":     getattr(setup, "show_balances",     True)  if setup else True,
@@ -1195,6 +1209,87 @@ async def start_daily_report() -> None:
     _asyncio.create_task(_daily_report_loop())
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Preview-Confirm UI constants & helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+_CONFIRM_KB = [
+    [
+        {"text": "✅ تأكيد وحفظ", "callback_data": "txn_confirm"},
+        {"text": "✏️ تعديل", "callback_data": "txn_edit_menu"},
+    ]
+]
+
+_EDIT_FIELD_KB = [
+    [
+        {"text": "💰 المبلغ", "callback_data": "txn_ef_amount"},
+        {"text": "📊 النوع", "callback_data": "txn_ef_type"},
+    ],
+    [
+        {"text": "🏪 العميل/المورد", "callback_data": "txn_ef_client"},
+        {"text": "📦 البضاعة/الخدمة", "callback_data": "txn_ef_goods"},
+    ],
+    [
+        {"text": "📂 الفئة", "callback_data": "txn_ef_category"},
+        {"text": "💳 حالة الدفع", "callback_data": "txn_ef_payment"},
+    ],
+    [
+        {"text": "📅 التاريخ", "callback_data": "txn_ef_date"},
+        {"text": "🏷️ المورد", "callback_data": "txn_ef_vendor"},
+    ],
+    [
+        {"text": "← رجوع للمعاينة", "callback_data": "txn_back_preview"},
+    ],
+]
+
+# callback_data → (invoice_key, prompt_text)
+_EDIT_FIELD_MAP: dict[str, tuple[str, str]] = {
+    "txn_ef_amount":   ("amount",   "💰 أدخل المبلغ الجديد (رقم فقط):"),
+    "txn_ef_type":     ("type",     "📊 النوع:\n1 أو إيراد — 📈 إيراد\n2 أو مصروف — 📉 مصروف"),
+    "txn_ef_client":   ("client",   "🏪 أدخل اسم العميل أو المورد:"),
+    "txn_ef_goods":    ("goods",    "📦 أدخل نوع البضاعة أو الخدمة:"),
+    "txn_ef_category": ("category", "📂 أدخل الفئة:\nمشتريات / مبيعات / رواتب / إيجار / تسويق / صيانة / مصاريف تشغيل / أخرى"),
+    "txn_ef_payment":  ("payment",  "💳 حالة الدفع:\n1 — مدفوع\n2 — غير مدفوع\n3 — مدفوع جزئياً"),
+    "txn_ef_date":     ("date",     "📅 أدخل التاريخ (مثال: 2026-05-02):"),
+    "txn_ef_vendor":   ("vendor",   "🏷️ أدخل اسم المورد/البائع:"),
+}
+
+
+def _build_preview_card(invoice: dict, sess: dict) -> str:
+    """Format a rich transaction preview card."""
+    r_type    = invoice.get("record_type", "expense")
+    type_lbl  = "📈 إيراد" if r_type == "income" else "📉 مصروف"
+    amount    = invoice.get("amount", "؟")
+    currency  = invoice.get("currency", "SAR")
+    category  = invoice.get("category") or "—"
+    date      = invoice.get("date") or "—"
+    vendor    = sess.get("client") or invoice.get("vendor") or "—"
+    goods     = sess.get("goods") or invoice.get("description") or "—"
+    payment   = sess.get("payment_status") or "مدفوع"
+    conf      = float(invoice.get("confidence", 0))
+    conf_icon = "🟢" if conf >= 0.85 else "🟡" if conf >= 0.65 else "🔴"
+
+    try:
+        amount_fmt = f"{float(amount):,.2f}".rstrip("0").rstrip(".")
+    except Exception:
+        amount_fmt = str(amount)
+
+    return (
+        "📋 <b>معاينة المعاملة</b>\n"
+        "━━━━━━━━━━━━━━━━\n"
+        f"{type_lbl}\n"
+        f"💰 المبلغ:  <b>{amount_fmt} {currency}</b>\n"
+        f"📂 الفئة:   {category}\n"
+        f"🏪 العميل:  {vendor}\n"
+        f"📦 البضاعة: {goods}\n"
+        f"💳 الدفع:   {payment}\n"
+        f"📅 التاريخ: {date}\n"
+        "━━━━━━━━━━━━━━━━\n"
+        f"{conf_icon} دقة الاستخراج: {conf*100:.0f}%\n\n"
+        "هل المعلومات صحيحة؟"
+    )
+
+
 @router.post("/bot/telegram/{i_code}", include_in_schema=False)
 async def telegram_webhook(
     i_code: str,
@@ -1218,7 +1313,88 @@ async def telegram_webhook(
     if not setup.telegram_bot_token:
         return {"ok": True}
 
-    token   = setup.telegram_bot_token
+    token    = setup.telegram_bot_token
+    callback = body.get("callback_query")
+
+    # ── Route: callback_query (inline button tap) vs normal message ──────────
+    if callback:
+        cb_id      = callback["id"]
+        cb_data    = callback.get("data", "")
+        cb_msg     = callback.get("message", {})
+        chat_id    = cb_msg.get("chat", {}).get("id")
+        message_id = cb_msg.get("message_id")
+        if not chat_id:
+            return {"ok": True}
+        _load_company(company_id)
+        sess  = _session(company_id, chat_id)
+        state = sess.get("state", "init")
+
+        # Must be authenticated to use buttons
+        if not _is_authenticated(company_id, chat_id):
+            await answer_callback_query(token, cb_id, "⚠️ يجب تسجيل الدخول أولاً")
+            return {"ok": True}
+
+        invoice = sess.get("invoice", {})
+
+        # ── ✅ CONFIRM → save transaction ─────────────────────────────────────
+        if cb_data == "txn_confirm":
+            await answer_callback_query(token, cb_id, "⏳ جاري الحفظ...")
+            if not invoice or not invoice.get("amount"):
+                await send_telegram_message(token, chat_id, "⚠️ انتهت صلاحية المعاملة. أرسل من جديد.")
+                return {"ok": True}
+            # Remove preview keyboard (replace with "saving..." text)
+            await edit_telegram_message(
+                token, chat_id, message_id,
+                _build_preview_card(invoice, sess) + "\n\n⏳ جاري الحفظ...",
+                keyboard=[],
+            )
+            await _finalize_transaction(token, chat_id, company_id, company_name, setup, db, sess, invoice, source="telegram_text")
+            # Clear pending invoice
+            for k in ("invoice", "client", "phone", "goods", "payment_status", "duration", "preview_msg_id"):
+                sess.pop(k, None)
+            sess["state"] = "ready"
+            return {"ok": True}
+
+        # ── ✏️ EDIT MENU → show field buttons ────────────────────────────────
+        if cb_data == "txn_edit_menu":
+            await answer_callback_query(token, cb_id)
+            if not invoice:
+                await send_telegram_message(token, chat_id, "⚠️ انتهت صلاحية المعاملة. أرسل من جديد.")
+                return {"ok": True}
+            await edit_telegram_message(
+                token, chat_id, message_id,
+                _build_preview_card(invoice, sess) + "\n\n✏️ <b>ماذا تريد تعديل؟</b>",
+                keyboard=_EDIT_FIELD_KB,
+            )
+            sess["preview_msg_id"] = message_id
+            sess["state"] = "await_confirm"
+            return {"ok": True}
+
+        # ── ← BACK TO PREVIEW ────────────────────────────────────────────────
+        if cb_data == "txn_back_preview":
+            await answer_callback_query(token, cb_id)
+            await edit_telegram_message(
+                token, chat_id, message_id,
+                _build_preview_card(invoice, sess),
+                keyboard=_CONFIRM_KB,
+            )
+            sess["state"] = "await_confirm"
+            return {"ok": True}
+
+        # ── FIELD EDIT BUTTONS ────────────────────────────────────────────────
+        if cb_data in _EDIT_FIELD_MAP:
+            field_key, prompt = _EDIT_FIELD_MAP[cb_data]
+            await answer_callback_query(token, cb_id)
+            sess["editing_field"]   = field_key
+            sess["preview_msg_id"]  = message_id
+            sess["state"]           = "edit_preview_field"
+            await send_telegram_message(token, chat_id, prompt + "\n\n/cancel للإلغاء")
+            return {"ok": True}
+
+        await answer_callback_query(token, cb_id)
+        return {"ok": True}
+
+    # ── Normal message ─────────────────────────────────────────────────────────
     message = body.get("message") or body.get("channel_post") or {}
     chat_id = message.get("chat", {}).get("id")
     if not chat_id:
@@ -1468,7 +1644,8 @@ async def telegram_webhook(
     # /cancel — abort current flow
     # ══════════════════════════════════════════════════════════
     if text_msg == "/cancel":
-        for key in ("invoice", "client", "phone", "goods", "duration", "payment_status", "pending_name"):
+        for key in ("invoice", "client", "phone", "goods", "duration", "payment_status",
+                    "pending_name", "preview_msg_id", "editing_field"):
             sess.pop(key, None)
         if state not in ("init", "await_id", "await_password"):
             sess["state"] = "ready"
@@ -1776,7 +1953,68 @@ async def telegram_webhook(
         await send_telegram_message(token, chat_id, _build_report_text(db, company_id))
         return {"ok": True}
 
-    # ── Conversational enrichment steps ───────────────────────────────────────
+    # ── Edit field during preview (user typed new value for a field) ─────────
+
+    if state == "edit_preview_field":
+        field      = sess.get("editing_field", "")
+        new_val    = text_msg.strip()
+        invoice    = sess.get("invoice", {})
+        prev_msg   = sess.get("preview_msg_id")
+
+        if not invoice or not field:
+            sess["state"] = "ready"
+            await send_telegram_message(token, chat_id, "⚠️ انتهت صلاحية المعاملة. أرسل من جديد.")
+            return {"ok": True}
+
+        # Normalize values
+        if field == "type":
+            if any(w in new_val for w in ("إيراد", "ايراد", "income", "1")):
+                invoice["record_type"] = "income"
+            else:
+                invoice["record_type"] = "expense"
+        elif field == "amount":
+            try:
+                invoice["amount"] = float(new_val.replace(",", ""))
+            except ValueError:
+                await send_telegram_message(token, chat_id, "⚠️ أدخل رقماً صحيحاً للمبلغ:")
+                return {"ok": True}
+        elif field == "payment":
+            pm = {"1": "مدفوع", "2": "غير مدفوع", "3": "مدفوع جزئياً",
+                  "مدفوع": "مدفوع", "غير مدفوع": "غير مدفوع", "مدفوع جزئياً": "مدفوع جزئياً"}
+            sess["payment_status"] = pm.get(new_val, new_val)
+        elif field in ("client", "goods"):
+            sess[field] = new_val if new_val not in ("-", "تخطى") else ""
+        elif field == "vendor":
+            invoice["vendor"] = new_val
+        else:
+            invoice[field] = new_val
+
+        sess["invoice"]       = invoice
+        sess["editing_field"] = None
+        sess["state"]         = "await_confirm"
+
+        # Update the preview card in-place or send a fresh one
+        card_text = _build_preview_card(invoice, sess)
+        if prev_msg:
+            await edit_telegram_message(token, chat_id, prev_msg, card_text, keyboard=_CONFIRM_KB)
+        else:
+            mid = await send_telegram_keyboard(token, chat_id, card_text, _CONFIRM_KB)
+            if mid:
+                sess["preview_msg_id"] = mid
+        return {"ok": True}
+
+    # ── await_confirm: user typed text while preview is showing ───────────────
+    # (They may have missed the buttons — show a reminder)
+    if state == "await_confirm":
+        invoice = sess.get("invoice", {})
+        if invoice:
+            await send_telegram_message(
+                token, chat_id,
+                "☝️ استخدم الأزرار أعلاه:\n✅ تأكيد وحفظ  |  ✏️ تعديل\n\nأو أرسل /cancel للإلغاء."
+            )
+        return {"ok": True}
+
+    # ── Legacy conversational enrichment steps (kept for fallback) ────────────
 
     if state == "await_client":
         sess["client"] = text_msg if text_msg not in ("-", "تخطى", "skip") else ""
@@ -1838,14 +2076,17 @@ async def telegram_webhook(
             )
             return {"ok": True}
 
+        # Clear previous session fields, store invoice
+        for k in ("client", "phone", "goods", "payment_status", "duration", "preview_msg_id", "editing_field"):
+            sess.pop(k, None)
         sess["invoice"] = invoice
-        sess["state"]   = "await_client"
-        await send_telegram_message(
-            token, chat_id,
-            f"✔️ فهمت: <b>{invoice.get('record_type','expense') == 'income' and 'إيراد' or 'مصروف'}</b> "
-            f"بمبلغ <b>{invoice.get('amount')} {invoice.get('currency','SAR')}</b>\n\n"
-            "🏪 اسم العميل أو المورد: (أو أرسل - للتخطي)"
-        )
+        sess["state"]   = "await_confirm"
+
+        # Show full preview card with confirm/edit buttons
+        card_text = _build_preview_card(invoice, sess)
+        mid = await send_telegram_keyboard(token, chat_id, card_text, _CONFIRM_KB)
+        if mid:
+            sess["preview_msg_id"] = mid
         return {"ok": True}
 
     # ── New transaction: photo / document ─────────────────────────────────────
@@ -1873,15 +2114,17 @@ async def telegram_webhook(
             await send_telegram_message(token, chat_id, format_error_reply())
             return {"ok": True}
 
+        # Clear previous session fields, store invoice
+        for k in ("client", "phone", "goods", "payment_status", "duration", "preview_msg_id", "editing_field"):
+            sess.pop(k, None)
         sess["invoice"] = invoice
-        sess["state"]   = "await_client"
-        r_type_label = "إيراد" if invoice.get("record_type") == "income" else "مصروف"
-        await send_telegram_message(
-            token, chat_id,
-            f"✔️ استخرجت: <b>{r_type_label}</b> "
-            f"بمبلغ <b>{invoice.get('amount')} {invoice.get('currency','SAR')}</b>\n\n"
-            "🏪 اسم العميل أو المورد: (أو أرسل - للتخطي)"
-        )
+        sess["state"]   = "await_confirm"
+
+        # Show full preview card with confirm/edit buttons
+        card_text = _build_preview_card(invoice, sess)
+        mid = await send_telegram_keyboard(token, chat_id, card_text, _CONFIRM_KB)
+        if mid:
+            sess["preview_msg_id"] = mid
 
     except Exception as e:
         logger.error(f"Telegram invoice processing error: {e}")

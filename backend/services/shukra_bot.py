@@ -11,6 +11,7 @@ Core processing engine:
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -214,28 +215,29 @@ async def _ollama_extract(text: str) -> dict:
 
 
 async def _claude_extract_text(text: str) -> dict:
-    """Extract transaction using Anthropic Claude Haiku."""
+    """Extract transaction using Anthropic Claude Haiku (async, 4s timeout)."""
     try:
         import anthropic
         from config import settings
         if not settings.ANTHROPIC_API_KEY:
             return {}
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        ai_msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=300,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f'اليوم: {today}. استخرج المعاملة المالية وأعد JSON فقط:\n"{text}"\n\n'
-                    'قواعد العملة: ريال/ر.س→SAR، درهم/د.إ→AED، دينار كويتي→KWD، '
-                    'دولار/dollar→USD، يورو/euro→EUR، جنيه مصري→EGP. بدون عملة→SAR\n\n'
-                    '{"amount":100000,"currency":"SAR","date":"' + today + '","vendor":"لاند كروزر",'
-                    '"category":"مشتريات","description":"شراء سيارة","record_type":"expense","confidence":0.95}'
-                )
-            }]
-        )
+        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        async with asyncio.timeout(4):
+            ai_msg = await client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=300,
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f'اليوم: {today}. استخرج المعاملة المالية وأعد JSON فقط:\n"{text}"\n\n'
+                        'قواعد العملة: ريال/ر.س→SAR، درهم/د.إ→AED، دينار كويتي→KWD، '
+                        'دولار/dollar→USD، يورو/euro→EUR، جنيه مصري→EGP. بدون عملة→SAR\n\n'
+                        '{"amount":100000,"currency":"SAR","date":"' + today + '","vendor":"لاند كروزر",'
+                        '"category":"مشتريات","description":"شراء سيارة","record_type":"expense","confidence":0.95}'
+                    )
+                }]
+            )
         raw = ai_msg.content[0].text.strip()
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         if m:
@@ -243,6 +245,8 @@ async def _claude_extract_text(text: str) -> dict:
             invoice.setdefault("date", today)
             invoice["source"] = "claude"
             return invoice
+    except asyncio.TimeoutError:
+        logger.warning("Claude extract timed out (4s)")
     except Exception as e:
         logger.warning(f"Claude extract failed: {e}")
     return {}
@@ -250,32 +254,53 @@ async def _claude_extract_text(text: str) -> dict:
 
 async def extract_text_transaction(text: str) -> dict:
     """
-    Multi-layer transaction extractor:
-    1. Claude Haiku      (best accuracy — when credits available)
-    2. Gemini Flash      (free 1500 req/day — Google AI)
-    3. ALLOUL Agent      (free — Ollama on GCP, when model is pulled)
-    4. Regex parser      (always works, zero API, guaranteed)
+    Multi-layer transaction extractor (fast path first):
+    0. Regex pre-check   (instant — skip AI entirely if obvious simple transaction)
+    1. Claude + Gemini   (raced in parallel — fastest AI wins, ~1-2s)
+    2. Ollama local      (free — llama3.2:3b on same server)
+    3. Regex fallback    (always works, zero API, guaranteed)
     """
-    # Layer 1: Claude
-    result = await _claude_extract_text(text)
-    if result.get("amount"):
-        return result
+    # Layer 0: Instant regex pre-check — if regex is highly confident, skip AI
+    regex_result = _regex_extract(text)
+    if regex_result.get("confidence", 0) >= 0.6 and regex_result.get("amount"):
+        # Simple transaction with a clear amount — check if text is short and unambiguous
+        word_count = len(text.split())
+        if word_count <= 10:
+            logger.info("Regex pre-check: short simple transaction, skipping AI")
+            return regex_result
 
-    # Layer 2: Gemini (free tier)
-    result = await _gemini_extract(text)
-    if result.get("amount"):
-        return result
+    # Layer 1: Race Claude vs Gemini in parallel — first valid result wins
+    try:
+        tasks = [
+            asyncio.create_task(_claude_extract_text(text)),
+            asyncio.create_task(_gemini_extract(text)),
+        ]
+        for coro in asyncio.as_completed(tasks):
+            try:
+                result = await coro
+                if result.get("amount"):
+                    # Cancel remaining tasks
+                    for t in tasks:
+                        t.cancel()
+                    return result
+            except Exception:
+                pass
+        # Wait for any remaining
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+    except Exception as e:
+        logger.warning(f"Parallel AI extract failed: {e}")
 
-    # Layer 3: Ollama local (llama3.2:3b — free, same server)
+    # Layer 2: Ollama local (llama3.2:3b — free, same server)
     result = await _ollama_extract(text)
     if result.get("amount"):
         return result
 
-    # Layer 4: Regex fallback — never fails
-    result = _regex_extract(text)
-    if result.get("amount"):
+    # Layer 3: Regex fallback — never fails
+    if regex_result.get("amount"):
         logger.info("Used regex fallback for text extraction")
-        return result
+        return regex_result
 
     return {}
 
@@ -306,7 +331,7 @@ async def extract_invoice_from_image(
     api_key: Optional[str] = None,
 ) -> dict:
     """
-    Use Claude Vision to extract invoice data from an image.
+    Use Claude Vision (Haiku, async, 10s timeout) to extract invoice data from an image.
     Returns a dict with: amount, currency, date, vendor, category,
     invoice_number, description, record_type, confidence
     """
@@ -315,30 +340,31 @@ async def extract_invoice_from_image(
         from config import settings
 
         key = api_key or settings.ANTHROPIC_API_KEY
-        client = anthropic.Anthropic(api_key=key)
+        client = anthropic.AsyncAnthropic(api_key=key)
 
         image_b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
 
-        msg = client.messages.create(
-            model="claude-opus-4-5",
-            max_tokens=1024,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": media_type,
-                                "data": image_b64,
+        async with asyncio.timeout(10):
+            msg = await client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=600,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": image_b64,
+                                },
                             },
-                        },
-                        {"type": "text", "text": EXTRACT_PROMPT},
-                    ],
-                }
-            ],
-        )
+                            {"type": "text", "text": EXTRACT_PROMPT},
+                        ],
+                    }
+                ],
+            )
 
         raw = msg.content[0].text.strip()
         match = re.search(r"\{.*\}", raw, re.DOTALL)
@@ -346,6 +372,9 @@ async def extract_invoice_from_image(
             return json.loads(match.group())
         return {"confidence": 0.0, "error": "no_json"}
 
+    except asyncio.TimeoutError:
+        logger.error("Image invoice extraction timed out (10s)")
+        return {"confidence": 0.0, "error": "timeout"}
     except Exception as e:
         logger.error(f"Invoice extraction failed: {e}")
         return {"confidence": 0.0, "error": str(e)}
@@ -738,6 +767,74 @@ async def send_telegram_message(bot_token: str, chat_id: int | str, text: str) -
             )
     except Exception as e:
         logger.warning(f"Telegram send failed: {e}")
+
+
+async def send_telegram_keyboard(
+    bot_token: str,
+    chat_id: int | str,
+    text: str,
+    keyboard: list,
+) -> Optional[int]:
+    """Send message with inline keyboard buttons. Returns message_id or None."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text": text,
+                    "parse_mode": "HTML",
+                    "reply_markup": {"inline_keyboard": keyboard},
+                },
+            )
+            data = r.json()
+            if data.get("ok"):
+                return data["result"]["message_id"]
+    except Exception as e:
+        logger.warning(f"Telegram keyboard send failed: {e}")
+    return None
+
+
+async def edit_telegram_message(
+    bot_token: str,
+    chat_id: int | str,
+    message_id: int,
+    text: str,
+    keyboard: Optional[list] = None,
+) -> None:
+    """Edit an existing message (text + optional inline keyboard)."""
+    try:
+        payload: dict = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "parse_mode": "HTML",
+        }
+        if keyboard is not None:
+            payload["reply_markup"] = {"inline_keyboard": keyboard}
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{bot_token}/editMessageText",
+                json=payload,
+            )
+    except Exception as e:
+        logger.warning(f"Telegram edit message failed: {e}")
+
+
+async def answer_callback_query(
+    bot_token: str,
+    callback_query_id: str,
+    text: str = "",
+) -> None:
+    """Acknowledge a callback query (removes loading spinner on button)."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery",
+                json={"callback_query_id": callback_query_id, "text": text},
+            )
+    except Exception as e:
+        logger.warning(f"Answer callback failed: {e}")
 
 
 async def set_telegram_webhook(bot_token: str, webhook_url: str) -> bool:
