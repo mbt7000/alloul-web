@@ -854,12 +854,8 @@ body::before{
   <div class="content">
     <div class="panel">
       <div class="ph"><div class="ph-t">جميع المهام</div><div class="pha">تصفية</div></div>
-      <div id="tasks-list" style="padding:0 20px">
-        <div class="ti" style="padding-top:16px"><div class="tch"></div><div style="flex:1"><div class="tnm">تحديث لوحة البيانات للعميل</div><div class="tmeta"><span class="ttag tr">عاجل جداً</span><span class="tdt">متأخر 3 أيام</span></div></div><div class="tav" style="background:var(--r)">سا</div></div>
-        <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">مراجعة عقد الشراكة مع الخليج</div><div class="tmeta"><span class="ttag tp">قانوني</span><span class="tdt">اليوم</span></div></div><div class="tav" style="background:var(--v)">مح</div></div>
-        <div class="ti"><div class="tch dn"></div><div style="flex:1"><div class="tnm dx">تقرير الربع الأول</div><div class="tmeta"><span class="ttag tg">مكتمل</span></div></div><div class="tav" style="background:var(--g)">أح</div></div>
-        <div class="ti"><div class="tch"></div><div style="flex:1"><div class="tnm">إعداد خطة التوظيف Q3</div><div class="tmeta"><span class="ttag ta">مهم</span><span class="tdt">الأسبوع القادم</span></div></div><div class="tav" style="background:var(--a);color:#080c14">نو</div></div>
-        <div class="ti" style="border:none;padding-bottom:16px"><div class="tch"></div><div style="flex:1"><div class="tnm">اختبار ميزات التطبيق الجديدة</div><div class="tmeta"><span class="ttag tc">تطوير</span><span class="tdt">15 مايو</span></div></div><div class="tav" style="background:var(--c);color:#080c14">أح</div></div>
+      <div id="tasks-page-list" style="padding:0 20px">
+        <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
       </div>
     </div>
   </div>
@@ -869,27 +865,7 @@ body::before{
 <div class="page" id="page-projects">
   <div class="topbar"><div><div class="tb-ttl">المشاريع</div><div class="tb-sub">7 مشاريع نشطة</div></div><div class="sp"></div><button class="tbbtn p">+ مشروع جديد</button></div>
   <div id="proj-page-list" class="content" style="display:flex;flex-direction:column;gap:14px">
-    <div class="panel" style="overflow:hidden;display:none">
-      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--cg);display:flex;align-items:center;justify-content:center;font-size:20px">📱</div>
-        <div style="flex:1"><div style="font-size:14px;font-weight:800;margin-bottom:3px">تطوير تطبيق Alloul</div><div style="font-size:11px;color:var(--t2)">أحمد + سارة + 3 آخرين • يستحق 15 مايو</div><div class="ptrack" style="margin-top:8px"><div class="pfill pf-c" style="width:72%"></div></div></div>
-        <div style="text-align:left"><div style="font-size:22px;font-weight:900;color:var(--c)">72%</div><div style="font-size:10px;color:var(--t2)">نشط</div></div>
-      </div>
-    </div>
-    <div class="panel">
-      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--gg);display:flex;align-items:center;justify-content:center;font-size:20px">🎨</div>
-        <div style="flex:1"><div style="font-size:14px;font-weight:800;margin-bottom:3px">تصميم الهوية البصرية</div><div style="font-size:11px;color:var(--t2)">سارة • يستحق 5 مايو</div><div class="ptrack" style="margin-top:8px"><div class="pfill pf-g" style="width:90%"></div></div></div>
-        <div style="text-align:left"><div style="font-size:22px;font-weight:900;color:var(--g)">90%</div><div style="font-size:10px;color:var(--g)">قريب</div></div>
-      </div>
-    </div>
-    <div class="panel">
-      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--ag);display:flex;align-items:center;justify-content:center;font-size:20px">📢</div>
-        <div style="flex:1"><div style="font-size:14px;font-weight:800;margin-bottom:3px">حملة التسويق Q2</div><div style="font-size:11px;color:var(--t2)">نورة + 2 آخرين • يستحق 30 يونيو</div><div class="ptrack" style="margin-top:8px"><div class="pfill pf-a" style="width:48%"></div></div></div>
-        <div style="text-align:left"><div style="font-size:22px;font-weight:900;color:var(--a)">48%</div><div style="font-size:10px;color:var(--t2)">جاري</div></div>
-      </div>
-    </div>
+    <div style="text-align:center;padding:40px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
   </div>
 </div>
 
@@ -897,26 +873,7 @@ body::before{
 <div class="page" id="page-crm">
   <div class="topbar"><div><div class="tb-ttl">CRM — العملاء</div><div class="tb-sub">14 صفقة • ٨٤٢k ر.س</div></div><div class="sp"></div><button class="tbbtn p">+ صفقة جديدة</button></div>
   <div class="crm-cols" id="crm-cols">
-    <div class="crm-col">
-      <div class="crm-ch"><div class="crm-ct" style="color:var(--t2)">◉ محتملون</div><div class="crm-cn">4</div></div>
-      <div class="crm-card"><div class="crm-co">شركة الفيصل للتقنية</div><div class="crm-vl">٤٥,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--c);width:20%"></div></div></div>
-      <div class="crm-card"><div class="crm-co">مجموعة النور</div><div class="crm-vl">٢٢,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--c);width:15%"></div></div></div>
-    </div>
-    <div class="crm-col">
-      <div class="crm-ch"><div class="crm-ct" style="color:var(--a)">◈ تفاوض</div><div class="crm-cn">3</div></div>
-      <div class="crm-card"><div class="crm-co">شركة النخيل العقارية</div><div class="crm-vl">١٢٠,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--a);width:55%"></div></div></div>
-      <div class="crm-card"><div class="crm-co">تك ستار</div><div class="crm-vl">٦٨,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--a);width:45%"></div></div></div>
-    </div>
-    <div class="crm-col">
-      <div class="crm-ch"><div class="crm-ct" style="color:var(--v)">◎ مقترح مرسل</div><div class="crm-cn">4</div></div>
-      <div class="crm-card"><div class="crm-co">الخليج للاستثمار</div><div class="crm-vl">٢٤٠,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--v);width:70%"></div></div></div>
-      <div class="crm-card"><div class="crm-co">أوميغا لوجستيكس</div><div class="crm-vl">٨٥,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--v);width:65%"></div></div></div>
-    </div>
-    <div class="crm-col">
-      <div class="crm-ch"><div class="crm-ct" style="color:var(--g)">✦ مكتسب</div><div class="crm-cn">3</div></div>
-      <div class="crm-card" style="border-color:oklch(72% .2 155 / .3)"><div class="crm-co" style="color:var(--g)">سابك للصناعات</div><div class="crm-vl">٣٨٥,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--g);width:100%"></div></div></div>
-      <div class="crm-card" style="border-color:oklch(72% .2 155 / .3)"><div class="crm-co" style="color:var(--g)">نيوم تك</div><div class="crm-vl">١٥٠,٠٠٠ ر.س</div><div class="crm-pr"><div class="crm-pf" style="background:var(--g);width:100%"></div></div></div>
-    </div>
+    <div style="text-align:center;padding:40px;color:var(--t3);font-size:12px;width:100%">جارٍ التحميل...</div>
   </div>
 </div>
 
@@ -967,11 +924,7 @@ body::before{
       <div class="panel">
         <div class="ph"><div class="ph-t">آخر المعاملات</div><div class="pha">عرض الكل</div></div>
         <div id="fin-txns" class="pb" style="padding:0 20px">
-          <div class="txn-item"><div class="txnic" style="background:var(--gg)">↓</div><div class="txn-info"><div class="txn-nm">دفعة من الخليج للاستثمار</div><div class="txn-dt">اليوم، 10:30 ص</div></div><div class="txn-amt" style="color:var(--g)">+٨٥,٠٠٠</div></div>
-          <div class="txn-item"><div class="txnic" style="background:var(--rg)">↑</div><div class="txn-info"><div class="txn-nm">رواتب شهر أبريل</div><div class="txn-dt">أمس، 2:00 م</div></div><div class="txn-amt" style="color:var(--r)">-٦٤,٠٠٠</div></div>
-          <div class="txn-item"><div class="txnic" style="background:var(--gg)">↓</div><div class="txn-info"><div class="txn-nm">فاتورة نيوم تك</div><div class="txn-dt">27 أبريل</div></div><div class="txn-amt" style="color:var(--g)">+٢٤,٠٠٠</div></div>
-          <div class="txn-item"><div class="txnic" style="background:var(--rg)">↑</div><div class="txn-info"><div class="txn-nm">إيجار المكتب</div><div class="txn-dt">25 أبريل</div></div><div class="txn-amt" style="color:var(--r)">-١٢,٠٠٠</div></div>
-          <div class="txn-item" style="border:none;padding-bottom:16px"><div class="txnic" style="background:var(--gg)">↓</div><div class="txn-info"><div class="txn-nm">دفعة سابك للصناعات</div><div class="txn-dt">20 أبريل</div></div><div class="txn-amt" style="color:var(--g)">+١٣٨,٨٠٠</div></div>
+          <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
         </div>
       </div>
 
@@ -1156,23 +1109,23 @@ body::before{
     <!-- Quick Stats -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">
       <div class="sc sc-c">
-        <div class="st"><div class="sic sic-c" style="font-size:16px">📹</div><div class="sdlt dup">↑ 3</div></div>
-        <div class="sval">7</div><div class="slbl">اجتماعات اليوم</div>
+        <div class="st"><div class="sic sic-c" style="font-size:16px">📹</div></div>
+        <div class="sval" id="call-stat-today">—</div><div class="slbl">اجتماعات اليوم</div>
         <div class="spark"><div class="sb sb-c" style="height:40%"></div><div class="sb sb-c" style="height:55%"></div><div class="sb sb-c" style="height:70%"></div><div class="sb sb-c" style="height:60%"></div><div class="sb sb-c" style="height:80%"></div><div class="sb sb-c" style="height:90%"></div><div class="sb sb-c hi" style="height:100%"></div></div>
       </div>
       <div class="sc sc-g">
-        <div class="st"><div class="sic sic-g" style="font-size:16px">🟢</div><div class="sdlt dup">متصل</div></div>
-        <div class="sval">12</div><div class="slbl">عضو متصل الآن</div>
+        <div class="st"><div class="sic sic-g" style="font-size:16px">👥</div></div>
+        <div class="sval" id="call-stat-members">—</div><div class="slbl">أعضاء الفريق</div>
         <div class="spark"><div class="sb sb-g" style="height:50%"></div><div class="sb sb-g" style="height:60%"></div><div class="sb sb-g" style="height:65%"></div><div class="sb sb-g" style="height:70%"></div><div class="sb sb-g" style="height:75%"></div><div class="sb sb-g" style="height:80%"></div><div class="sb sb-g hi" style="height:85%"></div></div>
       </div>
       <div class="sc sc-v">
-        <div class="st"><div class="sic sic-v" style="font-size:16px">⏱</div><div class="sdlt dup">↑ 8%</div></div>
-        <div class="sval">42<span style="font-size:14px;font-weight:600">د</span></div><div class="slbl">متوسط مدة الاجتماع</div>
+        <div class="st"><div class="sic sic-v" style="font-size:16px">📅</div></div>
+        <div class="sval" id="call-stat-upcoming">—</div><div class="slbl">اجتماع قادم</div>
         <div class="spark"><div class="sb sb-v" style="height:50%"></div><div class="sb sb-v" style="height:55%"></div><div class="sb sb-v" style="height:48%"></div><div class="sb sb-v" style="height:60%"></div><div class="sb sb-v" style="height:65%"></div><div class="sb sb-v" style="height:70%"></div><div class="sb sb-v hi" style="height:75%"></div></div>
       </div>
       <div class="sc sc-a">
-        <div class="st"><div class="sic sic-a" style="font-size:16px">📅</div></div>
-        <div class="sval">3</div><div class="slbl">اجتماعات هذا الأسبوع</div>
+        <div class="st"><div class="sic sic-a" style="font-size:16px">🗓</div></div>
+        <div class="sval" id="call-stat-total">—</div><div class="slbl">إجمالي الاجتماعات</div>
         <div class="spark"><div class="sb sb-a" style="height:30%"></div><div class="sb sb-a" style="height:45%"></div><div class="sb sb-a" style="height:60%"></div><div class="sb sb-a" style="height:50%"></div><div class="sb sb-a" style="height:70%"></div><div class="sb sb-a" style="height:65%"></div><div class="sb sb-a hi" style="height:80%"></div></div>
       </div>
     </div>
@@ -1197,12 +1150,12 @@ body::before{
             <div style="font-size:12px;color:var(--t2);line-height:1.6">اجتماعات بالفيديو، مشاركة الشاشة، دردشة الفريق، التكامل مع Microsoft 365.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="background:rgba(100,65,165,.1);border:1px solid rgba(100,65,165,.2);border-radius:9px;padding:9px 12px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:#a78bfa">4</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">اجتماعات اليوم</div>
+                <div style="font-size:18px;font-weight:900;color:#a78bfa" id="teams-meetings">—</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">اجتماعات مجدولة</div>
               </div>
               <div style="background:rgba(100,65,165,.1);border:1px solid rgba(100,65,165,.2);border-radius:9px;padding:9px 12px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:#a78bfa">8</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">أعضاء متصلون</div>
+                <div style="font-size:18px;font-weight:900;color:#a78bfa" id="teams-members">—</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">أعضاء الفريق</div>
               </div>
             </div>
           </div>
@@ -1230,12 +1183,12 @@ body::before{
             <div style="font-size:12px;color:var(--t2);line-height:1.6">مكالمات فيديو مجانية، تكامل مع Google Calendar، مشاركة الشاشة بسهولة.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="background:rgba(15,157,88,.1);border:1px solid rgba(15,157,88,.2);border-radius:9px;padding:9px 12px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:#34d399">2</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">اجتماعات اليوم</div>
+                <div style="font-size:18px;font-weight:900;color:#34d399" id="meet-meetings">—</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">اجتماعات مجدولة</div>
               </div>
               <div style="background:rgba(15,157,88,.1);border:1px solid rgba(15,157,88,.2);border-radius:9px;padding:9px 12px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:#34d399">3</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">أعضاء متصلون</div>
+                <div style="font-size:18px;font-weight:900;color:#34d399" id="meet-members">—</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">أعضاء الفريق</div>
               </div>
             </div>
           </div>
@@ -1263,12 +1216,12 @@ body::before{
             <div style="font-size:12px;color:var(--t2);line-height:1.6">غرف فيديو مدمجة مباشرة في التطبيق، مشاركة شاشة، تسجيل مكالمات.</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);border-radius:9px;padding:9px 12px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:#22d3ee">1</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">غرفة نشطة</div>
+                <div style="font-size:18px;font-weight:900;color:#22d3ee" id="daily-meetings">—</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">اجتماعات مجدولة</div>
               </div>
               <div style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);border-radius:9px;padding:9px 12px;text-align:center">
-                <div style="font-size:18px;font-weight:900;color:#22d3ee">1</div>
-                <div style="font-size:10px;color:var(--t3);margin-top:2px">عضو متصل</div>
+                <div style="font-size:18px;font-weight:900;color:#22d3ee" id="daily-members">—</div>
+                <div style="font-size:10px;color:var(--t3);margin-top:2px">أعضاء الفريق</div>
               </div>
             </div>
           </div>
@@ -1283,54 +1236,13 @@ body::before{
     <!-- Scheduled Meetings -->
     <div class="panel">
       <div class="ph">
-        <div class="ph-t">الاجتماعات المجدولة اليوم</div>
-        <div class="ph-s">الأربعاء، 29 أبريل 2026</div>
+        <div class="ph-t">الاجتماعات المجدولة</div>
+        <div class="ph-s" id="call-meetings-date">—</div>
         <div class="sp"></div>
         <div class="pha">+ إضافة اجتماع</div>
       </div>
-      <div style="padding:0 20px">
-        <div class="txn-item">
-          <div style="width:42px;height:42px;border-radius:11px;background:rgba(100,65,165,.15);border:1px solid rgba(100,65,165,.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🟣</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;margin-bottom:3px">مراجعة Q2 — الإدارة العليا</div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:11px;color:var(--t2)">Teams · 10:00 ص — 11:00 ص</span>
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--rg);color:var(--r)">● جارٍ الآن</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <div style="display:flex"><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--g),oklch(68% .2 175));border:2px solid #080c14;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">أح</div><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--v),oklch(60% .22 310));border:2px solid #080c14;margin-right:-8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">سا</div><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--a),oklch(75% .16 75));border:2px solid #080c14;margin-right:-8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#080c14">خا</div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);border:2px solid #080c14;margin-right:-8px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t2)">+3</div></div>
-            <button style="padding:7px 14px;background:rgba(100,65,165,.2);border:1px solid rgba(100,65,165,.35);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">انضم</button>
-          </div>
-        </div>
-        <div class="txn-item">
-          <div style="width:42px;height:42px;border-radius:11px;background:rgba(15,157,88,.1);border:1px solid rgba(15,157,88,.25);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🟢</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;margin-bottom:3px">جلسة العميل — شركة النخيل</div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:11px;color:var(--t2)">Google Meet · 2:00 م — 3:30 م</span>
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--gg);color:var(--g)">● قادم</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <div style="display:flex"><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--c),var(--c2));border:2px solid #080c14;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#080c14">مح</div><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--g),oklch(68% .2 175));border:2px solid #080c14;margin-right:-8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">أح</div></div>
-            <button style="padding:7px 14px;background:rgba(15,157,88,.15);border:1px solid rgba(15,157,88,.3);border-radius:8px;color:#34d399;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">انضم</button>
-          </div>
-        </div>
-        <div class="txn-item" style="border:none">
-          <div style="width:42px;height:42px;border-radius:11px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.25);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔵</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;margin-bottom:3px">استعراض نموذج التقرير AI</div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:11px;color:var(--t2)">Daily.co · 5:00 م — 5:30 م</span>
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--ag);color:var(--a)">● مجدول</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <div style="display:flex"><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--v),oklch(60% .22 310));border:2px solid #080c14;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">عم</div><div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--c),var(--c2));border:2px solid #080c14;margin-right:-8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#080c14">مح</div></div>
-            <button style="padding:7px 14px;background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.3);border-radius:8px;color:#22d3ee;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">انضم</button>
-          </div>
-        </div>
+      <div style="padding:0 20px" id="call-meetings-list">
+        <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">جارٍ التحميل...</div>
       </div>
     </div>
 
@@ -1354,137 +1266,19 @@ body::before{
         <!-- القيادة -->
         <div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--t3);text-transform:uppercase;margin-bottom:10px;padding-right:4px">القيادة</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px" id="tc-leadership">
-
-          <!-- محمد — CEO -->
-          <div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(6,182,212,.04));border:1px solid oklch(78% .2 200 / .3);border-radius:13px;transition:all .18s;cursor:default">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--c),var(--b));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;box-shadow:0 0 12px var(--cg)">مح</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #080c14;box-shadow:0 0 6px var(--g)"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">محمد الحربي</div>
-              <div style="font-size:10px;color:var(--c);font-weight:700;margin-top:1px">★ مؤسس CEO</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('محمد الحربي')" title="مكالمة فيديو" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('محمد الحربي')" title="رسالة" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
+          <div style="color:var(--t3);font-size:12px;padding:10px">جارٍ التحميل...</div>
         </div>
 
         <!-- الإدارة -->
         <div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--t3);text-transform:uppercase;margin-bottom:10px;padding-right:4px">الإدارة</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px" id="tc-managers">
-
-          <!-- سارة -->
-          <div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s;cursor:default">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--v),oklch(60% .22 310));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">سا</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #080c14;box-shadow:0 0 6px var(--g)"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">سارة العتيبي</div>
-              <div style="font-size:10px;color:var(--v);font-weight:700;margin-top:1px">مشرفة</div>
-              <div style="font-size:9px;color:var(--t3);margin-top:1px">↑ محمد الحربي</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('سارة العتيبي')" title="مكالمة فيديو" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('سارة العتيبي')" title="رسالة" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
-          <!-- أحمد -->
-          <div class="tc-card" data-status="busy" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s;cursor:default">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--g),oklch(68% .2 175));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">أح</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--a);border:2px solid #080c14;box-shadow:0 0 6px var(--a)"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">أحمد الزهراني</div>
-              <div style="font-size:10px;color:var(--g);font-weight:700;margin-top:1px">مشرف</div>
-              <div style="font-size:9px;color:var(--t3);margin-top:1px">↑ محمد الحربي</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('أحمد الزهراني')" title="مكالمة فيديو" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('أحمد الزهراني')" title="رسالة" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
+          <div style="color:var(--t3);font-size:12px;padding:10px">جارٍ التحميل...</div>
         </div>
 
         <!-- الفريق -->
         <div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--t3);text-transform:uppercase;margin-bottom:10px;padding-right:4px">الفريق</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="tc-staff">
-
-          <!-- نورة -->
-          <div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s;cursor:default">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--r),oklch(60% .22 35));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">نو</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #080c14;box-shadow:0 0 6px var(--g)"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">نورة القحطاني</div>
-              <div style="font-size:10px;color:var(--r);font-weight:700;margin-top:1px">مديرة مبيعات</div>
-              <div style="font-size:9px;color:var(--t3);margin-top:1px">↑ سارة العتيبي</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('نورة القحطاني')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('نورة القحطاني')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
-          <!-- خالد -->
-          <div class="tc-card" data-status="offline" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s;cursor:default;opacity:.7">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--a),oklch(75% .18 55));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#080c14">خا</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid #080c14"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">خالد الدوسري</div>
-              <div style="font-size:10px;color:var(--a);font-weight:700;margin-top:1px">محاسب</div>
-              <div style="font-size:9px;color:var(--t3);margin-top:1px">↑ سارة العتيبي</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('خالد الدوسري')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('خالد الدوسري')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
-          <!-- ريم -->
-          <div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s;cursor:default">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--b),oklch(65% .2 265));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">ري</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #080c14;box-shadow:0 0 6px var(--g)"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ريم الشمري</div>
-              <div style="font-size:10px;color:var(--b);font-weight:700;margin-top:1px">مطورة</div>
-              <div style="font-size:9px;color:var(--t3);margin-top:1px">↑ أحمد الزهراني</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('ريم الشمري')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('ريم الشمري')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
-          <!-- عمر -->
-          <div class="tc-card" data-status="busy" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s;cursor:default">
-            <div style="position:relative;flex-shrink:0">
-              <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--v),oklch(60% .22 310));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">عم</div>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--a);border:2px solid #080c14;box-shadow:0 0 6px var(--a)"></span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">عمر الغامدي</div>
-              <div style="font-size:10px;color:var(--v);font-weight:700;margin-top:1px">مصمم</div>
-              <div style="font-size:9px;color:var(--t3);margin-top:1px">↑ أحمد الزهراني</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <button onclick="startCall('عمر الغامدي')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--cr)'" onmouseout="this.style.background='var(--cg)'">📹</button>
-              <button onclick="sendMsg('عمر الغامدي')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--glass2)'" onmouseout="this.style.background='var(--glass)'">💬</button>
-            </div>
-          </div>
-
+          <div style="color:var(--t3);font-size:12px;padding:10px">جارٍ التحميل...</div>
         </div>
       </div>
     </div>
@@ -1812,6 +1606,13 @@ async function initDashboard() {
     }
   }
   if (mb.length && el('tg-members')) el('tg-members').textContent = mb.length + ' عضو';
+  // إحصائيات صفحة الاتصال — الأعضاء
+  if (mb.length) {
+    if (el('call-stat-members')) el('call-stat-members').textContent = mb.length;
+    if (el('teams-members'))     el('teams-members').textContent     = mb.length;
+    if (el('meet-members'))      el('meet-members').textContent      = mb.length;
+    if (el('daily-members'))     el('daily-members').textContent     = mb.length;
+  }
 
   // ── قائمة الأنشطة ──
   const acts = val(activity) || [];
@@ -1857,18 +1658,19 @@ async function initDashboard() {
   if (tasksEl && !taskList.length) {
     tasksEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">لا توجد مهام بعد</div>';
   }
-  if (tasksEl && taskList.length) {
+  function buildTaskRows(list, limit) {
     const priorityMap = { high:'tr', medium:'ta', low:'tg', urgent:'tr' };
     const priorityLbl = { high:'مرتفع', medium:'متوسط', low:'منخفض', urgent:'عاجل جداً' };
     const statusLbl   = { done:'مكتمل', completed:'مكتمل', pending:'معلق', in_progress:'جارٍ' };
     const statusCls   = { done:'tg', completed:'tg', pending:'tp', in_progress:'tc' };
-    tasksEl.innerHTML = taskList.slice(0, 8).map((t, i) => {
+    const rows = list.slice(0, limit);
+    return rows.map((t, i) => {
       const isDone = t.status === 'done' || t.status === 'completed';
       const pr = t.priority || 'medium';
       const sc = t.status || 'pending';
       const due = t.due_date ? `· ${t.due_date}` : '';
       const av = t.assignee_name ? initials(t.assignee_name) : '—';
-      const isLast = i === Math.min(taskList.length, 8) - 1;
+      const isLast = i === rows.length - 1;
       return `<div class="ti" ${isLast ? 'style="border:none;padding-bottom:16px"' : i===0 ? 'style="padding-top:16px"' : ''}>
         <div class="tch ${isDone ? 'dn' : ''}"></div>
         <div style="flex:1">
@@ -1882,6 +1684,21 @@ async function initDashboard() {
         <div class="tav" style="background:var(--b);color:#080c14">${av}</div>
       </div>`;
     }).join('');
+  }
+
+  if (tasksEl && taskList.length) tasksEl.innerHTML = buildTaskRows(taskList, 8);
+
+  // صفحة المهام الكاملة
+  const tasksPageEl = el('tasks-page-list');
+  if (tasksPageEl) {
+    if (taskList.length) tasksPageEl.innerHTML = buildTaskRows(taskList, 50);
+    else tasksPageEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">لا توجد مهام بعد</div>';
+    // تحديث عداد الرأس
+    const subEl = document.querySelector('#page-tasks .tb-sub');
+    if (subEl && taskList.length) {
+      const late = taskList.filter(t => t.is_late || t.overdue).length;
+      subEl.textContent = taskList.length + ' مهمة' + (late > 0 ? ` — ${late} متأخرة` : '');
+    }
   }
 
   // ── CRM (صفقات) ──
@@ -1942,38 +1759,52 @@ async function initDashboard() {
 function renderTeamContacts(members, me) {
   // احذف النفس من القائمة
   const others = members.filter(m => me ? m.user_id !== me.id : true);
-  // قسّم: إدارة (owner/admin) وفريق (member)
-  const admins = others.filter(m => m.role === 'owner' || m.role === 'admin');
+  // قسّم حسب الدور
+  const owners = others.filter(m => m.role === 'owner');
+  const admins = others.filter(m => m.role === 'admin');
   const staff  = others.filter(m => m.role !== 'owner' && m.role !== 'admin');
+  // أضف نفس المستخدم في القيادة إذا كان owner/admin
+  const selfOwner = me && (me.role === 'owner' || me.role === 'is_admin') ? [me] : [];
 
-  function memberCard(m, i) {
-    const nm = m.user_name || m.user_email || '—';
+  function memberCard(m, i, isOwner) {
+    const nm = m.user_name || m.name || m.user_email || m.email || '—';
     const av = initials(nm);
-    const role = m.job_title || (m.role === 'owner' ? 'مالك' : m.role === 'admin' ? 'مشرف' : 'عضو');
-    const col = avatarColors(i);
-    return `<div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--glass);border:1px solid var(--rim);border-radius:13px;transition:all .18s">
+    const role = m.job_title || (m.role === 'owner' ? '★ مؤسس' : m.role === 'admin' ? 'مشرف' : 'عضو');
+    const cols = ['linear-gradient(135deg,var(--c),var(--b))','linear-gradient(135deg,var(--v),oklch(60% .22 310))','linear-gradient(135deg,var(--g),oklch(68% .2 175))','linear-gradient(135deg,var(--r),oklch(60% .22 35))','linear-gradient(135deg,var(--a),oklch(75% .18 55))'];
+    const col = cols[i % cols.length];
+    const roleColor = m.role === 'owner' ? 'var(--c)' : m.role === 'admin' ? 'var(--v)' : 'var(--g)';
+    const borderStyle = isOwner ? 'border:1px solid oklch(78% .2 200 / .3);background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(6,182,212,.04))' : 'border:1px solid var(--rim);background:var(--glass)';
+    return `<div class="tc-card" data-status="online" style="display:flex;align-items:center;gap:10px;padding:11px 13px;${borderStyle};border-radius:13px;transition:all .18s">
       <div style="position:relative;flex-shrink:0">
-        <div style="width:38px;height:38px;border-radius:11px;background:${col};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">${av}</div>
+        <div style="width:38px;height:38px;border-radius:11px;background:${col};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff${isOwner?';box-shadow:0 0 12px var(--cg)':''}">${av}</div>
         <span style="position:absolute;bottom:-2px;left:-2px;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #080c14;box-shadow:0 0 6px var(--g)"></span>
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</div>
-        <div style="font-size:10px;color:var(--c);font-weight:700;margin-top:1px">${role}</div>
+        <div style="font-size:10px;color:${roleColor};font-weight:700;margin-top:1px">${role}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px">
-        <button onclick="startCall('${nm}')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" title="مكالمة">📹</button>
-        <button onclick="sendMsg('${nm}')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" title="رسالة">💬</button>
+        <button onclick="startCall('${nm.replace(/'/g,"\\'")}')" style="width:28px;height:28px;border-radius:8px;background:var(--cg);border:1px solid var(--cr);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" title="مكالمة">📹</button>
+        <button onclick="sendMsg('${nm.replace(/'/g,"\\'")}')" style="width:28px;height:28px;border-radius:8px;background:var(--glass);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" title="رسالة">💬</button>
       </div>
     </div>`;
   }
 
+  const ldEl  = document.getElementById('tc-leadership');
   const admEl = document.getElementById('tc-managers');
   const stfEl = document.getElementById('tc-staff');
-  const ldEl  = document.getElementById('tc-leadership');
-  // اجمع الكل في أقسام
-  if (admins.length && admEl)  admEl.innerHTML  = admins.map((m,i) => memberCard(m, i)).join('');
-  if (staff.length  && stfEl)  stfEl.innerHTML  = staff.map((m,i)  => memberCard(m, i+admins.length)).join('');
-  if (ldEl && !admins.length && !staff.length) ldEl.innerHTML = '<p style="color:var(--t3);font-size:12px;padding:12px">لا يوجد أعضاء آخرون</p>';
+
+  // القيادة (owners + المستخدم نفسه إذا owner)
+  const leaderList = owners.length ? owners : (me && me.role === 'owner' ? [{ user_name: me.name || me.username || me.email, role: 'owner', user_email: me.email }] : []);
+  if (ldEl) {
+    if (leaderList.length) ldEl.innerHTML = leaderList.map((m, i) => memberCard(m, i, true)).join('');
+    else if (!admins.length && !staff.length) ldEl.innerHTML = '<p style="color:var(--t3);font-size:12px;padding:12px">لا يوجد أعضاء آخرون</p>';
+    else ldEl.style.display = 'none';
+  }
+  if (admins.length && admEl)  admEl.innerHTML = admins.map((m, i) => memberCard(m, i, false)).join('');
+  else if (admEl) admEl.innerHTML = '<p style="color:var(--t3);font-size:12px;padding:10px">لا يوجد مشرفون</p>';
+  if (staff.length && stfEl)  stfEl.innerHTML  = staff.map((m, i) => memberCard(m, i + admins.length, false)).join('');
+  else if (stfEl) stfEl.innerHTML = '<p style="color:var(--t3);font-size:12px;padding:10px">لا يوجد أعضاء فريق</p>';
 }
 
 function renderTeamPage(members) {
@@ -2113,23 +1944,64 @@ function renderChatPage(members) {
 }
 
 function renderMeetings(meetings) {
-  // صفحة الاجتماعات المجدولة في page-call
-  const el = document.querySelector('#page-call .panel:last-of-type .pb, #page-call .txn-item');
-  // نترك الاجتماعات الوهمية ونضيف فوقها الحقيقية إذا وُجدت
-  if (!meetings || !meetings.length) return;
-  const container = document.querySelector('#page-call .panel .ph')?.closest('.panel')?.querySelector('div[style*="padding:0 20px"]');
+  const container = document.getElementById('call-meetings-list');
+  const dateEl    = document.getElementById('call-meetings-date');
+
+  // تاريخ اليوم
+  if (dateEl) {
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const now = new Date();
+    dateEl.textContent = days[now.getDay()] + '، ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+  }
+
+  // إحصائيات صفحة الاتصال
+  const el = id => document.getElementById(id);
+  if (el('call-stat-today'))    el('call-stat-today').textContent    = meetings ? meetings.length : '0';
+  if (el('call-stat-upcoming')) el('call-stat-upcoming').textContent = meetings ? meetings.length : '0';
+  if (el('call-stat-total'))    el('call-stat-total').textContent    = meetings ? meetings.length : '0';
+
   if (!container) return;
-  const provColors = { teams: 'rgba(100,65,165,.15)', meet: 'rgba(15,157,88,.1)', daily: 'rgba(6,182,212,.1)', default: 'var(--cg)' };
-  const provEmoji  = { teams: '🟣', meet: '🟢', daily: '🔵', default: '📹' };
-  container.innerHTML = meetings.slice(0, 4).map((m, i) => {
+  if (!meetings || !meetings.length) {
+    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:12px">لا توجد اجتماعات مجدولة اليوم</div>';
+    // بروفايدر كارد — صفر
+    ['teams-meetings','meet-meetings','daily-meetings'].forEach(id => { if(el(id)) el(id).textContent = '0'; });
+    return;
+  }
+
+  const provColors = { teams:'rgba(100,65,165,.15)', meet:'rgba(15,157,88,.1)', daily:'rgba(6,182,212,.1)', default:'var(--cg)' };
+  const provBorder = { teams:'rgba(100,65,165,.3)', meet:'rgba(15,157,88,.25)', daily:'rgba(6,182,212,.25)', default:'var(--rim)' };
+  const provEmoji  = { teams:'🟣', meet:'🟢', daily:'🔵', default:'📹' };
+  const provJoin   = { teams:'rgba(100,65,165,.2)', meet:'rgba(15,157,88,.15)', daily:'rgba(6,182,212,.15)', default:'var(--cg)' };
+  const provTxt    = { teams:'#a78bfa', meet:'#34d399', daily:'#22d3ee', default:'var(--c)' };
+
+  // عدد لكل بروفايدر
+  const teamsCnt = meetings.filter(m => m.provider === 'teams').length;
+  const meetCnt  = meetings.filter(m => m.provider === 'meet').length;
+  const dailyCnt = meetings.filter(m => m.provider === 'daily').length;
+  if (el('teams-meetings')) el('teams-meetings').textContent = teamsCnt;
+  if (el('meet-meetings'))  el('meet-meetings').textContent  = meetCnt;
+  if (el('daily-meetings')) el('daily-meetings').textContent = dailyCnt;
+
+  container.innerHTML = meetings.slice(0, 6).map((m, i) => {
     const pr = m.provider || 'default';
-    return `<div class="txn-item" ${i === meetings.length-1 ? 'style="border:none"' : ''}>
-      <div style="width:42px;height:42px;border-radius:11px;background:${provColors[pr]||provColors.default};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${provEmoji[pr]||'📹'}</div>
+    const isLast = i === Math.min(meetings.length, 6) - 1;
+    const provLbl = { teams:'Teams', meet:'Google Meet', daily:'Daily.co', default:'مكالمة' };
+    const timeStr = m.meeting_time ? ` · ${m.meeting_time}` : (m.meeting_date ? ` · ${m.meeting_date}` : '');
+    const isNow = m.status === 'active' || m.is_live;
+    const statusBadge = isNow
+      ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--rg);color:var(--r)">● جارٍ الآن</span>`
+      : `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--gg);color:var(--g)">● قادم</span>`;
+    return `<div class="txn-item" ${isLast ? 'style="border:none"' : ''}>
+      <div style="width:42px;height:42px;border-radius:11px;background:${provColors[pr]};border:1px solid ${provBorder[pr]};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${provEmoji[pr]}</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;margin-bottom:3px">${m.title}</div>
-        <div style="font-size:11px;color:var(--t2)">${m.meeting_date || ''} ${m.meeting_time ? '· '+m.meeting_time : ''}</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:3px">${m.title || 'اجتماع'}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--t2)">${provLbl[pr]||''}${timeStr}</span>
+          ${statusBadge}
+        </div>
       </div>
-      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--gg);color:var(--g)">● قادم</span>
+      <button onclick="${m.meeting_link ? `window.open('${m.meeting_link}','_blank')` : `startCall('${(m.title||'اجتماع').replace(/'/g,"\\'")}')`}" style="padding:7px 14px;background:${provJoin[pr]};border:1px solid ${provBorder[pr]};border-radius:8px;color:${provTxt[pr]};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">انضم</button>
     </div>`;
   }).join('');
 }
