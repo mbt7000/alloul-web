@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from auth import get_current_user
 from admin_access import require_admin_user
 from database import get_db
-from models import User
+from models import User, Company, Subscription
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -51,6 +51,19 @@ class AdminStatsResponse(BaseModel):
     verified_users: int
     total_posts: int
     total_companies: int
+    active_subscriptions: int
+    trialing_subscriptions: int
+    canceled_subscriptions: int
+
+
+class CompanySubscriptionResponse(BaseModel):
+    id: int
+    name: str
+    founder_email: Optional[str] = None
+    plan_id: Optional[str] = None
+    status: Optional[str] = None
+    created_at: Optional[str] = None
+    member_count: int = 0
 
 
 @router.get("/stats", response_model=AdminStatsResponse)
@@ -59,13 +72,42 @@ def get_admin_stats(
     db: Annotated[Session, Depends(get_db)],
 ):
     _require_admin(current_user)
-    from models import Post, Company
+    from models import Post
     return AdminStatsResponse(
         total_users=db.query(User).count(),
         verified_users=db.query(User).filter(User.verified > 0).count(),
         total_posts=db.query(Post).count(),
         total_companies=db.query(Company).count(),
+        active_subscriptions=db.query(Subscription).filter(Subscription.status == "active").count(),
+        trialing_subscriptions=db.query(Subscription).filter(Subscription.status == "trialing").count(),
+        canceled_subscriptions=db.query(Subscription).filter(Subscription.status == "canceled").count(),
     )
+
+
+@router.get("/companies", response_model=list[CompanySubscriptionResponse])
+def list_companies(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    _require_admin(current_user)
+    from models import CompanyMember
+    companies = db.query(Company).order_by(Company.id.desc()).offset(offset).limit(limit).all()
+    result = []
+    for c in companies:
+        sub = db.query(Subscription).filter(Subscription.company_id == c.id).order_by(Subscription.id.desc()).first()
+        member_count = db.query(CompanyMember).filter(CompanyMember.company_id == c.id).count()
+        result.append(CompanySubscriptionResponse(
+            id=c.id,
+            name=c.name,
+            founder_email=c.founder_email,
+            plan_id=sub.plan_id if sub else None,
+            status=sub.status if sub else "free",
+            created_at=c.created_at.isoformat() if c.created_at else None,
+            member_count=member_count,
+        ))
+    return result
 
 
 @router.get("/users", response_model=list[UserAdminResponse])
