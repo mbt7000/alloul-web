@@ -8,7 +8,7 @@ import {
   Loader2, Mail, Calendar, BadgeCheck, ChevronLeft,
   BarChart3, Users, Briefcase, Bell, Globe, Moon,
   Edit3, MapPin, Phone, X, Check, Camera, Lock,
-  Info, FileText, HelpCircle, Star, Sparkles,
+  Info, FileText, HelpCircle, Star, Sparkles, Hash, Send,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { getCurrentUser, getDashboardStats, apiFetch, type DashboardStats } from '@/lib/api-client';
@@ -193,7 +193,13 @@ export default function ProfilePage() {
               {/* Plan badge */}
               <div className="mb-1 px-3 py-1.5 rounded-xl border border-accent-500/30 bg-accent-500/10 flex items-center gap-1.5">
                 <Sparkles size={11} className="text-accent-400" />
-                <span className="text-accent-400 text-xs font-bold">Pro Trial</span>
+                <span className="text-accent-400 text-xs font-bold">
+                  {user.plan === 'professional' ? 'Pro'
+                   : user.plan === 'business' ? 'Business'
+                   : user.plan === 'starter' ? 'Starter'
+                   : user.subscription_status === 'trialing' ? 'Pro Trial'
+                   : 'مجاني'}
+                </span>
               </div>
             </div>
 
@@ -211,6 +217,20 @@ export default function ProfilePage() {
               <p className="text-white/70 text-sm mb-3 leading-relaxed">{(user as any).bio}</p>
             )}
 
+            {/* Employee No badge */}
+            {user.employee_no && (
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer select-all"
+                  style={{ background: 'rgba(46,139,255,0.12)', border: '1px solid rgba(46,139,255,0.25)' }}
+                  title="رقم الموظف — استخدمه للدخول لبوت شكرة"
+                >
+                  <Hash size={12} style={{ color: '#2E8BFF' }} />
+                  <span className="text-xs font-black" style={{ color: '#2E8BFF' }}>رقم الموظف: {user.employee_no}</span>
+                </div>
+              </div>
+            )}
+
             {/* Meta chips */}
             <div className="flex flex-wrap gap-2">
               {user.email && (
@@ -218,13 +238,14 @@ export default function ProfilePage() {
                   <Mail size={11} /> {user.email}
                 </span>
               )}
-              {(user as any).location && (
+              {user.location && (
                 <span className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 px-2.5 py-1 rounded-lg">
-                  <MapPin size={11} /> {(user as any).location}
+                  <MapPin size={11} /> {user.location}
                 </span>
               )}
               <span className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 px-2.5 py-1 rounded-lg">
-                <Calendar size={11} /> منذ 2026
+                <Calendar size={11} />
+                {user.created_at ? `منذ ${new Date(user.created_at).getFullYear()}` : 'منذ 2026'}
               </span>
             </div>
           </div>
@@ -247,6 +268,35 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+
+        {/* ─── Telegram Bot Info ─────────────────────────────────────────── */}
+        {user.employee_no && (
+          <div
+            className="rounded-2xl p-4 border"
+            style={{ background: 'rgba(0,136,204,0.08)', borderColor: 'rgba(0,136,204,0.25)' }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(0,136,204,0.2)' }}>
+                <Send size={16} style={{ color: '#29B6F6' }} />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm">بوت شكرة — المحاسبة عبر تيليغرام</p>
+                <p className="text-white/40 text-[11px]">سجّل دخولك للبوت بهذه البيانات</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+                <span className="text-white/50 text-xs">رقم الموظف</span>
+                <span className="text-white font-black text-sm font-mono">{user.employee_no}</span>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+                <span className="text-white/50 text-xs">كلمة المرور</span>
+                <span className="text-white/60 text-xs">نفس كلمة مرور المنصة</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ─── Menu Sections ──────────────────────────────────────────────── */}
         {MENU_SECTIONS.map((section) => (

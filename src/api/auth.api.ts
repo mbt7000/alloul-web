@@ -10,6 +10,7 @@ export interface AuthUser {
   cover_url?: string | null;
   bio?: string;
   i_code?: string;
+  employee_no?: string | null;
   phone?: string;
   verified?: number;
   created_at?: string;
@@ -17,6 +18,8 @@ export interface AuthUser {
   location?: string | null;
   skills?: string | null;   // used as "headline" in the UI
   voice_profile_url?: string | null;
+  plan?: string | null;
+  subscription_status?: string | null;
 }
 
 export interface UpdateMeBody {

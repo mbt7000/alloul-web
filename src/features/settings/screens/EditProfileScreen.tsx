@@ -461,6 +461,7 @@ export default function EditProfileScreen() {
               <InfoRow label="البريد" value={user?.email ?? "—"} />
               <InfoRow label="الهاتف" value={user?.phone ?? "—"} />
               <InfoRow label="رمز المستخدم" value={user?.i_code ?? "—"} mono />
+              <InfoRow label="رقم الموظف" value={user?.employee_no ?? "—"} mono />
               <InfoRow
                 label="تاريخ الإنشاء"
                 value={user?.created_at ? new Date(user.created_at).toLocaleDateString("ar") : "—"}
