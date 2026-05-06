@@ -108,21 +108,39 @@ export default function ProfileScreen() {
             <AppText variant="bodySm" tone="secondary" style={{ marginTop: 8, lineHeight: 22 }}>{user.bio}</AppText>
           ) : null}
 
-          {/* Work ID Badge */}
-          {user?.i_code ? (
-            <TouchableOpacity
-              onPress={() => {
-                Clipboard.setString(user.i_code!);
-                Alert.alert("تم النسخ", `كود العمل: ${user.i_code}`);
-              }}
-              activeOpacity={0.7}
-              style={{ marginTop: 12, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: "rgba(76,111,255,0.12)", borderWidth: 1, borderColor: "rgba(76,111,255,0.25)" }}
-            >
-              <Ionicons name="id-card-outline" size={14} color={colors.accentBlue} />
-              <AppText variant="caption" weight="bold" style={{ color: colors.accentBlue }}>#{user.i_code}</AppText>
-              <Ionicons name="copy-outline" size={12} color={colors.accentBlue} />
-            </TouchableOpacity>
-          ) : null}
+          {/* Badges Row */}
+          <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {/* Employee Number Badge */}
+            {user?.employee_no ? (
+              <TouchableOpacity
+                onPress={() => {
+                  Clipboard.setString(user.employee_no!);
+                  Alert.alert("تم النسخ", `رقم الموظف: ${user.employee_no}\nاستخدمه للدخول لبوت شكرة`);
+                }}
+                activeOpacity={0.7}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: "rgba(20,224,164,0.12)", borderWidth: 1, borderColor: "rgba(20,224,164,0.25)" }}
+              >
+                <Ionicons name="id-card-outline" size={14} color={colors.accentEmerald} />
+                <AppText variant="caption" weight="bold" style={{ color: colors.accentEmerald }}>رقم موظف: {user.employee_no}</AppText>
+                <Ionicons name="copy-outline" size={12} color={colors.accentEmerald} />
+              </TouchableOpacity>
+            ) : null}
+            {/* Work ID Badge */}
+            {user?.i_code ? (
+              <TouchableOpacity
+                onPress={() => {
+                  Clipboard.setString(user.i_code!);
+                  Alert.alert("تم النسخ", `كود العمل: ${user.i_code}`);
+                }}
+                activeOpacity={0.7}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: "rgba(76,111,255,0.12)", borderWidth: 1, borderColor: "rgba(76,111,255,0.25)" }}
+              >
+                <Ionicons name="briefcase-outline" size={14} color={colors.accentBlue} />
+                <AppText variant="caption" weight="bold" style={{ color: colors.accentBlue }}>#{user.i_code}</AppText>
+                <Ionicons name="copy-outline" size={12} color={colors.accentBlue} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         {/* ── Company affiliation ── */}
