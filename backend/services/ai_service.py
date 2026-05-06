@@ -56,11 +56,11 @@ class AIServiceProvider:
 
         # Sort by priority for the given context
         if private:
-            # Private data: Ollama > Claude > DeepSeek
-            priority_order = ["ollama", "claude", "deepseek"]
+            # Private data: Ollama > Claude > Groq > DeepSeek
+            priority_order = ["ollama", "claude", "groq", "deepseek"]
         else:
-            # Public data: Claude > DeepSeek > Ollama
-            priority_order = ["claude", "deepseek", "ollama"]
+            # Public data: Groq (free) > Claude > DeepSeek > Ollama
+            priority_order = ["groq", "claude", "deepseek", "ollama"]
 
         # Find first available provider in priority order
         for provider_id in priority_order:
@@ -217,6 +217,10 @@ class AIServiceProvider:
             return await self._call_claude(
                 system_prompt, user_prompt, model, max_tokens, temperature
             )
+        elif provider_id == "groq":
+            return await self._call_groq(
+                system_prompt, user_prompt, model, max_tokens, temperature
+            )
         elif provider_id == "deepseek":
             return await self._call_deepseek(
                 system_prompt, user_prompt, model, max_tokens, temperature
@@ -240,6 +244,11 @@ class AIServiceProvider:
         """Internal: stream from a specific provider."""
         if provider_id == "claude":
             async for chunk in self._stream_claude(
+                system_prompt, user_prompt, model, max_tokens, temperature
+            ):
+                yield chunk
+        elif provider_id == "groq":
+            async for chunk in self._stream_groq(
                 system_prompt, user_prompt, model, max_tokens, temperature
             ):
                 yield chunk
@@ -367,6 +376,74 @@ class AIServiceProvider:
             stream=True,
         )
         for chunk in resp:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+            if delta:
+                yield delta
+
+    # ──── Groq Implementation (مجاني، سريع جداً، OpenAI-compatible) ─────────
+
+    async def _call_groq(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        model: Optional[str],
+        max_tokens: int,
+        temperature: float,
+    ) -> str:
+        """Call Groq API — free 14,400 req/day, OpenAI-compatible."""
+        if not settings.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY not configured")
+        try:
+            from openai import AsyncOpenAI
+        except ImportError:
+            raise ImportError("openai package required: pip install openai")
+
+        client = AsyncOpenAI(
+            api_key=settings.GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+        )
+        resp = await client.chat.completions.create(
+            model=model or settings.GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return resp.choices[0].message.content or ""
+
+    async def _stream_groq(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        model: Optional[str],
+        max_tokens: int,
+        temperature: float,
+    ):
+        """Stream from Groq API."""
+        if not settings.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY not configured")
+        try:
+            from openai import AsyncOpenAI
+        except ImportError:
+            raise ImportError("openai package required: pip install openai")
+
+        client = AsyncOpenAI(
+            api_key=settings.GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+        )
+        stream = await client.chat.completions.create(
+            model=model or settings.GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        async for chunk in stream:
             delta = chunk.choices[0].delta.content if chunk.choices else None
             if delta:
                 yield delta
