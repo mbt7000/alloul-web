@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     # Google Gemini — free 1500 req/day via AI Studio key
     GEMINI_API_KEY: Optional[str] = None
 
+    # Groq — مجاني 14,400 طلب/يوم، سريع جداً، OpenAI-compatible
+    # نماذج: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
+    GROQ_API_KEY: Optional[str] = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
     # Daily.co — غرف فيديو + شات داخل الجلسة (قسم الشركات)
     DAILY_API_KEY: Optional[str] = None
     # النطاق الفرعي فقط، مثال: alloul → https://alloul.daily.co
