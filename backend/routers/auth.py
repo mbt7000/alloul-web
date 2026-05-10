@@ -10,6 +10,7 @@ from typing import Annotated, Any, Dict
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwk, jwt, JWTError
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from auth import create_access_token, get_current_user, get_password_hash, verify_password
+from auth import create_access_token, get_current_user, get_password_hash, verify_password, blacklist_token
 from database import get_db
 from firebase_verify import verify_firebase_token, is_firebase_configured
 from azure_ad_verify import verify_azure_ad_token
@@ -326,6 +327,19 @@ def change_password(
     current_user.hashed_password = get_password_hash(body.new_password)
     db.commit()
     return {"message": "Password changed successfully"}
+
+
+_http_bearer = HTTPBearer(auto_error=False)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    current_user: Annotated[User, Depends(get_current_user)],
+    cred: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)] = None,
+):
+    """Logout — adds token to blacklist so it cannot be reused."""
+    if cred and cred.credentials:
+        blacklist_token(cred.credentials)
 
 
 @router.post("/migrate-icodes", include_in_schema=False)

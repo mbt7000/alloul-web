@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Set
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
@@ -15,6 +15,18 @@ from models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 http_bearer = HTTPBearer(auto_error=False)
+
+# In-memory token blacklist (cleared on restart; acceptable for our scale)
+_token_blacklist: Set[str] = set()
+
+
+def blacklist_token(token: str) -> None:
+    """Add token to blacklist on logout."""
+    _token_blacklist.add(token)
+
+
+def is_token_blacklisted(token: str) -> bool:
+    return token in _token_blacklist
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -56,6 +68,12 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if is_token_blacklisted(cred.credentials):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
     payload = decode_token(cred.credentials)
