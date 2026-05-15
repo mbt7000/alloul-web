@@ -83,6 +83,13 @@ const addBotEmployee = (employee_no: string) =>
 const removeBotEmployee = (employee_no: string) =>
   apiFetch(`/accounting/bot/employees/${employee_no}`, { method: "DELETE" });
 
+const fetchBotPinStatus = () =>
+  apiFetch<{ has_pin: boolean }>("/accounting/bot/pin/status").catch(() => ({ has_pin: false }));
+const setBotPin = (pin: string) =>
+  apiFetch("/accounting/bot/pin", { method: "POST", body: JSON.stringify({ pin }) });
+const deleteBotPin = () =>
+  apiFetch("/accounting/bot/pin", { method: "DELETE" });
+
 const postRecord = (form: RecordForm) =>
   apiFetch("/accounting/records", {
     method: "POST",
@@ -139,6 +146,11 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
   const [botEmployees, setBotEmployees] = useState<BotEmployee[] | null>(null);
   const [addStaffNo, setAddStaffNo] = useState("");
   const [addingStaff, setAddingStaff] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pinValue, setPinValue] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [hasPin, setHasPin] = useState(false);
+  const [savingPin, setSavingPin] = useState(false);
 
   const [form, setForm] = useState<RecordForm>({
     record_type: "expense",
@@ -156,9 +168,10 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const [d, emps] = await Promise.all([fetchDashboard(), fetchBotEmployees()]);
+      const [d, emps, pinStatus] = await Promise.all([fetchDashboard(), fetchBotEmployees(), fetchBotPinStatus()]);
       setData(d);
       setBotEmployees(emps);
+      setHasPin(pinStatus?.has_pin ?? false);
       setSetupForm((f) => ({
         ...f,
         google_sheet_url: d.setup.google_sheet_url || "",
@@ -242,6 +255,50 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
     }
   };
 
+  const handleSavePin = async () => {
+    const p = pinValue.trim();
+    const c = pinConfirm.trim();
+    if (!p || !/^\d{4,8}$/.test(p)) {
+      Alert.alert("خطأ", "الرمز السري يجب أن يكون 4-8 أرقام فقط");
+      return;
+    }
+    if (p !== c) {
+      Alert.alert("خطأ", "الرمزان لا يتطابقان");
+      return;
+    }
+    setSavingPin(true);
+    try {
+      await setBotPin(p);
+      setHasPin(true);
+      setPinOpen(false);
+      setPinValue("");
+      setPinConfirm("");
+      Alert.alert("تم ✓", "تم تعيين الرمز السري بنجاح\nاستخدمه بدل كلمة المرور عند تسجيل الدخول في البوت");
+    } catch (e: any) {
+      Alert.alert("خطأ", e?.message || "تعذّر الحفظ");
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handleDeletePin = () => {
+    Alert.alert("حذف الرمز السري", "ستحتاج لكلمة مرور المنصة للدخول في البوت. متأكد؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "حذف", style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteBotPin();
+            setHasPin(false);
+            Alert.alert("تم", "تم حذف الرمز السري");
+          } catch {
+            Alert.alert("خطأ", "تعذّر الحذف");
+          }
+        },
+      },
+    ]);
+  };
+
   const currency = data?.setup.currency || "SAR";
   const maxTrend = data
     ? Math.max(...data.trend.map((t) => Math.max(t.income, t.expense)), 1)
@@ -260,6 +317,9 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
                 <Ionicons name="people-outline" size={20} color={colors.textPrimary} />
               </Pressable>
             ) : null}
+            <Pressable onPress={() => setPinOpen(true)} style={{ padding: 8 }}>
+              <Ionicons name={hasPin ? "lock-closed" : "lock-open-outline"} size={20} color={hasPin ? colors.primary : colors.textPrimary} />
+            </Pressable>
             <Pressable onPress={() => setSetupOpen(true)} style={{ padding: 8 }}>
               <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
             </Pressable>
@@ -521,6 +581,56 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
                 <AppText style={{ color: colors.textMuted, fontSize: 13 }}>لا يوجد موظفون مُضافون بعد</AppText>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Bot PIN Modal ── */}
+      <Modal visible={pinOpen} animationType="slide" transparent onRequestClose={() => setPinOpen(false)}>
+        <View style={S.overlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPinOpen(false)} />
+          <View style={[S.sheet, { backgroundColor: colors.bgCard }]}>
+            <AppText style={[S.sheetTitle, { color: colors.textPrimary }]}>
+              {hasPin ? "تغيير الرمز السري" : "تعيين رمز سري للبوت"}
+            </AppText>
+            <AppText style={[S.hint, { color: colors.textMuted, marginBottom: 16 }]}>
+              الرمز السري يُستخدم بدل كلمة مرور المنصة عند تسجيل الدخول في بوت شكرة (4-8 أرقام)
+            </AppText>
+
+            <AppText style={[S.inputLabel, { color: colors.textMuted }]}>الرمز السري الجديد</AppText>
+            <TextInput
+              style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="مثال: 1234"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={8}
+              value={pinValue}
+              onChangeText={setPinValue}
+            />
+
+            <AppText style={[S.inputLabel, { color: colors.textMuted }]}>تأكيد الرمز السري</AppText>
+            <TextInput
+              style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="أعد إدخال الرمز"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={8}
+              value={pinConfirm}
+              onChangeText={setPinConfirm}
+            />
+
+            <AppButton label="حفظ الرمز السري" onPress={handleSavePin} loading={savingPin} />
+
+            {hasPin && (
+              <Pressable onPress={handleDeletePin} style={[S.cancelRow, { marginTop: 8 }]}>
+                <AppText style={{ color: "#EF4444" }}>حذف الرمز السري</AppText>
+              </Pressable>
+            )}
+            <Pressable onPress={() => setPinOpen(false)} style={S.cancelRow}>
+              <AppText style={{ color: colors.textMuted }}>إلغاء</AppText>
+            </Pressable>
           </View>
         </View>
       </Modal>

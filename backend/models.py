@@ -397,6 +397,42 @@ class HandoverRecord(Base):
     owner = relationship("User", foreign_keys=[user_id])
 
 
+# ─── Work Summary Agent ───────────────────────────────────────────────────────
+
+class WorkLog(Base):
+    """Stores work submissions — always in English regardless of input language."""
+    __tablename__ = "work_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    employee_name = Column(String(255), nullable=False)
+    task_en = Column(Text, nullable=False)           # always English
+    status = Column(String(32), default="in_progress")  # in_progress, completed, pending
+    priority = Column(String(16), default="medium")     # high, medium, low
+    original_language = Column(String(8), default="ar") # detected input language
+    original_text = Column(Text, nullable=True)         # raw input preserved
+    ai_summary_en = Column(Text, nullable=True)         # English summary
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    company = relationship("Company", foreign_keys=[company_id])
+    employee = relationship("User", foreign_keys=[user_id])
+
+
+class HandoverLog(Base):
+    """Stores auto-generated handovers sent every 12 hours."""
+    __tablename__ = "handover_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    content_en = Column(Text, nullable=False)    # stored in English
+    sent_at = Column(DateTime(timezone=True), server_default=func.now())
+    trigger = Column(String(32), default="scheduled")  # scheduled, manual, shift_change
+
+    company = relationship("Company", foreign_keys=[company_id])
+
+
 class SalesLedger(Base):
     """Per-company sales / transaction ledger saved from AI extractions."""
     __tablename__ = "sales_ledger"
@@ -930,6 +966,7 @@ class AccountingPermission(Base):
     can_edit_records   = Column(Boolean, default=False)  # يعدل معاملة
     can_delete_records = Column(Boolean, default=False)  # يحذف معاملة
     can_use_bot        = Column(Boolean, default=True)   # يستخدم بوت Telegram/WhatsApp
+    bot_pin_hash       = Column(String(128), nullable=True)  # رمز سري مستقل للبوت (اختياري)
 
     is_active  = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
