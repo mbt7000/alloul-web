@@ -1717,7 +1717,20 @@ async def telegram_webhook(
                 return {"ok": True}
         sess["pending_user_id"] = target_user.id
         sess["state"]           = "await_password"
-        await send_telegram_message(token, chat_id, "🔐 أدخل <b>كلمة مرور المنصة</b>:")
+        # رسالة مخصصة حسب نوع المصادقة المفعّلة
+        has_pin = (
+            db.query(AccountingPermission)
+            .filter(
+                AccountingPermission.company_id == company_id,
+                AccountingPermission.user_id == target_user.id,
+                AccountingPermission.bot_pin_hash.isnot(None),
+            )
+            .first()
+        )
+        if has_pin:
+            await send_telegram_message(token, chat_id, "🔐 أدخل <b>الرمز السري</b> للبوت:")
+        else:
+            await send_telegram_message(token, chat_id, "🔐 أدخل <b>كلمة مرور المنصة</b>:")
         return {"ok": True}
 
     if state == "await_password":
@@ -1735,15 +1748,27 @@ async def telegram_webhook(
                 "أعد إدخال رقم موظفك:"
             )
             return {"ok": True}
-        if not verify_password(text_msg.strip(), target_user.hashed_password):
+        # Check bot_pin first — if set, use it; else fall back to platform password
+        perm_check = db.query(AccountingPermission).filter(
+            AccountingPermission.company_id == company_id,
+            AccountingPermission.user_id == target_user.id,
+        ).first()
+        entered = text_msg.strip()
+        if perm_check and perm_check.bot_pin_hash:
+            auth_ok = verify_password(entered, perm_check.bot_pin_hash)
+            auth_label = "الرمز السري"
+        else:
+            auth_ok = verify_password(entered, target_user.hashed_password)
+            auth_label = "كلمة المرور"
+        if not auth_ok:
             sess["state"] = "await_id"
             sess.pop("pending_user_id", None)
             await send_telegram_message(
                 token, chat_id,
-                "❌ كلمة المرور غير صحيحة.\n🔢 أعد إدخال رقم موظفك:"
+                f"❌ {auth_label} غير صحيح.\n🔢 أعد إدخال رقم موظفك:"
             )
             return {"ok": True}
-        # Password correct — determine role
+        # Auth correct — determine role
         member = db.query(CompanyMember).filter(
             CompanyMember.company_id == company_id,
             CompanyMember.user_id == target_user.id,
@@ -2657,3 +2682,87 @@ def get_bot_status(
             for cat, limit in budgets.items()
         ],
     }
+
+
+# ─── Bot PIN (رمز سري للبوت) ──────────────────────────────────────────────────
+
+def _get_current_company_id(user: User, db: Session) -> int:
+    """Return company_id for any member (not just founders)."""
+    return _get_company_id(user, db)
+
+class BotPinBody(BaseModel):
+    pin: str  # 4-8 digits
+
+class BotPinStatusOut(BaseModel):
+    has_pin: bool
+
+
+@router.get("/bot/pin/status", response_model=BotPinStatusOut)
+def get_bot_pin_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """الموظف يتحقق هل عنده رمز سري للبوت."""
+    company_id = _get_current_company_id(current_user, db)
+    perm = db.query(AccountingPermission).filter(
+        AccountingPermission.company_id == company_id,
+        AccountingPermission.user_id == current_user.id,
+    ).first()
+    return {"has_pin": bool(perm and perm.bot_pin_hash)}
+
+
+@router.post("/bot/pin")
+def set_bot_pin(
+    body: BotPinBody,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """الموظف يضع/يغير رمزه السري للبوت (4-8 أرقام)."""
+    from auth import get_password_hash
+
+    pin = body.pin.strip()
+    if not pin.isdigit() or not (4 <= len(pin) <= 8):
+        raise HTTPException(status_code=400, detail="الرمز السري يجب أن يكون 4-8 أرقام فقط")
+
+    company_id = _get_current_company_id(current_user, db)
+    perm = db.query(AccountingPermission).filter(
+        AccountingPermission.company_id == company_id,
+        AccountingPermission.user_id == current_user.id,
+    ).first()
+
+    # المؤسس (owner/admin) ممكن ما عنده perm — نضيف له سجل
+    if not perm:
+        member = db.query(CompanyMember).filter(
+            CompanyMember.company_id == company_id,
+            CompanyMember.user_id == current_user.id,
+        ).first()
+        if not member or member.role not in ("owner", "admin"):
+            raise HTTPException(status_code=403, detail="ليس لديك صلاحية استخدام البوت")
+        perm = AccountingPermission(
+            company_id=company_id,
+            user_id=current_user.id,
+            granted_by=current_user.id,
+            can_use_bot=True,
+        )
+        db.add(perm)
+
+    perm.bot_pin_hash = get_password_hash(pin)
+    db.commit()
+    return {"ok": True, "message": "تم تعيين الرمز السري بنجاح"}
+
+
+@router.delete("/bot/pin")
+def delete_bot_pin(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """الموظف يحذف رمزه السري (الرجوع لكلمة مرور المنصة)."""
+    company_id = _get_current_company_id(current_user, db)
+    perm = db.query(AccountingPermission).filter(
+        AccountingPermission.company_id == company_id,
+        AccountingPermission.user_id == current_user.id,
+    ).first()
+    if perm:
+        perm.bot_pin_hash = None
+        db.commit()
+    return {"ok": True, "message": "تم حذف الرمز السري"}
