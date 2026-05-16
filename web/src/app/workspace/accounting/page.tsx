@@ -165,6 +165,12 @@ export default function AccountingPage() {
   const [initialCapital,  setInitialCapital]  = useState('');
   const [settingsTab,     setSettingsTab]     = useState<'sheet'|'telegram'|'whatsapp'|'privacy'|'permissions'>('sheet');
 
+  // Bot PIN
+  const [hasPin,     setHasPin]     = useState(false);
+  const [pinValue,   setPinValue]   = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
+  const [savingPin,  setSavingPin]  = useState(false);
+
   // Privacy
   const [pShowBal,  setPShowBal]  = useState(true);
   const [pShowProf, setPShowProf] = useState(true);
@@ -186,11 +192,13 @@ export default function AccountingPage() {
     setLoading(true);
     try {
       const h = getToken() ? { Authorization: `Bearer ${getToken()}` } : {} as Record<string,string>;
-      const [d1, d2] = await Promise.all([
-        fetch(`${API_BASE}/accounting/dashboard`, { headers: h }).then(r => r.ok ? r.json() : null),
-        fetch(`${API_BASE}/accounting/bot/info`,  { headers: h }).then(r => r.ok ? r.json() : null),
+      const [d1, d2, d3] = await Promise.all([
+        fetch(`${API_BASE}/accounting/dashboard`,      { headers: h }).then(r => r.ok ? r.json() : null),
+        fetch(`${API_BASE}/accounting/bot/info`,       { headers: h }).then(r => r.ok ? r.json() : null),
+        fetch(`${API_BASE}/accounting/bot/pin/status`, { headers: h }).then(r => r.ok ? r.json() : { has_pin: false }),
       ]);
       setData(d1); setBotInfo(d2);
+      setHasPin(d3?.has_pin ?? false);
       if (d1?.setup) {
         if (d1.setup.google_sheet_url) setSheetUrl(d1.setup.google_sheet_url);
         if (d1.setup.initial_capital != null) setInitialCapital(String(d1.setup.initial_capital));
@@ -239,6 +247,27 @@ export default function AccountingPage() {
   const copyText = (t: string, k: string) => {
     navigator.clipboard.writeText(t); setCopied(k);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleSavePin = async () => {
+    if (!/^\d{4,8}$/.test(pinValue)) { alert('الرمز السري يجب أن يكون 4-8 أرقام'); return; }
+    if (pinValue !== pinConfirm) { alert('الرمزان لا يتطابقان'); return; }
+    setSavingPin(true);
+    try {
+      const h = { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
+      const r = await fetch(`${API_BASE}/accounting/bot/pin`, { method: 'POST', headers: h, body: JSON.stringify({ pin: pinValue }) });
+      if (!r.ok) throw new Error((await r.json()).detail || 'خطأ');
+      setHasPin(true); setPinValue(''); setPinConfirm('');
+      alert('✅ تم تعيين الرمز السري بنجاح');
+    } catch (e: any) { alert(e.message || 'تعذّر الحفظ'); }
+    finally { setSavingPin(false); }
+  };
+
+  const handleDeletePin = async () => {
+    if (!confirm('سيُحذف الرمز السري وسيطلب البوت كلمة مرور المنصة. متأكد؟')) return;
+    const h = { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
+    await fetch(`${API_BASE}/accounting/bot/pin`, { method: 'DELETE', headers: h });
+    setHasPin(false);
   };
 
   const saveSetup = async () => {
@@ -656,6 +685,34 @@ export default function AccountingPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* رمز سري للبوت */}
+                      <div className="border-t border-white/10 pt-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-emerald-400" />
+                          <p className="text-sm font-semibold">رمز سري للبوت</p>
+                          {hasPin && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">مفعّل</span>}
+                        </div>
+                        <p className="text-xs text-white/40">
+                          {hasPin ? 'رمز سري مفعّل — يُستخدم بدل كلمة المرور عند الدخول للبوت' : 'لم يُعيَّن رمز بعد — البوت يطلب كلمة مرور المنصة'}
+                        </p>
+                        <input type="password" inputMode="numeric" maxLength={8} placeholder={hasPin ? 'رمز جديد (4-8 أرقام)' : 'رمز سري (4-8 أرقام)'}
+                          value={pinValue} onChange={e => setPinValue(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none" />
+                        <input type="password" inputMode="numeric" maxLength={8} placeholder="تأكيد الرمز"
+                          value={pinConfirm} onChange={e => setPinConfirm(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:border-emerald-500 focus:outline-none" />
+                        <button onClick={handleSavePin} disabled={savingPin || !pinValue}
+                          className="w-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                          {savingPin && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                          {hasPin ? 'تغيير الرمز السري' : 'تعيين الرمز السري'}
+                        </button>
+                        {hasPin && (
+                          <button onClick={handleDeletePin} className="w-full text-red-400 text-sm py-1.5 hover:text-red-300 transition-colors">
+                            حذف الرمز السري
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
