@@ -146,7 +146,6 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
   const [botEmployees, setBotEmployees] = useState<BotEmployee[] | null>(null);
   const [addStaffNo, setAddStaffNo] = useState("");
   const [addingStaff, setAddingStaff] = useState(false);
-  const [pinOpen, setPinOpen] = useState(false);
   const [pinValue, setPinValue] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [hasPin, setHasPin] = useState(false);
@@ -270,7 +269,6 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
     try {
       await setBotPin(p);
       setHasPin(true);
-      setPinOpen(false);
       setPinValue("");
       setPinConfirm("");
       Alert.alert("تم ✓", "تم تعيين الرمز السري بنجاح\nاستخدمه بدل كلمة المرور عند تسجيل الدخول في البوت");
@@ -317,9 +315,6 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
                 <Ionicons name="people-outline" size={20} color={colors.textPrimary} />
               </Pressable>
             ) : null}
-            <Pressable onPress={() => setPinOpen(true)} style={{ padding: 8 }}>
-              <Ionicons name={hasPin ? "lock-closed" : "lock-open-outline"} size={20} color={hasPin ? colors.primary : colors.textPrimary} />
-            </Pressable>
             <Pressable onPress={() => setSetupOpen(true)} style={{ padding: 8 }}>
               <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
             </Pressable>
@@ -585,56 +580,6 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
         </View>
       </Modal>
 
-      {/* ── Bot PIN Modal ── */}
-      <Modal visible={pinOpen} animationType="slide" transparent onRequestClose={() => setPinOpen(false)}>
-        <View style={S.overlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPinOpen(false)} />
-          <View style={[S.sheet, { backgroundColor: colors.bgCard }]}>
-            <AppText style={[S.sheetTitle, { color: colors.textPrimary }]}>
-              {hasPin ? "تغيير الرمز السري" : "تعيين رمز سري للبوت"}
-            </AppText>
-            <AppText style={[S.hint, { color: colors.textMuted, marginBottom: 16 }]}>
-              الرمز السري يُستخدم بدل كلمة مرور المنصة عند تسجيل الدخول في بوت شكرة (4-8 أرقام)
-            </AppText>
-
-            <AppText style={[S.inputLabel, { color: colors.textMuted }]}>الرمز السري الجديد</AppText>
-            <TextInput
-              style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="مثال: 1234"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={8}
-              value={pinValue}
-              onChangeText={setPinValue}
-            />
-
-            <AppText style={[S.inputLabel, { color: colors.textMuted }]}>تأكيد الرمز السري</AppText>
-            <TextInput
-              style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="أعد إدخال الرمز"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={8}
-              value={pinConfirm}
-              onChangeText={setPinConfirm}
-            />
-
-            <AppButton label="حفظ الرمز السري" onPress={handleSavePin} loading={savingPin} />
-
-            {hasPin && (
-              <Pressable onPress={handleDeletePin} style={[S.cancelRow, { marginTop: 8 }]}>
-                <AppText style={{ color: "#EF4444" }}>حذف الرمز السري</AppText>
-              </Pressable>
-            )}
-            <Pressable onPress={() => setPinOpen(false)} style={S.cancelRow}>
-              <AppText style={{ color: colors.textMuted }}>إلغاء</AppText>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
       {/* ── Setup Modal ── */}
       <Modal visible={setupOpen} animationType="slide" transparent onRequestClose={() => setSetupOpen(false)}>
         <View style={S.overlay}>
@@ -679,6 +624,46 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
             </ScrollView>
 
             <AppButton label="حفظ الإعداد" onPress={saveSetup} loading={savingSetup} />
+
+            {/* ── رمز سري للبوت ── */}
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 20, paddingTop: 16 }}>
+              <AppText style={[S.inputLabel, { color: colors.textMuted, marginBottom: 4 }]}>رمز سري للبوت</AppText>
+              <AppText style={[S.hint, { color: colors.textMuted, marginBottom: 12 }]}>
+                {hasPin ? "✅ رمز سري مفعّل — يُستخدم بدل كلمة المرور عند الدخول للبوت" : "لم يُعيَّن رمز سري بعد — البوت يطلب كلمة مرور المنصة"}
+              </AppText>
+
+              <AppText style={[S.inputLabel, { color: colors.textMuted }]}>{hasPin ? "تغيير الرمز السري" : "الرمز السري الجديد"}</AppText>
+              <TextInput
+                style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="4-8 أرقام"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={8}
+                value={pinValue}
+                onChangeText={setPinValue}
+              />
+
+              <AppText style={[S.inputLabel, { color: colors.textMuted }]}>تأكيد الرمز</AppText>
+              <TextInput
+                style={[S.input, { color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="أعد إدخال الرمز"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={8}
+                value={pinConfirm}
+                onChangeText={setPinConfirm}
+              />
+
+              <AppButton label={hasPin ? "تغيير الرمز السري" : "تعيين الرمز السري"} onPress={handleSavePin} loading={savingPin} />
+              {hasPin && (
+                <Pressable onPress={handleDeletePin} style={[S.cancelRow, { marginTop: 4 }]}>
+                  <AppText style={{ color: "#EF4444" }}>حذف الرمز السري</AppText>
+                </Pressable>
+              )}
+            </View>
+
             <Pressable onPress={() => setSetupOpen(false)} style={S.cancelRow}>
               <AppText style={{ color: colors.textMuted }}>إلغاء</AppText>
             </Pressable>
