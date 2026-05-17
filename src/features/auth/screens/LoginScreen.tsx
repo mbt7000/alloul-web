@@ -19,6 +19,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import { login, register, loginWithFirebase, loginWithAppleNative, getApiBaseUrl } from "../../../api";
+import VerifyEmailScreen from "./VerifyEmailScreen";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import Constants from "expo-constants";
@@ -54,6 +55,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState<string | null>(null);
   const [oauthDebug, setOauthDebug] = useState("");
   const [appleAvailableOnDevice, setAppleAvailableOnDevice] = useState(false);
 
@@ -154,14 +156,19 @@ export default function LoginScreen() {
     if (isRegister && !username) { setError(t("auth.usernameRequired")); return; }
     setLoading(true);
     try {
-      if (isRegister) await register(username, email, password);
-      else await login(email, password);
-      await refresh();
+      if (isRegister) {
+        await register(username, email, password);
+        setPendingVerifyEmail(email);
+      } else {
+        await login(email, password);
+        await refresh();
+      }
     } catch (err: unknown) {
       const e = err as { message?: string; status?: number };
       if (e?.message === "NETWORK_UNREACHABLE") setError(t("auth.networkError"));
       else if (e?.message === "NETWORK_TIMEOUT") setError(t("auth.networkError"));
       else if (e?.message === "SESSION_STORAGE_FAILED") setError(t("auth.sessionStorageFailed"));
+      else if (e?.message === "email_not_verified") setError(t("auth.verifyEmail.emailNotVerified"));
       else if (typeof e?.status === "number" && e.status >= 500) {
         const detail = typeof e?.message === "string" ? e.message.trim() : "";
         const generic = !detail || detail === "Internal Server Error" || detail === "Request failed";
@@ -338,6 +345,15 @@ export default function LoginScreen() {
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  if (pendingVerifyEmail) {
+    return (
+      <VerifyEmailScreen
+        email={pendingVerifyEmail}
+        onBack={() => { setPendingVerifyEmail(null); setIsRegister(false); }}
+      />
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* Background glow blobs */}

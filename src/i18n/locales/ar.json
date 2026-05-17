@@ -96,7 +96,18 @@
     "appleNotAvailable": "تسجيل الدخول عبر Apple غير متاح على هذا الجهاز.",
     "appleTokenMissing": "لم يُرجَع رمز من Apple.",
     "appleFailed": "فشل دخول Apple",
-    "googleNotInBuild": "دخول Google يحتاج Firebase ومفاتيح Google في البناء (EXPO_PUBLIC_*). أعد بناء التطبيق بعد ضبط الأسرار."
+    "googleNotInBuild": "دخول Google يحتاج Firebase ومفاتيح Google في البناء (EXPO_PUBLIC_*). أعد بناء التطبيق بعد ضبط الأسرار.",
+    "verifyEmail": {
+      "title": "تحقق من بريدك",
+      "subtitle": "أرسلنا رابط التحقق إلى",
+      "instruction": "اضغط على الرابط في الإيميل لتفعيل حسابك.",
+      "resend": "إعادة الإرسال",
+      "resending": "جارٍ الإرسال…",
+      "resentSuccess": "تم إرسال رابط جديد!",
+      "backToLogin": "العودة لتسجيل الدخول",
+      "emailNotVerified": "يرجى تأكيد بريدك أولاً. تحقق من صندوقك أو أعد الإرسال.",
+      "wrongEmail": "بريد خاطئ؟ ارجع وسجّل من جديد."
+    }
   },
   "phone": {
     "title": "تحقق من رقم الهاتف",

@@ -57,12 +57,26 @@ export async function login(email: string, password: string) {
 }
 
 export async function register(username: string, email: string, password: string) {
-  const res = await apiFetch<{ access_token: string }>("/auth/register", {
+  return apiFetch<{ message: string; email: string }>("/auth/register", {
     method: "POST",
     body: JSON.stringify({ username, email, password }),
   });
+}
+
+export async function verifyEmail(token: string) {
+  const res = await apiFetch<{ access_token: string }>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
   await persistAccessToken(res.access_token);
   return res;
+}
+
+export async function resendVerification(email: string) {
+  return apiFetch<{ message: string }>("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
 }
 
 export async function loginWithFirebase(idToken: string) {

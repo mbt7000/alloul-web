@@ -96,7 +96,18 @@
     "appleNotAvailable": "Sign in with Apple is not available on this device.",
     "appleTokenMissing": "Apple did not return an identity token.",
     "appleFailed": "Apple sign-in failed",
-    "googleNotInBuild": "Google sign-in needs Firebase + Google client IDs in the EAS build (EXPO_PUBLIC_*). Rebuild the app after setting secrets."
+    "googleNotInBuild": "Google sign-in needs Firebase + Google client IDs in the EAS build (EXPO_PUBLIC_*). Rebuild the app after setting secrets.",
+    "verifyEmail": {
+      "title": "Check your inbox",
+      "subtitle": "We sent a verification link to",
+      "instruction": "Tap the link in the email to activate your account.",
+      "resend": "Resend email",
+      "resending": "Sending…",
+      "resentSuccess": "A new link was sent!",
+      "backToLogin": "Back to sign in",
+      "emailNotVerified": "Please verify your email first. Check your inbox or resend below.",
+      "wrongEmail": "Wrong email? Go back and register again."
+    }
   },
   "phone": {
     "title": "Verify Phone Number",
