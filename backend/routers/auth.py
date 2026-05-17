@@ -215,7 +215,7 @@ def login(
         ) from exc
 
 
-@router.post("/register", response_model=TokenResponse)
+@router.post("/register", status_code=202)
 def register(
     body: RegisterRequest,
     db: Annotated[Session, Depends(get_db)],
