@@ -45,6 +45,8 @@ from azure_ad_verify import verify_azure_ad_token
 from config import settings
 from admin_access import user_is_admin
 from models import User
+from services.email import email_service
+from services.email_verification import create_token, consume_token, revoke_user_tokens
 from schemas import (
     AzureAdRequest,
     ChangePasswordRequest,
@@ -190,6 +192,12 @@ def login(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Wrong email or password",
             )
+        if not user.email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="email_not_verified",
+            )
+        _ensure_icode(user, db)
         _ensure_icode(user, db)
         token = create_access_token(data={"sub": str(user.id)})
         return TokenResponse(access_token=token, token_type="bearer")
@@ -230,6 +238,7 @@ def register(
             name=body.username,
             i_code=_generate_user_icode(db),
             employee_no=_generate_employee_no(db),
+            email_verified=False,
         )
         db.add(user)
         try:
@@ -247,8 +256,17 @@ def register(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database unavailable; verify DATABASE_URL and that Postgres is running",
             )
-        token = create_access_token(data={"sub": str(user.id)})
-        return TokenResponse(access_token=token, token_type="bearer")
+
+        # Send verification email
+        verify_token = create_token(user.id)
+        verify_url = f"https://alloul.app/auth/verify-email?token={verify_token}"
+        email_service.send(
+            "email_verification",
+            to=user.email,
+            context={"name": user.name or user.username, "verify_url": verify_url},
+        )
+
+        return {"message": "verification_email_sent", "email": user.email}
     except HTTPException:
         raise
     except ValueError as exc:
@@ -257,6 +275,48 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid registration data",
         ) from exc
+
+
+@router.post("/verify-email", response_model=TokenResponse)
+def verify_email(
+    body: dict,
+    db: Annotated[Session, Depends(get_db)],
+):
+    token = body.get("token", "")
+    user_id = consume_token(token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification link",
+        )
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.email_verified = True
+    db.commit()
+    _ensure_icode(user, db)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return TokenResponse(access_token=access_token, token_type="bearer")
+
+
+@router.post("/resend-verification")
+def resend_verification(
+    body: dict,
+    db: Annotated[Session, Depends(get_db)],
+):
+    email = body.get("email", "").strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    # Always return 200 to avoid email enumeration
+    if user and not user.email_verified:
+        revoke_user_tokens(user.id)
+        verify_token = create_token(user.id)
+        verify_url = f"https://alloul.app/auth/verify-email?token={verify_token}"
+        email_service.send(
+            "email_verification",
+            to=user.email,
+            context={"name": user.name or user.username, "verify_url": verify_url},
+        )
+    return {"message": "If the email exists and is unverified, a new link was sent."}
 
 
 @router.get("/me", response_model=UserResponse)
