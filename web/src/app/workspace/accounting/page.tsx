@@ -249,6 +249,34 @@ export default function AccountingPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const [rebuildingSheet, setRebuildingSheet] = useState(false);
+
+  const handleRebuildSheet = async () => {
+    if (!confirm('سيتم إعادة بناء Google Sheet بالكامل من قاعدة البيانات.\nهذا يضمن عدم ضياع أي بيانات. متأكد؟')) return;
+    setRebuildingSheet(true);
+    try {
+      const h = { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
+      const r = await fetch(`${API_BASE}/accounting/rebuild-sheet`, { method: 'POST', headers: h });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'خطأ');
+      alert(`✅ ${d.message}`);
+    } catch (e: any) { alert(e.message || 'تعذّرت الاستعادة'); }
+    finally { setRebuildingSheet(false); }
+  };
+
+  const handleDownloadBackup = async () => {
+    const h = { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) };
+    const r = await fetch(`${API_BASE}/accounting/backup`, { headers: h });
+    if (!r.ok) { alert('تعذّر التحميل'); return; }
+    const blob = await r.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `shukra_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSavePin = async () => {
     if (!/^\d{4,8}$/.test(pinValue)) { alert('الرمز السري يجب أن يكون 4-8 أرقام'); return; }
     if (pinValue !== pinConfirm) { alert('الرمزان لا يتطابقان'); return; }
@@ -849,6 +877,23 @@ export default function AccountingPage() {
                       {saving && <Loader2 className="w-4 h-4 animate-spin" />} حفظ الإعداد
                     </button>
                   )}
+
+                  {/* حماية البيانات */}
+                  <div className="border-t border-white/10 pt-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400">🛡️</span>
+                      <p className="text-sm font-semibold">حماية البيانات</p>
+                    </div>
+                    <p className="text-xs text-white/40">بياناتك محفوظة دائماً في قاعدة البيانات — حتى لو اختفى Google Sheet يمكن استعادته</p>
+                    <button onClick={handleRebuildSheet} disabled={rebuildingSheet}
+                      className="w-full bg-blue-500/20 border border-blue-500/30 text-blue-300 font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-blue-500/30 transition-colors">
+                      {rebuildingSheet ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄'} استعادة Google Sheet من DB
+                    </button>
+                    <button onClick={handleDownloadBackup}
+                      className="w-full bg-white/5 border border-white/10 text-white/60 font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition-colors">
+                      ⬇️ تحميل نسخة احتياطية JSON
+                    </button>
+                  </div>
                 </div>
               )}
             </>
