@@ -149,7 +149,8 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
   const [pinValue, setPinValue] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [hasPin, setHasPin] = useState(false);
-  const [savingPin, setSavingPin] = useState(false);
+  const [savingPin,       setSavingPin]       = useState(false);
+  const [rebuildingSheet, setRebuildingSheet] = useState(false);
 
   const [form, setForm] = useState<RecordForm>({
     record_type: "expense",
@@ -295,6 +296,32 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
         },
       },
     ]);
+  };
+
+  const handleRebuildSheet = async () => {
+    Alert.alert(
+      "استعادة Google Sheet",
+      "سيتم إعادة بناء الـ Sheet بالكامل من قاعدة البيانات.\nهذا يضمن عدم ضياع أي بيانات. متأكد؟",
+      [
+        { text: "إلغاء", style: "cancel" },
+        {
+          text: "استعادة",
+          onPress: async () => {
+            setRebuildingSheet(true);
+            try {
+              const res = await apiFetch<{ message: string; written: number; total: number }>(
+                "/accounting/rebuild-sheet", { method: "POST" }
+              );
+              Alert.alert("✅ تمت الاستعادة", res.message);
+            } catch (e: any) {
+              Alert.alert("خطأ", e?.message || "تعذّرت الاستعادة");
+            } finally {
+              setRebuildingSheet(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const currency = data?.setup.currency || "SAR";
@@ -662,6 +689,23 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
                   <AppText style={{ color: "#EF4444" }}>حذف الرمز السري</AppText>
                 </Pressable>
               )}
+            </View>
+
+            {/* ── حماية البيانات ── */}
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 20, paddingTop: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Ionicons name="shield-checkmark-outline" size={16} color="#10B981" />
+                <AppText style={[S.inputLabel, { color: colors.textPrimary, marginBottom: 0 }]}>حماية البيانات</AppText>
+              </View>
+              <AppText style={[S.hint, { color: colors.textMuted, marginBottom: 14 }]}>
+                بياناتك محفوظة دائماً في قاعدة البيانات حتى لو اختفى Google Sheet
+              </AppText>
+
+              <AppButton
+                label={rebuildingSheet ? "جاري الاستعادة..." : "🔄 استعادة Google Sheet"}
+                onPress={handleRebuildSheet}
+                loading={rebuildingSheet}
+              />
             </View>
 
             <Pressable onPress={() => setSetupOpen(false)} style={S.cancelRow}>
