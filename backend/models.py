@@ -923,14 +923,22 @@ class AccountingRecord(Base):
     recorded_at = Column(DateTime(timezone=True), nullable=False, index=True)
 
     # Extended metadata
-    vendor       = Column(String(255), nullable=True)               # vendor / customer name
-    description  = Column(Text, nullable=True)                      # free-form note
-    payment_status = Column(String(16), default="paid")             # paid | pending | partial
+    vendor         = Column(String(255), nullable=True)             # vendor / customer name
+    description    = Column(Text, nullable=True)                    # free-form note
+    payment_status = Column(String(32), default="مدفوع")           # مدفوع | غير مدفوع | مدفوع جزئياً
 
-    # Source tracing (no sensitive content)
-    source = Column(String(32), default="manual")                   # manual | whatsapp | n8n | api
-    sheet_row_ref = Column(String(64), nullable=True)               # row ID in Google Sheets (pointer)
-    external_ref = Column(String(128), nullable=True)               # invoice # or PO #
+    # Full transaction details (source of truth — not dependent on Google Sheet)
+    txn_number     = Column(String(32),  nullable=True, index=True) # TXN-2026-0001
+    employee_name  = Column(String(255), nullable=True)             # اسم الموظف المُدخِل
+    client_phone   = Column(String(32),  nullable=True)             # هاتف العميل/المورد
+    goods          = Column(Text, nullable=True)                    # البضاعة / الخدمة
+    duration       = Column(String(64),  nullable=True)             # مدة السداد
+    invoice_number = Column(String(128), nullable=True)             # رقم الفاتورة
+
+    # Source tracing
+    source = Column(String(32), default="manual")                   # manual | telegram | whatsapp | api
+    sheet_row_ref = Column(String(64), nullable=True)               # row ref in Google Sheet
+    external_ref = Column(String(128), nullable=True)               # PO # or other ref
 
     # AI confidence from n8n OCR pipeline
     ai_confidence = Column(Float, nullable=True)                    # 0.0–1.0

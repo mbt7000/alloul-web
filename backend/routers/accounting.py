@@ -928,27 +928,34 @@ async def _finalize_transaction(
 
     # ── 1. Save to DB immediately (source of truth) ───────────────────────────
     try:
-        desc_parts = [invoice.get("description", "")]
-        if goods:    desc_parts.append(f"بضاعة: {goods}")
-        if duration: desc_parts.append(f"مدة: {duration}")
+        now_year = datetime.now(timezone.utc).year
         record = AccountingRecord(
-            company_id=company_id,
-            record_type=invoice.get("record_type", "expense"),
-            amount=float(invoice.get("amount") or 0),
-            currency=invoice.get("currency", "SAR"),
-            category=invoice.get("category"),
-            vendor=client_name or invoice.get("vendor") or "",
-            description=" | ".join(p for p in desc_parts if p),
-            payment_status=payment_status,
-            source=source,
-            recorded_at=datetime.now(timezone.utc),
-            external_ref=f"EMP:{employee_name}",
+            company_id    = company_id,
+            record_type   = invoice.get("record_type", "expense"),
+            amount        = float(invoice.get("amount") or 0),
+            currency      = invoice.get("currency", "SAR"),
+            category      = invoice.get("category"),
+            vendor        = client_name or invoice.get("vendor") or "",
+            description   = invoice.get("description", ""),
+            payment_status= payment_status,
+            source        = source,
+            recorded_at   = _parse_dt(invoice.get("date")) or datetime.now(timezone.utc),
+            # Full details — source of truth
+            employee_name = employee_name,
+            client_phone  = client_phone,
+            goods         = goods or invoice.get("vendor") or "",
+            duration      = duration,
+            invoice_number= invoice.get("invoice_number"),
+            external_ref  = invoice.get("invoice_number"),
+            ai_confidence = float(invoice.get("confidence") or 0),
+            needs_review  = float(invoice.get("confidence") or 0) < 0.7,
         )
         db.add(record)
         db.commit()
         db.refresh(record)
-        now_year   = datetime.now(timezone.utc).year
         txn_number = f"TXN-{now_year}-{record.id:04d}"
+        record.txn_number = txn_number
+        db.commit()
         invoice["txn_number"] = txn_number
         sheet_ok = True
     except Exception as e:
@@ -2766,3 +2773,120 @@ def delete_bot_pin(
         perm.bot_pin_hash = None
         db.commit()
     return {"ok": True, "message": "تم حذف الرمز السري"}
+
+
+# ─── Sheet Rebuild & Backup ───────────────────────────────────────────────────
+
+@router.post("/rebuild-sheet")
+async def rebuild_sheet_from_db(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    يعيد بناء Google Sheet بالكامل من بيانات DB.
+    يُستخدم عندما يُحذف الـ Sheet أو تختفي بياناته.
+    """
+    company_id = _require_founder(current_user, db)
+    setup = db.query(AccountingSetup).filter(AccountingSetup.company_id == company_id).first()
+    if not setup or not setup.google_sheet_id:
+        raise HTTPException(status_code=400, detail="لم يتم ربط Google Sheet بعد")
+
+    records = (
+        db.query(AccountingRecord)
+        .filter(AccountingRecord.company_id == company_id, AccountingRecord.is_deleted == False)
+        .order_by(AccountingRecord.recorded_at.asc())
+        .all()
+    )
+
+    if not BOT_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="خدمة Google Sheets غير متاحة")
+
+    company = db.query(Company).filter(Company.id == company_id).first()
+    company_name = company.name if company else ""
+    written = 0
+    errors  = 0
+
+    for rec in records:
+        invoice = {
+            "amount":        rec.amount,
+            "currency":      rec.currency or "SAR",
+            "date":          rec.recorded_at.strftime("%Y-%m-%d") if rec.recorded_at else "",
+            "vendor":        rec.vendor or "",
+            "category":      rec.category or "",
+            "invoice_number":rec.invoice_number or rec.external_ref or "",
+            "description":   rec.description or "",
+            "record_type":   rec.record_type,
+            "confidence":    rec.ai_confidence or 1.0,
+        }
+        try:
+            ok, _ = await write_to_google_sheet(
+                setup.google_sheet_id,
+                invoice,
+                source=rec.source or "db_restore",
+                company_name=company_name,
+                employee_name=rec.employee_name or "",
+                client_name=rec.vendor or "",
+                client_phone=rec.client_phone or "",
+                goods=rec.goods or "",
+                duration=rec.duration or "",
+                payment_status=rec.payment_status or "مدفوع",
+            )
+            if ok:
+                written += 1
+            else:
+                errors += 1
+        except Exception as e:
+            logger.error(f"rebuild row {rec.id} failed: {e}")
+            errors += 1
+
+    return {
+        "ok": True,
+        "total": len(records),
+        "written": written,
+        "errors": errors,
+        "message": f"تم استعادة {written} سجل من أصل {len(records)} في Google Sheet",
+    }
+
+
+@router.get("/backup")
+def export_backup(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """تصدير كامل بيانات الشركة كـ JSON (نسخة احتياطية)."""
+    from fastapi.responses import JSONResponse
+    company_id = _require_founder(current_user, db)
+    records = (
+        db.query(AccountingRecord)
+        .filter(AccountingRecord.company_id == company_id, AccountingRecord.is_deleted == False)
+        .order_by(AccountingRecord.recorded_at.asc())
+        .all()
+    )
+    data = []
+    for r in records:
+        data.append({
+            "id":            r.id,
+            "txn_number":    r.txn_number,
+            "record_type":   r.record_type,
+            "amount":        r.amount,
+            "currency":      r.currency,
+            "category":      r.category,
+            "vendor":        r.vendor,
+            "client_phone":  r.client_phone,
+            "goods":         r.goods,
+            "invoice_number":r.invoice_number,
+            "description":   r.description,
+            "payment_status":r.payment_status,
+            "employee_name": r.employee_name,
+            "duration":      r.duration,
+            "source":        r.source,
+            "recorded_at":   r.recorded_at.isoformat() if r.recorded_at else None,
+            "created_at":    r.created_at.isoformat() if r.created_at else None,
+        })
+    company = db.query(Company).filter(Company.id == company_id).first()
+    return JSONResponse({
+        "company":    company.name if company else "",
+        "exported_at":datetime.now(timezone.utc).isoformat(),
+        "total":      len(data),
+        "records":    data,
+    }, headers={"Content-Disposition": f"attachment; filename=shukra_backup_{company_id}.json"})
