@@ -114,11 +114,7 @@ async def _complete_with_fallback(
     *,
     private: bool = False,
 ) -> str:
-    """Async single-shot completion with automatic fallback chain.
-
-    Uses complete_async() to avoid nested event loop conflicts inside FastAPI.
-      - Private mode: Ollama → Claude → DeepSeek
-      - Public mode: Claude → DeepSeek → Ollama
+    """Async completion via AIService (Ollama → DeepSeek → Claude → Groq).
 
     Raises HTTPException(503) only if NO provider is available.
     """
