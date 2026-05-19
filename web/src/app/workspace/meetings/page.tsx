@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, Calendar, Video, Loader2, Clock, ExternalLink } from 'lucide-react';
+import { ArrowRight, Calendar, Video, Loader2, Clock, Plus, Mic } from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { getMeetings, getCompanyDailyJoinUrl, ApiError, type Meeting } from '@/lib/api-client';
-import { isAuthenticated, clearToken } from '@/lib/auth';
+import { getMeetings, ApiError, type Meeting } from '@/lib/api-client';
+import { isAuthenticated, clearToken, getToken } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:   { label: 'مجدول',  bg: '#2E8BFF22', color: '#2E8BFF' },
@@ -19,37 +21,44 @@ export default function MeetingsPage() {
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [roomUrl, setRoomUrl] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [showNew, setShowNew] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace('/login');
-      return;
-    }
+    if (!isAuthenticated()) { router.replace('/login'); return; }
     (async () => {
       try {
         const data = await getMeetings();
         setMeetings(Array.isArray(data) ? data : []);
       } catch (e: any) {
-        if (e instanceof ApiError && e.status === 401) {
-          clearToken();
-          router.replace('/login');
-        }
-      } finally {
-        setLoading(false);
-      }
+        if (e instanceof ApiError && e.status === 401) { clearToken(); router.replace('/login'); }
+      } finally { setLoading(false); }
     })();
   }, [router]);
 
-  const handleJoinDaily = async () => {
-    setJoining(true);
+  const createRoom = async () => {
+    if (!newTitle.trim()) return;
+    setCreating(true);
     try {
-      const res = await getCompanyDailyJoinUrl();
-      window.open(res.join_url, '_blank');
-    } catch (e: any) {
-      alert(e?.message || 'تعذّر فتح Daily — تأكد من اشتراك الشركة');
+      const res = await fetch(`${API_BASE}/livekit/rooms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRoomUrl(data.room_url);
+        setShowNew(false);
+        setNewTitle('');
+      } else {
+        alert('تعذّر إنشاء الغرفة — تأكد من إعداد LiveKit');
+      }
+    } catch {
+      alert('خطأ في الاتصال');
     } finally {
-      setJoining(false);
+      setCreating(false);
     }
   };
 
@@ -60,38 +69,89 @@ export default function MeetingsPage() {
           <ArrowRight size={18} />
         </Link>
         <h1 className="text-white font-black text-[17px] flex-1">الاجتماعات</h1>
+        <button
+          onClick={() => setShowNew(v => !v)}
+          className="p-2 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors"
+        >
+          <Plus size={18} className="text-primary" />
+        </button>
       </header>
 
       <div className="px-4 py-5 pb-24 md:pb-10 space-y-5">
-        {/* Daily room card */}
-        <button
-          onClick={handleJoinDaily}
-          disabled={joining}
-          className="w-full p-4 rounded-2xl border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors flex items-center gap-4 disabled:opacity-60"
-        >
-          <div className="w-[52px] h-[52px] rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center flex-shrink-0">
-            {joining ? (
-              <Loader2 size={22} className="text-primary animate-spin" />
-            ) : (
-              <Video size={22} className="text-primary" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0 text-right">
-            <div className="flex items-center gap-2">
-              <span className="text-white font-black text-base">غرفة الشركة المباشرة</span>
-              <div className="flex items-center gap-1 bg-danger/20 px-1.5 py-0.5 rounded">
-                <div className="w-1 h-1 rounded-full bg-danger" />
-                <span className="text-danger text-[9px] font-black">LIVE</span>
-              </div>
+
+        {/* new meeting form */}
+        {showNew && (
+          <div className="p-4 rounded-2xl border border-primary/30 bg-primary/5 space-y-3">
+            <p className="text-white font-bold text-sm">اجتماع جديد — LiveKit</p>
+            <div className="flex gap-2">
+              <input
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && createRoom()}
+                placeholder="عنوان الاجتماع..."
+                className="flex-1 bg-dark-bg-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none"
+              />
+              <button
+                onClick={createRoom}
+                disabled={!newTitle.trim() || creating}
+                className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold disabled:opacity-40 flex items-center gap-2"
+              >
+                {creating ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
+                ابدأ
+              </button>
             </div>
-            <p className="text-white/50 text-xs mt-1">
-              {joining ? 'جارٍ فتح Daily.co...' : 'انضم للاجتماع المباشر فوراً'}
-            </p>
           </div>
-          <div className="px-4 py-2 rounded-full bg-primary text-white text-xs font-black flex-shrink-0">
-            انضم
+        )}
+
+        {/* active LiveKit room */}
+        {roomUrl && (
+          <div className="p-4 rounded-2xl border border-green-500/40 bg-green-500/5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-white font-black text-sm">غرفة الشركة المباشرة</span>
+              <span className="text-[9px] font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">LIVE</span>
+            </div>
+            <div className="flex gap-2">
+              <a
+                href={roomUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-sm font-black"
+              >
+                <Video size={16} />
+                انضم للاجتماع
+              </a>
+              <button
+                onClick={() => setRoomUrl(null)}
+                className="px-4 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:border-white/20"
+              >
+                إغلاق
+              </button>
+            </div>
           </div>
-        </button>
+        )}
+
+        {/* start room button when no active room */}
+        {!roomUrl && !showNew && (
+          <button
+            onClick={() => setShowNew(true)}
+            className="w-full p-4 rounded-2xl border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors flex items-center gap-4"
+          >
+            <div className="w-[52px] h-[52px] rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center flex-shrink-0">
+              <Video size={22} className="text-primary" />
+            </div>
+            <div className="flex-1 text-right">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-black text-base">غرفة الشركة المباشرة</span>
+                <Mic size={14} className="text-primary" />
+              </div>
+              <p className="text-white/50 text-xs mt-1">مدعوم بـ LiveKit — تسجيل + ملخص AI</p>
+            </div>
+            <div className="px-4 py-2 rounded-full bg-primary text-white text-xs font-black flex-shrink-0">
+              ابدأ
+            </div>
+          </button>
+        )}
 
         {/* Meetings list */}
         <div>
