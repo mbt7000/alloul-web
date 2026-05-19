@@ -54,13 +54,9 @@ class AIServiceProvider:
         if not platforms:
             return None
 
-        # Sort by priority for the given context
-        if private:
-            # Private data: Ollama > Claude > Groq > DeepSeek
-            priority_order = ["ollama", "claude", "groq", "deepseek"]
-        else:
-            # Public data: Groq (free) > Claude > DeepSeek > Ollama
-            priority_order = ["groq", "claude", "deepseek", "ollama"]
+        # Canonical priority: Ollama (free/local) → DeepSeek (BYOK) → Claude (premium BYOK)
+        # Groq kept as fallback for legacy configs that have GROQ_API_KEY set
+        priority_order = ["ollama", "deepseek", "claude", "groq"]
 
         # Find first available provider in priority order
         for provider_id in priority_order:
