@@ -54,9 +54,10 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
-    STRIPE_PRICE_STARTER: Optional[str] = "price_1TPS2BGPIIEnFHbUv19A4YVu"   # $45/mo — 5 employees
-    STRIPE_PRICE_PRO: Optional[str] = "price_1TPS2QGPIIEnFHbUifufCcWZ"       # $225/mo — 30 employees, 14d trial
-    STRIPE_PRICE_PRO_PLUS: Optional[str] = None                               # Business — contact us
+    STRIPE_PRICE_STARTER: Optional[str] = "price_1TPS2BGPIIEnFHbUv19A4YVu"   # $30/mo — 5 employees
+    STRIPE_PRICE_PRO: Optional[str] = "price_1TPS2QGPIIEnFHbUifufCcWZ"       # $90/mo — 25 employees
+    STRIPE_PRICE_BUSINESS: Optional[str] = None                               # $210/mo — 100 employees (set in .env)
+    STRIPE_PRICE_PRO_PLUS: Optional[str] = None                               # legacy alias for business
     FRONTEND_URL: str = "https://alloul.app"
 
     # Azure AD / Microsoft SSO (optional – for POST /auth/azure-ad)

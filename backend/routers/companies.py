@@ -82,7 +82,7 @@ def _log_activity(db: Session, company_id: int, user_id: Optional[int], action: 
     db.commit()
 
 
-MAX_EMPLOYEES = {"starter": 5, "pro": 21, "pro_plus": 33}
+MAX_EMPLOYEES = {"starter": 5, "pro": 25, "business": 100, "pro_plus": 100}
 
 
 def _require_active_subscription(
@@ -104,7 +104,7 @@ def _require_active_subscription(
             return sub
 
         class _AdminPlanBypass:
-            plan_id = "pro_plus"
+            plan_id = "business"
             status = "active"
 
         return _AdminPlanBypass()  # type: ignore[return-value]
@@ -233,9 +233,11 @@ def get_stripe_config(
     return {
         "publishable_key": settings.STRIPE_PUBLISHABLE_KEY or "",
         "plans": {
-            "starter": {"price_id": settings.STRIPE_PRICE_STARTER, "amount": 2400, "employees": 5},
-            "pro":     {"price_id": settings.STRIPE_PRICE_PRO,     "amount": 5900, "employees": 21},
-            "pro_plus":{"price_id": settings.STRIPE_PRICE_PRO_PLUS,"amount": 28900,"employees": 33},
+            "starter":  {"price_id": settings.STRIPE_PRICE_STARTER,   "amount": 3000,  "employees": 5},
+            "pro":      {"price_id": settings.STRIPE_PRICE_PRO,        "amount": 9000,  "employees": 25},
+            "business": {"price_id": settings.STRIPE_PRICE_BUSINESS,   "amount": 21000, "employees": 100},
+            # legacy alias — kept for existing subscribers
+            "pro_plus": {"price_id": settings.STRIPE_PRICE_BUSINESS,   "amount": 21000, "employees": 100},
         },
     }
 
@@ -243,9 +245,10 @@ def get_stripe_config(
 def _get_stripe_price_id(plan_id: str):
     from config import settings
     m = {
-        "starter": settings.STRIPE_PRICE_STARTER,
-        "pro": settings.STRIPE_PRICE_PRO,
-        "pro_plus": settings.STRIPE_PRICE_PRO_PLUS,
+        "starter":  settings.STRIPE_PRICE_STARTER,
+        "pro":      settings.STRIPE_PRICE_PRO,
+        "business": settings.STRIPE_PRICE_BUSINESS,
+        "pro_plus": settings.STRIPE_PRICE_BUSINESS,  # legacy alias
     }
     return m.get(plan_id)
 
