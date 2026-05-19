@@ -1,5 +1,6 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { FEATURES } from "../../config/features";
 import CompanyListScreen from "../../features/companies/screens/CompanyListScreen";
 import CompanyDashboardScreen from "../../features/companies/screens/CompanyDashboardScreen";
 import CompanyServicesScreen from "../../features/companies/screens/CompanyServicesScreen";
@@ -44,6 +45,10 @@ import AccountingScreen from "../../features/companies/screens/AccountingScreen"
 import DirectMessageScreen from "../../features/chat/screens/DirectMessageScreen";
 import PublicProfileScreen from "../../features/profile/screens/PublicProfileScreen";
 import InfoPlaceholderScreen from "../../shared/screens/InfoPlaceholderScreen";
+import WorkspaceAssistantScreen from "../../features/ai/screens/WorkspaceAssistantScreen";
+import WhatsAppInboxScreen from "../../features/whatsapp/screens/WhatsAppInboxScreen";
+import SmartMeetingScreen from "../../features/meetings/screens/SmartMeetingScreen";
+import InvoiceListScreen from "../../features/invoicing/screens/InvoiceListScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -137,6 +142,19 @@ export default function CompanyNavigator() {
       <Stack.Screen name="UserProfile" component={PublicProfileScreen} />
       <Stack.Screen name="Conversation" component={DirectMessageScreen} />
       <Stack.Screen name="PostDetail" component={InfoPlaceholderScreen} />
+      {/* Phase 3: Feature-flagged screens (default OFF) */}
+      {FEATURES.ALLOULAI_ASSISTANT && (
+        <Stack.Screen name="WorkspaceAssistant" component={WorkspaceAssistantScreen} />
+      )}
+      {FEATURES.WHATSAPP_INTEGRATION && (
+        <Stack.Screen name="WhatsAppInbox" component={WhatsAppInboxScreen} />
+      )}
+      {FEATURES.SMART_MEETINGS && (
+        <Stack.Screen name="SmartMeeting" component={SmartMeetingScreen} />
+      )}
+      {FEATURES.ZATCA_INVOICES && (
+        <Stack.Screen name="Invoices" component={InvoiceListScreen} />
+      )}
     </Stack.Navigator>
   );
 }
