@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Briefcase, CheckSquare, Calendar, Users, Folder, BookOpen,
   TrendingUp, Video, MessageSquare, Sparkles, ArrowLeft, BarChart3, Loader2,
-  Phone, UserPlus, PieChart, Receipt,
+  Phone, UserPlus, PieChart, Receipt, FileText, MessageCircle, Zap,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import {
@@ -38,7 +38,10 @@ const SERVICES = [
   { icon: BookOpen,    label: 'قاعدة المعرفة', sub: 'مستندات + بحث ذكي',  color: '#8B5CF6', href: '/workspace/knowledge' },
   { icon: UserPlus,    label: 'التوظيف',       sub: 'مرشحون ومقابلات',    color: '#14E0A4', href: '/workspace/hiring' },
   { icon: PieChart,    label: 'التقارير',      sub: 'إحصائيات الشركة',    color: '#00D4FF', href: '/workspace/reports' },
-  { icon: BarChart3,   label: 'الخدمات',       sub: 'كل الخدمات',         color: '#FF4757', href: '/workspace/services' },
+  { icon: BarChart3,      label: 'الخدمات',          sub: 'كل الخدمات',           color: '#FF4757', href: '/workspace/services' },
+  { icon: MessageCircle, label: 'واتساب بيزنس',    sub: 'محادثات العملاء',      color: '#25D366', href: '/workspace/whatsapp' },
+  { icon: Zap,           label: 'اجتماعات ذكية',   sub: 'تسجيل + ملخص AI',     color: '#F59E0B', href: '/workspace/smart-meetings' },
+  { icon: FileText,      label: 'الفواتير',         sub: 'ZATCA / ضريبة القيمة', color: '#06B6D4', href: '/workspace/invoices' },
 ];
 
 export default function WorkspacePage() {
