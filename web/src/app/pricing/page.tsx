@@ -69,14 +69,14 @@ export default function PricingPage() {
     }
   };
 
-  // ALLOUL&Q — pricing 2026 (per-seat)
-  // starter      → $9/شخص  حتى 5 أشخاص  = $45/شهر
-  // professional → $7.5/شخص حتى 30 شخص  = $225/شهر  ← 14 يوم مجاني
-  // business     → $6.7/شخص غير محدود   → اتصل بنا
+  // ALLOUL&Q — pricing 2026
+  // starter      → $30/شهر  حتى 5 موظفين
+  // pro          → $90/شهر  حتى 25 موظف  ← 14 يوم مجاني
+  // business     → $210/شهر حتى 100 موظف
   const prices = {
-    starter:      { monthly: 45,  yearly: 432,  employees: 5  },
-    professional: { monthly: 225, yearly: 2160, employees: 30 },
-    business:     { monthly: 0,   yearly: 0,    employees: -1 },
+    starter:      { monthly: 30,  yearly: 288, employees: 5  },
+    professional: { monthly: 90,  yearly: 864, employees: 25 },
+    business:     { monthly: 210, yearly: 2016, employees: 100 },
   };
 
   const monthlyPrice = isYearly ? 'سنوي' : 'شهري';
@@ -85,7 +85,7 @@ export default function PricingPage() {
   const features = {
     starter: [
       'حتى 5 موظفين',
-      '$9 لكل شخص شهرياً',
+      '$30 شهرياً — كل شيء مشمول',
       'Media World كامل',
       'Corporate World أساسي',
       '10GB تخزين',
@@ -96,8 +96,8 @@ export default function PricingPage() {
       'iOS + Android',
     ],
     professional: [
-      'حتى 30 موظف',
-      '$7.5 لكل شخص شهرياً',
+      'حتى 25 موظف',
+      '$90 شهرياً — كل شيء مشمول',
       'كل ميزات Starter',
       'Corporate World كامل',
       '50GB تخزين',
@@ -109,8 +109,8 @@ export default function PricingPage() {
       'تحليلات أساسية',
     ],
     business: [
-      'موظفون غير محدودون',
-      '$6.7 لكل شخص شهرياً',
+      'حتى 100 موظف',
+      '$210 شهرياً — كل شيء مشمول',
       'كل ميزات Professional',
       'AI Assistant غير محدود',
       'شكرة AI Accountant — متقدم',
@@ -140,7 +140,7 @@ export default function PricingPage() {
     },
     {
       q: 'هل تتضمن الخطط فترة تجربة مجانية؟',
-      a: 'نعم! خطة Professional تتضمن 14 يوم تجربة مجانية بدون الحاجة لإدخال بيانات بطاقة ائتمان.',
+      a: 'نعم! خطة Pro تتضمن 14 يوم تجربة مجانية بدون الحاجة لإدخال بيانات بطاقة ائتمان.',
     },
     {
       q: 'هل يمكنني الترقية أو الترجيع بين الخطط؟',
@@ -198,7 +198,7 @@ export default function PricingPage() {
   ];
 
   const comparisonData = [
-    { label: 'عدد الموظفين', starter: '5', professional: '30', business: 'غير محدود', enterprise: 'غير محدود' },
+    { label: 'عدد الموظفين', starter: '5', professional: '25', business: '100', enterprise: 'غير محدود' },
     { label: 'التخزين', starter: '10GB', professional: '50GB', business: '200GB', enterprise: 'غير محدود' },
     { label: 'AI Messages', starter: '50/شهر', professional: '500/شهر', business: 'غير محدود', enterprise: 'غير محدود' },
     { label: 'Media World', starter: true, professional: true, business: true, enterprise: true },
@@ -321,11 +321,11 @@ export default function PricingPage() {
                   <span className={`text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{isYearly ? '/سنة' : '/شهر'}</span>
                 </div>
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  حتى 5 موظفين • $9/شخص
+                  حتى 5 موظفين • سعر ثابت شهري
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    وفّر <span className="text-green-400">$108</span> مقارنة بالشهري
+                    وفّر <span className="text-green-400">$72</span> مقارنة بالشهري
                   </p>
                 )}
               </div>
@@ -368,11 +368,11 @@ export default function PricingPage() {
                   <span className={`text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{isYearly ? '/سنة' : '/شهر'}</span>
                 </div>
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  حتى 30 موظف • $7.5/شخص
+                  حتى 25 موظف • سعر ثابت شهري
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    وفّر <span className="text-green-400">$540</span> مقارنة بالشهري
+                    وفّر <span className="text-green-400">$216</span> مقارنة بالشهري
                   </p>
                 )}
               </div>
@@ -408,25 +408,30 @@ export default function PricingPage() {
               <h3 className="text-2xl font-bold mb-2">ALLOUL&Q Business</h3>
 
               <div className="mb-6">
-                <div className="text-4xl font-bold">
-                  $6.7
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold">${isYearly ? prices.business.yearly : prices.business.monthly}</span>
+                  <span className={`text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{isYearly ? '/سنة' : '/شهر'}</span>
                 </div>
-                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  لكل شخص / شهرياً
+                <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
+                  حتى 100 موظف • سعر ثابت شهري
                 </p>
-                <p className={`text-sm mt-2 font-semibold ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
-                  موظفون غير محدودون
-                </p>
+                {isYearly && (
+                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
+                    وفّر <span className="text-green-400">$504</span> مقارنة بالشهري
+                  </p>
+                )}
               </div>
 
-              <a
-                href="mailto:sales@alloul.app"
-                className="w-full bg-gradient-to-l from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold py-3 rounded-lg transition-colors mb-4 flex items-center justify-center gap-2"
+              <button
+                onClick={() => handleSubscribe('business')}
+                disabled={!!loadingPlan}
+                className="w-full bg-gradient-to-l from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold py-3 rounded-lg transition-colors mb-4 flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                تواصل مع فريق المبيعات
-              </a>
+                {loadingPlan === 'business' ? <Loader2 size={18} className="animate-spin" /> : null}
+                اشترك الآن
+              </button>
               <p className={`text-center text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
-                سعر مخصص حسب حجم شركتك
+                14 يوم تجربة مجانية • يُلغى في أي وقت
               </p>
 
               <div className="space-y-4">
