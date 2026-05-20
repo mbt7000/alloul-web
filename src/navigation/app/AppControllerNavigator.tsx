@@ -95,7 +95,7 @@ export default function AppControllerNavigator() {
       <Stack.Screen name="PhoneVerify" component={PhoneVerifyScreen} />
       <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
       <Stack.Screen name="Lobby" component={LobbyScreen} />
-      <Stack.Screen name="AcceptInvite" component={AcceptInviteScreen} />
+      <Stack.Screen name="AcceptInvite" component={AcceptInviteScreen as any} />
     </Stack.Navigator>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getEmailInviteInfo, acceptEmailInvite, type EmailInviteInfo } from "../../../api";
-import { saveToken } from "../../../storage/token";
+import { setToken } from "../../../storage/token";
 import { useAuth } from "../../../state/auth/AuthContext";
 
 const C = {
@@ -65,7 +65,7 @@ export default function AcceptInviteScreen({ route, navigation }: Props) {
     setError(null);
     try {
       const res = await acceptEmailInvite(token, { name: name.trim(), username: username.trim(), password });
-      await saveToken(res.access_token);
+      await setToken(res.access_token);
       await refresh();
     } catch (e: any) {
       setError(e?.message || "حدث خطأ، حاول مجدداً.");

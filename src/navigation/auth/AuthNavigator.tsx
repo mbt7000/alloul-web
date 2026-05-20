@@ -8,7 +8,7 @@ import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 import LoginScreen from "../../features/auth/screens/LoginScreen";
 import MobileSplashScreen from "../../features/auth/screens/MobileSplashScreen";
-import { loginWithAppleNative } from "../../api";
+import { loginWithAppleNative, loginWithFirebase } from "../../api";
 import { useAuth } from "../../state/auth/AuthContext";
 import {
   exchangeAppleIdTokenForFirebaseIdToken,

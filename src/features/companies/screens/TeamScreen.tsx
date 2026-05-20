@@ -518,7 +518,7 @@ export default function TeamScreen() {
                 maxLength={12}
                 autoFocus
               />
-            )
+            )}
 
             <AppText variant="caption" tone="muted" style={{ marginTop: 14, marginBottom: 8 }}>الدور في الشركة</AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

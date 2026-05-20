@@ -19,7 +19,7 @@ export const FEATURES = {
   USE_PARENT_BILLING: false, // 🔒 Unified billing via alloul-platform
 
   // ─── Phase 3: AI Features ─────────────────────────────────────────────────
-  ALLOULAI_ASSISTANT: false, // 🔒 AlloulAI workspace assistant (Ollama-powered)
+  ALLOULAI_ASSISTANT: true,  // ✅ AlloulAI workspace assistant (Ollama-powered)
   AI_SALES_ASSISTANT: false, // 🔒 AI sidebar in CRM / Deals
   DOCUMENT_AI: false,        // 🔒 Document upload + RAG ($49/mo add-on)
 
