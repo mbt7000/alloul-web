@@ -24,7 +24,7 @@ export const FEATURES = {
   DOCUMENT_AI: false,        // 🔒 Document upload + RAG ($49/mo add-on)
 
   // ─── Phase 3: Communication ───────────────────────────────────────────────
-  WHATSAPP_INTEGRATION: false, // 🔒 WhatsApp Business ($99/mo add-on)
+  WHATSAPP_INTEGRATION: true,  // ✅ WhatsApp Business ($99/mo add-on)
   SMART_MEETINGS: false,       // 🔒 LiveKit + AI transcription + action items
 
   // ─── Phase 3: Growth & Finance ────────────────────────────────────────────
