@@ -46,7 +46,7 @@ class AppErrorBoundary extends React.Component<
       return (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0a0a0f", padding: 24 }}>
           <Text style={{ color: "#ef4444", fontSize: 18, fontWeight: "700", marginBottom: 12 }}>حدث خطأ غير متوقع</Text>
-          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", marginBottom: 32 }}>{this.state.error}</Text>
+          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", marginBottom: 32 }}>حدث خطأ غير متوقع. إذا استمرت المشكلة، يرجى التواصل مع الدعم.</Text>
           <TouchableOpacity
             onPress={() => this.setState({ hasError: false, error: null })}
             style={{ backgroundColor: "#0ea5e9", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 }}

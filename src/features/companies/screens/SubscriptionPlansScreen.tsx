@@ -139,7 +139,10 @@ export default function SubscriptionPlansScreen({ navigation }: { navigation: an
         body: JSON.stringify({ plan_id: planId }),
       });
       if (res.checkout_url) {
-        await Linking.openURL(res.checkout_url);
+        // Only open HTTPS URLs — reject any other scheme
+        const url = res.checkout_url
+        if (!url.startsWith('https://')) throw new Error('Invalid checkout URL scheme')
+        await Linking.openURL(url);
         // Plan will be refreshed when user returns to app via AppState listener
       }
     } catch (err: unknown) {

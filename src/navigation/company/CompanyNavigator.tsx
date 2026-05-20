@@ -82,8 +82,8 @@ function CompanySelectorEntry({ navigation }: { navigation: any }) {
           navigation.replace("CompanyWorkspace");
         }
       } catch {
-        // On any error, allow access (don't block on network failure)
-        navigation.replace("CompanyWorkspace");
+        // On network error, show retry rather than silently granting access
+        navigation.replace("SubscriptionGate");
       }
     })();
   }, [company, loading, navigation]);

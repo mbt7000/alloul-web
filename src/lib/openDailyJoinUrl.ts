@@ -3,6 +3,11 @@ import { Alert, Linking } from "react-native";
 
 /** يفتح غرفة Daily في المتصفح داخل التطبيق (Expo). */
 export async function openDailyJoinUrl(joinUrl: string): Promise<void> {
+  // Only allow HTTPS URLs from Daily.co
+  if (!joinUrl.startsWith('https://')) {
+    Alert.alert("خطأ", "رابط الاجتماع غير صالح.")
+    return
+  }
   try {
     await WebBrowser.openBrowserAsync(joinUrl);
   } catch {

@@ -241,7 +241,7 @@ export default function AiAssistantScreen() {
       const status = e instanceof Error && "status" in e ? (e as any).status : 0;
       let errorMsg: string;
       if (status === 503 || status === 502) {
-        errorMsg = "خدمة الذكاء الاصطناعي غير متاحة حالياً. تأكد من تشغيل Ollama على الخادم أو تحقق من مفتاح ANTHROPIC_API_KEY.";
+        errorMsg = "خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى لاحقاً.";
       } else if (status === 401) {
         errorMsg = "جلستك انتهت. أعد تسجيل الدخول.";
       } else {

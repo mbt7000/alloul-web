@@ -398,7 +398,10 @@ export default function AccountingScreen({ navigation }: { navigation: any }) {
             </AppText>
             {data?.setup.google_sheet_url ? (
               <Pressable
-                onPress={() => Linking.openURL(data.setup.google_sheet_url!)}
+                onPress={() => {
+                  const url = data.setup.google_sheet_url!
+                  if (url.startsWith('https://')) Linking.openURL(url)
+                }}
                 style={S.sheetLink}
               >
                 <Ionicons name="open-outline" size={14} color="#10B981" />

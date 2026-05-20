@@ -43,6 +43,11 @@ backend/**/__pycache__/
 backend/.env
 backend/firebase.json
 backend/firebase-service-account.json
+GoogleService-Info.plist
+google-services.json
+web/.env.prod
+web/.env.local
+web/.env.*.local
 
 # typescript
 *.tsbuildinfo
