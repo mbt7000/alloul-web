@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from auth import get_current_user
 from admin_access import user_is_admin
 from database import get_db
-from models import User, Company, Subscription, Department, CompanyMember, ActivityLog, CompanyInvitation, Notification, CompanyOnboarding
+from models import User, Company, Subscription, Department, CompanyMember, ActivityLog, CompanyInvitation, EmailInvitation, Notification, CompanyOnboarding
 from schemas_company import (
     CompanyCreate,
     CompanyResponse,
@@ -31,6 +31,10 @@ from schemas_company import (
     InviteLinkResponse,
     OnboardingStatusResponse,
     PendingInvitationResponse,
+    EmailInviteRequest,
+    EmailInviteInfoResponse,
+    AcceptEmailInviteRequest,
+    AcceptEmailInviteResponse,
 )
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -970,6 +974,183 @@ def complete_onboarding_step(
         raise HTTPException(status_code=400, detail=f"Invalid step. Valid: {list(valid_steps.keys())}")
     _tick_onboarding(db, company.id, field)
     return {"message": f"Step '{body.step}' marked complete"}
+
+
+# ─── Email Invitations ───────────────────────────────────────────────────────
+
+import secrets
+from datetime import datetime, timezone, timedelta
+
+
+async def _send_invite_email(to_email: str, company_name: str, inviter_name: str, role: str, token: str) -> None:
+    """Send invitation email via Resend. Silently skips if RESEND_API_KEY not configured."""
+    from config import settings
+    if not settings.RESEND_API_KEY:
+        return
+    import httpx
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    invite_url = f"{frontend_url}/invite/{token}"
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#111;color:#f5f5f5;border-radius:12px">
+      <h2 style="color:#F5EFE6">دعوة للانضمام إلى {company_name}</h2>
+      <p>مرحباً،<br>دعاك <strong>{inviter_name}</strong> للانضمام إلى <strong>{company_name}</strong> بدور <strong>{role}</strong>.</p>
+      <a href="{invite_url}" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+        قبول الدعوة
+      </a>
+      <p style="color:#888;font-size:12px">الرابط صالح لمدة 72 ساعة. إذا لم تطلب هذه الدعوة، تجاهل هذا الإيميل.</p>
+    </div>
+    """
+    async with httpx.AsyncClient(timeout=10) as client:
+        await client.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}", "Content-Type": "application/json"},
+            json={"from": settings.EMAIL_FROM, "to": [to_email], "subject": f"دعوة للانضمام إلى {company_name}", "html": html},
+        )
+
+
+@router.post("/invite-email", status_code=201)
+async def send_email_invitation(
+    body: EmailInviteRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Send an email invitation to any email address. Owner/Admin only."""
+    membership = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
+    if not membership or membership.role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners and admins can send email invitations")
+    company = db.query(Company).filter(Company.id == membership.company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    email = body.email.strip().lower()
+    # Check if already a member via this email
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        already = db.query(CompanyMember).filter(
+            CompanyMember.company_id == company.id, CompanyMember.user_id == existing_user.id
+        ).first()
+        if already:
+            raise HTTPException(status_code=400, detail="This user is already a member")
+    # Cancel previous pending invite for same email
+    old = db.query(EmailInvitation).filter(
+        EmailInvitation.company_id == company.id,
+        EmailInvitation.email == email,
+        EmailInvitation.status == "pending",
+    ).first()
+    if old:
+        old.status = "expired"
+    token = secrets.token_urlsafe(32)
+    invite = EmailInvitation(
+        company_id=company.id,
+        inviter_id=current_user.id,
+        email=email,
+        role=body.role,
+        token=token,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=72),
+    )
+    db.add(invite)
+    db.commit()
+    inviter_name = current_user.name or current_user.username or "مسؤول"
+    await _send_invite_email(email, company.name, inviter_name, body.role, token)
+    _tick_onboarding(db, company.id, "step_invite")
+    return {"message": f"Invitation sent to {email}", "token": token}
+
+
+@router.get("/email-invite/{token}", response_model=EmailInviteInfoResponse)
+def get_email_invite_info(token: str, db: Annotated[Session, Depends(get_db)]):
+    """Public — returns invite details so the frontend can show company info before signup."""
+    invite = db.query(EmailInvitation).filter(EmailInvitation.token == token).first()
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    if invite.status != "pending":
+        raise HTTPException(status_code=410, detail=f"Invitation already {invite.status}")
+    if invite.expires_at < datetime.now(timezone.utc):
+        invite.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=410, detail="Invitation has expired")
+    company = db.query(Company).filter(Company.id == invite.company_id).first()
+    inviter = db.query(User).filter(User.id == invite.inviter_id).first()
+    return EmailInviteInfoResponse(
+        token=token,
+        company_name=company.name if company else "Unknown",
+        company_logo=company.logo_url if company else None,
+        inviter_name=inviter.name or inviter.username if inviter else None,
+        role=invite.role,
+        email=invite.email,
+        expires_at=invite.expires_at.isoformat(),
+    )
+
+
+@router.post("/email-invite/{token}/accept", response_model=AcceptEmailInviteResponse)
+def accept_email_invite(
+    token: str,
+    body: AcceptEmailInviteRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Accept email invite. Creates account if user doesn't exist. Returns JWT."""
+    from auth import create_access_token, get_password_hash
+    from routers.auth import _generate_user_icode, _generate_employee_no
+
+    invite = db.query(EmailInvitation).filter(EmailInvitation.token == token).first()
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    if invite.status != "pending":
+        raise HTTPException(status_code=410, detail=f"Invitation already {invite.status}")
+    if invite.expires_at < datetime.now(timezone.utc):
+        invite.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=410, detail="Invitation has expired")
+
+    # Find or create user
+    user = db.query(User).filter(User.email == invite.email).first()
+    if not user:
+        # Validate new account fields
+        if not body.username or not body.password:
+            raise HTTPException(status_code=400, detail="Username and password required for new account")
+        if len(body.password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        username = body.username.strip().lower()
+        if db.query(User).filter(User.username == username).first():
+            raise HTTPException(status_code=400, detail="Username already taken")
+        user = User(
+            email=invite.email,
+            username=username,
+            hashed_password=get_password_hash(body.password),
+            name=body.name or username,
+            i_code=_generate_user_icode(db),
+            employee_no=_generate_employee_no(db),
+        )
+        db.add(user)
+        db.flush()
+    else:
+        # User exists — just add membership
+        already = db.query(CompanyMember).filter(
+            CompanyMember.company_id == invite.company_id, CompanyMember.user_id == user.id
+        ).first()
+        if already:
+            raise HTTPException(status_code=400, detail="You are already a member of this company")
+
+    # Create membership
+    mem_code = _generate_icode()
+    while db.query(CompanyMember).filter(
+        CompanyMember.company_id == invite.company_id, CompanyMember.i_code == mem_code
+    ).first():
+        mem_code = _generate_icode()
+
+    from routers.employees import generate_work_id as _gen_work_id
+    member = CompanyMember(
+        company_id=invite.company_id,
+        user_id=user.id,
+        role=invite.role,
+        i_code=mem_code,
+        work_id=_gen_work_id(db),
+    )
+    db.add(member)
+    invite.status = "accepted"
+    invite.accepted_at = datetime.now(timezone.utc)
+    db.commit()
+
+    token_jwt = create_access_token(data={"sub": str(user.id)})
+    return AcceptEmailInviteResponse(access_token=token_jwt)
 
 
 # ─── Hiring Board (keep existing) ────────────────────────────────────────────

@@ -12,6 +12,8 @@ import SearchGateway from "../global/SearchGateway";
 import NotificationsGateway from "../global/NotificationsGateway";
 import PhoneVerifyScreen from "../../features/phone/screens/PhoneVerifyScreen";
 import SubscriptionPlansScreen from "../../features/companies/screens/SubscriptionPlansScreen";
+import LobbyScreen from "../../features/auth/screens/LobbyScreen";
+import AcceptInviteScreen from "../../features/auth/screens/AcceptInviteScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -34,9 +36,12 @@ function LoadingScreen() {
 
 function CompanyAccessFallback() {
   const { setMode } = useHomeMode();
+  const { isMember } = useCompany();
   React.useEffect(() => {
     setMode("public");
   }, [setMode]);
+  // If user has no company at all → show Lobby instead of subscription plans
+  if (!isMember) return <LobbyScreen />;
   return <SubscriptionPlansScreen navigation={{ goBack: () => setMode("public") }} />;
 }
 
@@ -89,6 +94,8 @@ export default function AppControllerNavigator() {
       <Stack.Screen name="Notifications" component={NotificationsGateway} />
       <Stack.Screen name="PhoneVerify" component={PhoneVerifyScreen} />
       <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
+      <Stack.Screen name="Lobby" component={LobbyScreen} />
+      <Stack.Screen name="AcceptInvite" component={AcceptInviteScreen} />
     </Stack.Navigator>
   );
 }

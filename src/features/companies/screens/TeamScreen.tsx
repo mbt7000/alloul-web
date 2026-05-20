@@ -30,6 +30,7 @@ import {
   updateMemberRole,
   validateWorkId,
   addMemberByWorkId,
+  sendEmailInvite,
   type CompanyMemberRow,
   type MyRoleResponse,
   type WorkIdPreview,
@@ -79,7 +80,9 @@ export default function TeamScreen() {
 
   // Invite modal
   const [showInvite, setShowInvite] = useState(false);
+  const [inviteTab, setInviteTab] = useState<"code" | "email">("email");
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("employee");
   const [inviting, setInviting] = useState(false);
 
@@ -119,15 +122,26 @@ export default function TeamScreen() {
   // ─── Actions ────────────────────────────────────────────────────────────
 
   const handleInvite = async () => {
-    if (!inviteCode.trim()) return;
     setInviting(true);
     try {
-      const res = await sendInvitation(inviteCode.trim(), inviteRole);
-      Alert.alert("تم الإرسال", (res as any).message || "تم إرسال الدعوة بنجاح");
+      if (inviteTab === "email") {
+        const email = inviteEmail.trim().toLowerCase();
+        if (!email || !email.includes("@")) {
+          Alert.alert("خطأ", "أدخل بريداً إلكترونياً صحيحاً.");
+          return;
+        }
+        const res = await sendEmailInvite(email, inviteRole);
+        Alert.alert("تم الإرسال", (res as any).message || `تم إرسال الدعوة إلى ${email}`);
+        setInviteEmail("");
+      } else {
+        if (!inviteCode.trim()) return;
+        const res = await sendInvitation(inviteCode.trim(), inviteRole);
+        Alert.alert("تم الإرسال", (res as any).message || "تم إرسال الدعوة بنجاح");
+        setInviteCode("");
+      }
       setShowInvite(false);
-      setInviteCode("");
     } catch (e: any) {
-      Alert.alert("خطأ", e?.message || "تعذّر إرسال الدعوة. تحقق من الكود.");
+      Alert.alert("خطأ", e?.message || "تعذّر إرسال الدعوة.");
     } finally {
       setInviting(false);
     }
@@ -460,21 +474,51 @@ export default function TeamScreen() {
         <Pressable style={styles.overlay} onPress={() => setShowInvite(false)}>
           <Pressable style={[styles.sheet, { backgroundColor: c.bgCard }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
-            <AppText variant="h3" weight="bold" style={{ marginBottom: 4 }}>دعوة عضو جديد</AppText>
-            <AppText variant="caption" tone="muted" style={{ marginBottom: 16 }}>
-              أدخل كود المستخدم المكوّن من ٨ إلى ١٢ رقم من ملفه الشخصي
-            </AppText>
+            <AppText variant="h3" weight="bold" style={{ marginBottom: 12 }}>دعوة عضو جديد</AppText>
 
-            <TextInput
-              style={[styles.input, { borderColor: c.border, color: c.textPrimary, backgroundColor: c.bg }]}
-              placeholder="كود المستخدم (٨-١٢ رقم)"
-              placeholderTextColor={c.textMuted}
-              value={inviteCode}
-              onChangeText={setInviteCode}
-              keyboardType="number-pad"
-              maxLength={12}
-              autoFocus
-            />
+            {/* Tabs */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+              {(["email", "code"] as const).map((tab) => (
+                <Pressable
+                  key={tab}
+                  onPress={() => setInviteTab(tab)}
+                  style={{
+                    flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
+                    backgroundColor: inviteTab === tab ? c.accentCyan + "22" : "transparent",
+                    borderWidth: 1,
+                    borderColor: inviteTab === tab ? c.accentCyan : c.border,
+                  }}
+                >
+                  <AppText style={{ color: inviteTab === tab ? c.accentCyan : c.textMuted, fontSize: 13, fontWeight: "700" }}>
+                    {tab === "email" ? "بريد إلكتروني" : "كود المستخدم"}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+
+            {inviteTab === "email" ? (
+              <TextInput
+                style={[styles.input, { borderColor: c.border, color: c.textPrimary, backgroundColor: c.bg }]}
+                placeholder="email@company.com"
+                placeholderTextColor={c.textMuted}
+                value={inviteEmail}
+                onChangeText={setInviteEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoFocus
+              />
+            ) : (
+              <TextInput
+                style={[styles.input, { borderColor: c.border, color: c.textPrimary, backgroundColor: c.bg }]}
+                placeholder="كود المستخدم (٨-١٢ رقم)"
+                placeholderTextColor={c.textMuted}
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                keyboardType="number-pad"
+                maxLength={12}
+                autoFocus
+              />
+            )
 
             <AppText variant="caption" tone="muted" style={{ marginTop: 14, marginBottom: 8 }}>الدور في الشركة</AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -506,7 +550,7 @@ export default function TeamScreen() {
                 tone="primary"
                 style={{ flex: 1 }}
                 onPress={handleInvite}
-                disabled={inviting || inviteCode.trim().length < 6}
+                disabled={inviting || (inviteTab === "code" ? inviteCode.trim().length < 6 : !inviteEmail.includes("@"))}
               />
             </View>
           </Pressable>

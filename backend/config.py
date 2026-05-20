@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     STRIPE_PRICE_PRO_PLUS: Optional[str] = None                               # legacy alias for business
     FRONTEND_URL: str = "https://alloul.app"
 
+    # Email (Resend — https://resend.com)
+    RESEND_API_KEY: Optional[str] = None
+    EMAIL_FROM: str = "ALLOUL&Q <noreply@alloul.app>"
+
     # Azure AD / Microsoft SSO (optional – for POST /auth/azure-ad)
     MICROSOFT_CLIENT_ID: Optional[str] = None
     MICROSOFT_TENANT_ID: Optional[str] = None

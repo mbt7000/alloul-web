@@ -635,3 +635,34 @@ export const addMemberByWorkId = (body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+
+// ─── Email Invitations ──────────────────────────────────────────────────────
+
+export interface EmailInviteInfo {
+  token: string;
+  company_name: string;
+  company_logo?: string | null;
+  inviter_name?: string | null;
+  role: string;
+  email: string;
+  expires_at: string;
+}
+
+export const sendEmailInvite = (email: string, role = "member") =>
+  apiFetch<{ message: string; token: string }>("/companies/invite-email", {
+    method: "POST",
+    body: JSON.stringify({ email, role }),
+  });
+
+export const getEmailInviteInfo = (token: string) =>
+  apiFetch<EmailInviteInfo>(`/companies/email-invite/${token}`);
+
+export const acceptEmailInvite = (token: string, body: {
+  name: string;
+  username: string;
+  password: string;
+}) =>
+  apiFetch<{ access_token: string; token_type: string }>(`/companies/email-invite/${token}/accept`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });

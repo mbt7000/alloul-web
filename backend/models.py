@@ -152,6 +152,25 @@ class CompanyInvitation(Base):
     role = Column(String(32), default="member")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class EmailInvitation(Base):
+    """Email-based invitation — invitee may not have an account yet."""
+    __tablename__ = "email_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    role = Column(String(32), nullable=False, default="member")
+    token = Column(String(128), unique=True, nullable=False, index=True)
+    status = Column(String(16), default="pending")  # pending, accepted, expired
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    company = relationship("Company")
+    inviter = relationship("User")
+
     company = relationship("Company")
     inviter = relationship("User", foreign_keys=[inviter_id])
     invitee = relationship("User", foreign_keys=[invitee_id])

@@ -136,3 +136,30 @@ class PendingInvitationResponse(BaseModel):
     inviter_name: Optional[str] = None
     role: str
     created_at: Optional[str] = None
+
+
+class EmailInviteRequest(BaseModel):
+    email: str
+    role: str = "member"
+
+
+class EmailInviteInfoResponse(BaseModel):
+    token: str
+    company_name: str
+    company_logo: Optional[str] = None
+    inviter_name: Optional[str] = None
+    role: str
+    email: str
+    expires_at: str
+
+
+class AcceptEmailInviteRequest(BaseModel):
+    token: str
+    name: str
+    username: str
+    password: str
+
+
+class AcceptEmailInviteResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
