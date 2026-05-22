@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   Home, Search, Bell, MessageSquare, Bookmark, User, Briefcase,
-  Plus, Menu, X, LogOut,
+  Plus, Menu, X, LogOut, Plug2, Settings,
 } from 'lucide-react';
 import { getCachedUser, clearToken, type AuthUser } from '@/lib/auth';
 
@@ -20,8 +20,9 @@ const NAV_ITEMS = [
   { href: '/explore',       icon: Search,        label: 'استكشاف' },
   { href: '/notifications', icon: Bell,          label: 'الإشعارات' },
   { href: '/messages',      icon: MessageSquare, label: 'الرسائل' },
-  { href: '/bookmarks',     icon: Bookmark,      label: 'المحفوظات' },
   { href: '/workspace',     icon: Briefcase,     label: 'عالم الأعمال' },
+  { href: '/integrations',  icon: Plug2,         label: 'الروابط' },
+  { href: '/settings',      icon: Settings,      label: 'الإعدادات' },
   { href: '/profile',       icon: User,          label: 'الملف الشخصي' },
 ];
 
