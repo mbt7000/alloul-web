@@ -49,6 +49,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     clearToken();
+    document.cookie = 'alloul_auth=; path=/; max-age=0';
     router.push('/login');
   };
 

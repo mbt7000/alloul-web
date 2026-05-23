@@ -45,9 +45,13 @@ export default function LoginPage() {
 
   const finishLogin = async (accessToken: string, isNewUser = false) => {
     setToken(accessToken);
+    // Set auth cookie so middleware can protect server-rendered routes
+    document.cookie = 'alloul_auth=1; path=/; max-age=2592000; SameSite=Lax';
     const me = await getCurrentUser();
     setCachedUser(me);
-    router.replace(isNewUser ? '/onboarding' : '/');
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect') || (isNewUser ? '/onboarding' : '/');
+    router.replace(redirect);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
