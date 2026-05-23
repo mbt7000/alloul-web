@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Tajawal, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import '@/styles/globals.css'
+import '@livekit/components-styles'
 
 const inter = Inter({
   subsets: ['latin'],

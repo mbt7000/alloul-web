@@ -3,6 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
 
+  transpilePackages: [
+    '@livekit/components-react',
+    '@livekit/components-core',
+    'livekit-client',
+  ],
+
   // Skip TS/ESLint errors during build — legacy pages have type drift
   // that doesn't affect runtime. New pages are type-clean.
   typescript: { ignoreBuildErrors: true },
