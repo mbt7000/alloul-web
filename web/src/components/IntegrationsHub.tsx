@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Integration, ConnectedIntegration } from '@/lib/integrations-types';
 import { integrationApi } from '@/lib/integrations-api';
+import { getToken } from '@/lib/auth';
 
 /* ── Brand metadata ─────────────────────────────────────────────────────── */
 const BRAND: Record<string, { color: string; letter: string; cat: string }> = {
@@ -920,6 +922,14 @@ export default function IntegrationsHub({
   const [showCredModal, setShowCredModal] = useState<Integration | null>(null);
   const [section, setSection] = useState('connectors');
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!getToken()) {
+      router.replace('/login?redirect=/integrations');
+    }
+  }, [router]);
 
   const activeIntegration = integrations.find(s => s.id === activeId) ?? null;
   const isConnected = activeId ? connectedIds.has(activeId) : false;
