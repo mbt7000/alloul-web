@@ -1,39 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowRight, Calendar, Video, Loader2, Clock,
-  Plus, PhoneOff, Mic, ScreenShare,
+  ArrowRight, Calendar, Video, Loader2, Clock, Plus, ExternalLink,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import AppShell from '@/components/AppShell';
-import { apiFetch, getMeetings, ApiError, type Meeting } from '@/lib/api-client';
-import { isAuthenticated, clearToken } from '@/lib/auth';
+import { getMeetings, ApiError, type Meeting } from '@/lib/api-client';
+import { isAuthenticated, clearToken, getToken } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 
-// ── LiveKit components — loaded client-side only (no SSR) ──────────────────
-const LiveKitRoom = dynamic(
-  () => import('@livekit/components-react').then(m => m.LiveKitRoom),
-  { ssr: false, loading: () => <RoomLoader /> },
-);
-const VideoConference = dynamic(
-  () => import('@livekit/components-react').then(m => m.VideoConference),
-  { ssr: false },
-);
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
 
-function RoomLoader() {
-  return (
-    <div className="flex-1 flex items-center justify-center" style={{ background: '#0A0A0F' }}>
-      <div className="text-center space-y-3">
-        <Loader2 size={28} className="text-primary animate-spin mx-auto" />
-        <p className="text-white/40 text-sm">جاري الاتصال بالغرفة...</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Status map ──────────────────────────────────────────────────────────────
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:   { label: 'مجدول',  bg: '#2E8BFF22', color: '#2E8BFF' },
   in_progress: { label: 'جارٍ',   bg: '#F59E0B22', color: '#F59E0B' },
@@ -41,54 +19,17 @@ const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }>
   cancelled:   { label: 'ملغى',   bg: '#EF444422', color: '#EF4444' },
 };
 
-interface ActiveRoom {
-  room_name: string;
-  token: string;
-  ws_url: string;
-  title: string;
-}
-
-// ── LiveKit dark-theme overrides ────────────────────────────────────────────
-const LK_CSS = `
-  .lk-room-container,
-  .lk-video-conference { background: #0A0A0F !important; height: 100% !important; }
-  .lk-control-bar {
-    background: rgba(10,10,15,0.95) !important;
-    border-top: 1px solid rgba(255,255,255,0.08) !important;
-    padding: 12px 20px !important;
-    gap: 10px !important;
-  }
-  .lk-button {
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: #fff !important;
-    border-radius: 14px !important;
-    font-family: inherit !important;
-  }
-  .lk-button:hover { background: rgba(255,255,255,0.13) !important; }
-  .lk-disconnect-button {
-    background: rgba(239,68,68,0.15) !important;
-    border-color: rgba(239,68,68,0.4) !important;
-    color: #EF4444 !important;
-  }
-  .lk-disconnect-button:hover { background: rgba(239,68,68,0.28) !important; }
-  .lk-participant-tile { border-radius: 16px !important; overflow: hidden !important; background: #111117 !important; }
-  .lk-participant-name { font-family: inherit !important; font-size: 12px !important; }
-  .lk-grid-layout { padding: 12px !important; gap: 10px !important; }
-  .lk-focus-layout { padding: 10px !important; gap: 8px !important; }
-`;
-
-// ── Main component ──────────────────────────────────────────────────────────
 export default function MeetingsPage() {
   const router = useRouter();
 
-  const [meetings,   setMeetings]   = useState<Meeting[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [creating,   setCreating]   = useState(false);
-  const [newTitle,   setNewTitle]   = useState('');
-  const [showNew,    setShowNew]    = useState(false);
-  const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
-  const [error,      setError]      = useState<string | null>(null);
+  const [meetings,  setMeetings]  = useState<Meeting[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [creating,  setCreating]  = useState(false);
+  const [newTitle,  setNewTitle]  = useState('');
+  const [showNew,   setShowNew]   = useState(false);
+  const [roomUrl,   setRoomUrl]   = useState<string | null>(null);
+  const [roomTitle, setRoomTitle] = useState('');
+  const [error,     setError]     = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return; }
@@ -106,11 +47,20 @@ export default function MeetingsPage() {
     if (!newTitle.trim()) return;
     setCreating(true); setError(null);
     try {
-      const data = await apiFetch<ActiveRoom>('/livekit/rooms', {
+      const res = await fetch(`${API_BASE}/livekit/rooms`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`,
+        },
         body: JSON.stringify({ title: newTitle }),
       });
-      setActiveRoom(data);
+      if (!res.ok) throw new Error('تعذّر إنشاء الغرفة');
+      const data = await res.json();
+      const joinUrl =
+        `https://meet.livekit.io/custom?liveKitUrl=${encodeURIComponent(data.ws_url)}&token=${encodeURIComponent(data.token)}`;
+      setRoomUrl(joinUrl);
+      setRoomTitle(newTitle);
       setShowNew(false);
       setNewTitle('');
     } catch (e: any) {
@@ -120,56 +70,6 @@ export default function MeetingsPage() {
     }
   };
 
-  const leaveRoom = useCallback(() => setActiveRoom(null), []);
-
-  // ── Active room ─────────────────────────────────────────────────────────
-  if (activeRoom) {
-    return (
-      <>
-        <style>{LK_CSS}</style>
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0A0F' }} dir="ltr">
-
-          {/* Top bar */}
-          <div
-            className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-            style={{ background: 'rgba(10,10,15,0.97)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="flex items-center gap-2 flex-1">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-white font-black text-sm">{activeRoom.title ?? activeRoom.room_name}</span>
-              <span className="text-[9px] font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">LIVE</span>
-            </div>
-            <button
-              onClick={leaveRoom}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-400 hover:text-white transition-colors"
-              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}
-            >
-              <PhoneOff size={12} />
-              مغادرة
-            </button>
-          </div>
-
-          {/* LiveKit room */}
-          <div className="flex-1 overflow-hidden">
-            <LiveKitRoom
-              serverUrl={activeRoom.ws_url}
-              token={activeRoom.token}
-              connect={true}
-              video={true}
-              audio={true}
-              onDisconnected={leaveRoom}
-              style={{ height: '100%' }}
-            >
-              <VideoConference />
-            </LiveKitRoom>
-          </div>
-
-        </div>
-      </>
-    );
-  }
-
-  // ── Normal page ─────────────────────────────────────────────────────────
   return (
     <AppShell>
       <header className="sticky top-0 z-20 bg-dark-bg-900/85 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-4">
@@ -220,8 +120,36 @@ export default function MeetingsPage() {
           </div>
         )}
 
+        {/* Active room link */}
+        {roomUrl && (
+          <div className="p-4 rounded-2xl border border-primary/40 bg-primary/5 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-white font-black text-sm">{roomTitle}</span>
+              <span className="text-[9px] font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">LIVE</span>
+            </div>
+            <div className="flex gap-2">
+              <a
+                href={roomUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-black text-sm font-black"
+              >
+                <ExternalLink size={15} />
+                انضم للاجتماع
+              </a>
+              <button
+                onClick={() => { setRoomUrl(null); setRoomTitle(''); }}
+                className="px-4 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:border-white/20 transition-colors"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Quick start */}
-        {!showNew && (
+        {!showNew && !roomUrl && (
           <button
             onClick={() => { setShowNew(true); setError(null); }}
             className="w-full p-4 rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/8 transition-colors flex items-center gap-4 text-right"
