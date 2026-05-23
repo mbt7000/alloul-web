@@ -1,30 +1,94 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Calendar, Video, Loader2, Clock, Plus, Mic } from 'lucide-react';
+import {
+  ArrowRight, Calendar, Video, Loader2, Clock,
+  Plus, PhoneOff, Mic, ScreenShare,
+} from 'lucide-react';
+import dynamic from 'next/dynamic';
 import AppShell from '@/components/AppShell';
-import { getMeetings, ApiError, type Meeting } from '@/lib/api-client';
-import { isAuthenticated, clearToken, getToken } from '@/lib/auth';
+import { apiFetch, getMeetings, ApiError, type Meeting } from '@/lib/api-client';
+import { isAuthenticated, clearToken } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
+// ── LiveKit components — loaded client-side only (no SSR) ──────────────────
+const LiveKitRoom = dynamic(
+  () => import('@livekit/components-react').then(m => m.LiveKitRoom),
+  { ssr: false, loading: () => <RoomLoader /> },
+);
+const VideoConference = dynamic(
+  () => import('@livekit/components-react').then(m => m.VideoConference),
+  { ssr: false },
+);
 
+function RoomLoader() {
+  return (
+    <div className="flex-1 flex items-center justify-center" style={{ background: '#0A0A0F' }}>
+      <div className="text-center space-y-3">
+        <Loader2 size={28} className="text-primary animate-spin mx-auto" />
+        <p className="text-white/40 text-sm">جاري الاتصال بالغرفة...</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Status map ──────────────────────────────────────────────────────────────
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:   { label: 'مجدول',  bg: '#2E8BFF22', color: '#2E8BFF' },
-  in_progress: { label: 'جارٍ',    bg: '#F59E0B22', color: '#F59E0B' },
+  in_progress: { label: 'جارٍ',   bg: '#F59E0B22', color: '#F59E0B' },
   done:        { label: 'منتهي',  bg: '#14E0A422', color: '#14E0A4' },
   cancelled:   { label: 'ملغى',   bg: '#EF444422', color: '#EF4444' },
 };
 
+interface ActiveRoom {
+  room_name: string;
+  token: string;
+  ws_url: string;
+  title: string;
+}
+
+// ── LiveKit dark-theme overrides ────────────────────────────────────────────
+const LK_CSS = `
+  .lk-room-container,
+  .lk-video-conference { background: #0A0A0F !important; height: 100% !important; }
+  .lk-control-bar {
+    background: rgba(10,10,15,0.95) !important;
+    border-top: 1px solid rgba(255,255,255,0.08) !important;
+    padding: 12px 20px !important;
+    gap: 10px !important;
+  }
+  .lk-button {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #fff !important;
+    border-radius: 14px !important;
+    font-family: inherit !important;
+  }
+  .lk-button:hover { background: rgba(255,255,255,0.13) !important; }
+  .lk-disconnect-button {
+    background: rgba(239,68,68,0.15) !important;
+    border-color: rgba(239,68,68,0.4) !important;
+    color: #EF4444 !important;
+  }
+  .lk-disconnect-button:hover { background: rgba(239,68,68,0.28) !important; }
+  .lk-participant-tile { border-radius: 16px !important; overflow: hidden !important; background: #111117 !important; }
+  .lk-participant-name { font-family: inherit !important; font-size: 12px !important; }
+  .lk-grid-layout { padding: 12px !important; gap: 10px !important; }
+  .lk-focus-layout { padding: 10px !important; gap: 8px !important; }
+`;
+
+// ── Main component ──────────────────────────────────────────────────────────
 export default function MeetingsPage() {
   const router = useRouter();
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [roomUrl, setRoomUrl] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState('');
-  const [showNew, setShowNew] = useState(false);
+
+  const [meetings,   setMeetings]   = useState<Meeting[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [creating,   setCreating]   = useState(false);
+  const [newTitle,   setNewTitle]   = useState('');
+  const [showNew,    setShowNew]    = useState(false);
+  const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
+  const [error,      setError]      = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return; }
@@ -40,28 +104,72 @@ export default function MeetingsPage() {
 
   const createRoom = async () => {
     if (!newTitle.trim()) return;
-    setCreating(true);
+    setCreating(true); setError(null);
     try {
-      const res = await fetch(`${API_BASE}/livekit/rooms`, {
+      const data = await apiFetch<ActiveRoom>('/livekit/rooms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ title: newTitle }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setRoomUrl(data.room_url);
-        setShowNew(false);
-        setNewTitle('');
-      } else {
-        alert('تعذّر إنشاء الغرفة — تأكد من إعداد LiveKit');
-      }
-    } catch {
-      alert('خطأ في الاتصال');
+      setActiveRoom(data);
+      setShowNew(false);
+      setNewTitle('');
+    } catch (e: any) {
+      setError(e?.message || 'خطأ في إنشاء الغرفة');
     } finally {
       setCreating(false);
     }
   };
 
+  const leaveRoom = useCallback(() => setActiveRoom(null), []);
+
+  // ── Active room ─────────────────────────────────────────────────────────
+  if (activeRoom) {
+    return (
+      <>
+        <style>{LK_CSS}</style>
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0A0F' }} dir="ltr">
+
+          {/* Top bar */}
+          <div
+            className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
+            style={{ background: 'rgba(10,10,15,0.97)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-white font-black text-sm">{activeRoom.title ?? activeRoom.room_name}</span>
+              <span className="text-[9px] font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">LIVE</span>
+            </div>
+            <button
+              onClick={leaveRoom}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-400 hover:text-white transition-colors"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}
+            >
+              <PhoneOff size={12} />
+              مغادرة
+            </button>
+          </div>
+
+          {/* LiveKit room */}
+          <div className="flex-1 overflow-hidden">
+            <LiveKitRoom
+              serverUrl={activeRoom.ws_url}
+              token={activeRoom.token}
+              connect={true}
+              video={true}
+              audio={true}
+              onDisconnected={leaveRoom}
+              style={{ height: '100%' }}
+            >
+              <VideoConference />
+            </LiveKitRoom>
+          </div>
+
+        </div>
+      </>
+    );
+  }
+
+  // ── Normal page ─────────────────────────────────────────────────────────
   return (
     <AppShell>
       <header className="sticky top-0 z-20 bg-dark-bg-900/85 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-4">
@@ -70,7 +178,7 @@ export default function MeetingsPage() {
         </Link>
         <h1 className="text-white font-black text-[17px] flex-1">الاجتماعات</h1>
         <button
-          onClick={() => setShowNew(v => !v)}
+          onClick={() => { setShowNew(v => !v); setError(null); }}
           className="p-2 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors"
         >
           <Plus size={18} className="text-primary" />
@@ -79,81 +187,59 @@ export default function MeetingsPage() {
 
       <div className="px-4 py-5 pb-24 md:pb-10 space-y-5">
 
-        {/* new meeting form */}
+        {/* New meeting form */}
         {showNew && (
           <div className="p-4 rounded-2xl border border-primary/30 bg-primary/5 space-y-3">
-            <p className="text-white font-bold text-sm">اجتماع جديد — LiveKit</p>
+            <p className="text-white font-bold text-sm flex items-center gap-2">
+              <Video size={14} className="text-primary" />
+              اجتماع جديد
+            </p>
             <div className="flex gap-2">
               <input
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && createRoom()}
                 placeholder="عنوان الاجتماع..."
-                className="flex-1 bg-dark-bg-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none"
+                className="flex-1 bg-dark-bg-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary/40"
+                autoFocus
               />
               <button
                 onClick={createRoom}
                 disabled={!newTitle.trim() || creating}
-                className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold disabled:opacity-40 flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl bg-primary text-black text-sm font-black disabled:opacity-40 flex items-center gap-2"
               >
                 {creating ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
                 ابدأ
               </button>
             </div>
+            {error && (
+              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                {error}
+              </p>
+            )}
           </div>
         )}
 
-        {/* active LiveKit room */}
-        {roomUrl && (
-          <div className="p-4 rounded-2xl border border-green-500/40 bg-green-500/5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-white font-black text-sm">غرفة الشركة المباشرة</span>
-              <span className="text-[9px] font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">LIVE</span>
-            </div>
-            <div className="flex gap-2">
-              <a
-                href={roomUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-sm font-black"
-              >
-                <Video size={16} />
-                انضم للاجتماع
-              </a>
-              <button
-                onClick={() => setRoomUrl(null)}
-                className="px-4 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:border-white/20"
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* start room button when no active room */}
-        {!roomUrl && !showNew && (
+        {/* Quick start */}
+        {!showNew && (
           <button
-            onClick={() => setShowNew(true)}
-            className="w-full p-4 rounded-2xl border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors flex items-center gap-4"
+            onClick={() => { setShowNew(true); setError(null); }}
+            className="w-full p-4 rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/8 transition-colors flex items-center gap-4 text-right"
           >
             <div className="w-[52px] h-[52px] rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center flex-shrink-0">
               <Video size={22} className="text-primary" />
             </div>
-            <div className="flex-1 text-right">
-              <div className="flex items-center gap-2">
-                <span className="text-white font-black text-base">غرفة الشركة المباشرة</span>
-                <Mic size={14} className="text-primary" />
-              </div>
-              <p className="text-white/50 text-xs mt-1">مدعوم بـ LiveKit — تسجيل + ملخص AI</p>
+            <div className="flex-1">
+              <div className="text-white font-black text-base">غرفة الفريق المباشرة</div>
+              <p className="text-white/40 text-xs mt-0.5">مدعوم بـ LiveKit — مجاني وخاص بالكامل</p>
             </div>
-            <div className="px-4 py-2 rounded-full bg-primary text-white text-xs font-black flex-shrink-0">
-              ابدأ
+            <div className="px-4 py-2 rounded-full bg-primary text-black text-xs font-black flex-shrink-0">
+              ابدأ الآن
             </div>
           </button>
         )}
 
-        {/* Meetings list */}
+        {/* Scheduled meetings */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-bold text-base">الاجتماعات المجدولة</h3>
@@ -167,12 +253,12 @@ export default function MeetingsPage() {
           ) : meetings.length === 0 ? (
             <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-10 text-center">
               <Calendar size={36} className="text-white/20 mx-auto mb-3" />
-              <p className="text-white/60 text-sm font-bold">لا توجد اجتماعات</p>
-              <p className="text-white/40 text-xs mt-1">اجتماعاتك المجدولة بتظهر هنا</p>
+              <p className="text-white/60 text-sm font-bold">لا توجد اجتماعات مجدولة</p>
+              <p className="text-white/30 text-xs mt-1">اضغط + لبدء اجتماع فوري</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {meetings.map((m) => {
+              {meetings.map(m => {
                 const style = STATUS_STYLE[m.status] ?? STATUS_STYLE.scheduled;
                 return (
                   <div
@@ -189,18 +275,12 @@ export default function MeetingsPage() {
                       <div className="text-white font-bold text-sm truncate mb-1">{m.title}</div>
                       <div className="flex items-center gap-3 text-white/40 text-[11px]">
                         {m.meeting_date && (
-                          <div className="flex items-center gap-1">
-                            <Calendar size={10} />
-                            {m.meeting_date}
-                          </div>
+                          <span className="flex items-center gap-1"><Calendar size={10} />{m.meeting_date}</span>
                         )}
                         {m.meeting_time && (
-                          <div className="flex items-center gap-1">
-                            <Clock size={10} />
-                            {m.meeting_time.slice(0, 5)}
-                          </div>
+                          <span className="flex items-center gap-1"><Clock size={10} />{m.meeting_time.slice(0, 5)}</span>
                         )}
-                        {m.duration_minutes && <span>{m.duration_minutes}د</span>}
+                        {m.duration_minutes && <span>{m.duration_minutes} دقيقة</span>}
                       </div>
                     </div>
                     <div
@@ -215,6 +295,7 @@ export default function MeetingsPage() {
             </div>
           )}
         </div>
+
       </div>
     </AppShell>
   );
