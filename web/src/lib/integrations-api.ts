@@ -14,12 +14,9 @@ function apiBase() {
 function getHeaders(): HeadersInit {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (typeof window !== 'undefined') {
-    const jwt = localStorage.getItem('alloulq_jwt');
+    const jwt = localStorage.getItem('alloul_token');
     if (jwt) {
       headers['Authorization'] = `Bearer ${jwt}`;
-    } else {
-      const tid = localStorage.getItem('dev_tenant_id') ?? 'dev-tenant-001';
-      headers['X-Tenant-ID'] = tid;
     }
   }
   return headers;
