@@ -24,6 +24,18 @@ const nextConfig = {
     unoptimized: true,
   },
 
+  // Proxy integrations backend — avoids mixed-content (HTTPS → HTTP)
+  async rewrites() {
+    const intApiUrl =
+      process.env.INTEGRATIONS_API_URL || 'http://srv1431166.hstgr.cloud:8011';
+    return [
+      {
+        source: '/api/integrations/:path*',
+        destination: `${intApiUrl}/api/v1/:path*`,
+      },
+    ];
+  },
+
   // Headers for security and performance
   async headers() {
     return [

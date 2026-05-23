@@ -4,8 +4,12 @@ import type {
   Integration,
 } from './integrations-types';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_INTEGRATIONS_API_URL ?? 'http://localhost:8010';
+// Browser → same-origin proxy at /api/integrations/* (Next.js rewrites to backend)
+// Server  → direct HTTP to integrations backend (no mixed-content issue)
+function apiBase() {
+  if (typeof window !== 'undefined') return '/api/integrations/integrations';
+  return (process.env.INTEGRATIONS_API_URL ?? 'http://srv1431166.hstgr.cloud:8011') + '/api/v1/integrations';
+}
 
 function getHeaders(): HeadersInit {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -22,7 +26,7 @@ function getHeaders(): HeadersInit {
 }
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     ...options,
     headers: { ...getHeaders(), ...(options.headers ?? {}) },
   });
@@ -40,17 +44,17 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
 export const integrationApi = {
   listAll: (): Promise<Integration[]> =>
-    apiFetch('/api/v1/integrations'),
+    apiFetch(''),
 
   listConnected: (): Promise<ConnectedIntegration[]> =>
-    apiFetch('/api/v1/integrations/connected'),
+    apiFetch('/connected'),
 
   connect: (id: string, body?: { api_key?: string; bot_token?: string }): Promise<ConnectResponse> =>
-    apiFetch(`/api/v1/integrations/${id}/connect`, {
+    apiFetch(`/${id}/connect`, {
       method: 'POST',
       body: JSON.stringify(body ?? {}),
     }),
 
   disconnect: (id: string): Promise<{ message: string }> =>
-    apiFetch(`/api/v1/integrations/${id}`, { method: 'DELETE' }),
+    apiFetch(`/${id}`, { method: 'DELETE' }),
 };
