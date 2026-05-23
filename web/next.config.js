@@ -29,6 +29,13 @@ const nextConfig = {
     const intApiUrl =
       process.env.INTEGRATIONS_API_URL || 'http://srv1431166.hstgr.cloud:8011';
     return [
+      // OAuth callback: https://alloul.app/api/v1/integrations/oauth/callback/:service
+      // → backend: http://server:8011/api/v1/integrations/oauth/callback/:service
+      {
+        source: '/api/v1/integrations/oauth/callback/:path*',
+        destination: `${intApiUrl}/api/v1/integrations/oauth/callback/:path*`,
+      },
+      // All other integrations API calls
       {
         source: '/api/integrations/:path*',
         destination: `${intApiUrl}/api/v1/:path*`,
