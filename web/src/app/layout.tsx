@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Tajawal } from 'next/font/google'
+import { Inter, Tajawal, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import '@/styles/globals.css'
 
 const inter = Inter({
@@ -12,6 +12,13 @@ const tajawal = Tajawal({
   subsets: ['arabic'],
   weight: ['200', '300', '400', '500', '700', '800', '900'],
   variable: '--font-tajawal',
+  display: 'swap',
+})
+
+const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
+  subsets: ['arabic'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-ibm-plex-arabic',
   display: 'swap',
 })
 
@@ -45,7 +52,7 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${inter.variable} ${tajawal.variable} dark`}
+      className={`${inter.variable} ${tajawal.variable} ${ibmPlexSansArabic.variable} dark`}
       suppressHydrationWarning
     >
       <head>
