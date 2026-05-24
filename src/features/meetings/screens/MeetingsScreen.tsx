@@ -11,7 +11,8 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { FEATURES } from "../../../config/features";
 import Screen from "../../../shared/layout/Screen";
 import AppHeader from "../../../shared/layout/AppHeader";
 import AppText from "../../../shared/ui/AppText";
@@ -69,6 +70,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 export default function MeetingsScreen() {
   const { colors } = useAppTheme();
   const { company } = useCompany();
+  const navigation = useNavigation<any>();
 
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
@@ -203,6 +205,33 @@ export default function MeetingsScreen() {
             </Pressable>
           ))}
         </View>
+
+        {FEATURES.SMART_MEETINGS && (
+          <Pressable
+            onPress={() => navigation.navigate("SmartMeeting")}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 10,
+              padding: 14, borderRadius: 14,
+              backgroundColor: "#4c6fff18", borderWidth: 1, borderColor: "#4c6fff40",
+            }}
+          >
+            <View style={{
+              width: 36, height: 36, borderRadius: 10,
+              backgroundColor: "#4c6fff22", alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name="videocam" size={18} color="#4c6fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="body" weight="bold" style={{ color: "#4c6fff" }}>
+                اجتماع ذكي
+              </AppText>
+              <AppText variant="micro" style={{ color: "#4c6fff", opacity: 0.7 }}>
+                LiveKit · تفريغ تلقائي · بنود عمل بالـ AI
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#4c6fff" />
+          </Pressable>
+        )}
 
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(["all", "scheduled", "done"] as const).map((k) => {

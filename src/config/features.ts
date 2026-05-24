@@ -25,7 +25,7 @@ export const FEATURES = {
 
   // ─── Phase 3: Communication ───────────────────────────────────────────────
   WHATSAPP_INTEGRATION: true,  // ✅ WhatsApp Business ($99/mo add-on)
-  SMART_MEETINGS: false,       // 🔒 LiveKit + AI transcription + action items
+  SMART_MEETINGS: true,        // ✅ LiveKit + AI transcription + action items
 
   // ─── Phase 3: Growth & Finance ────────────────────────────────────────────
   LEAD_GENERATION: false,    // 🔒 ALLOUL Automation lead capture ($0.20/lead or $99/mo)

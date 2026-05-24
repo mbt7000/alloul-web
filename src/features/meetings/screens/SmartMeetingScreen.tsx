@@ -1,8 +1,5 @@
 /**
- * SmartMeetingScreen — AI-powered meeting with LiveKit + transcription
- * Feature flag: SMART_MEETINGS
- * Creates a LiveKit room via alloul-platform livekit-service (port 8500).
- * Displays live transcript and extracts action items post-meeting.
+ * SmartMeetingScreen — LiveKit video meetings + AI transcription + action items
  */
 import React, { useCallback, useState } from "react";
 import {
@@ -12,10 +9,12 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import * as WebBrowser from "expo-web-browser";
 import AppText from "../../../shared/ui/AppText";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { apiFetch } from "../../../api/client";
@@ -23,8 +22,8 @@ import { apiFetch } from "../../../api/client";
 interface MeetingRoom {
   room_name: string;
   token: string;
-  room_url: string;
-  participants?: number;
+  ws_url: string;
+  title: string;
 }
 
 interface ActionItem {
@@ -39,6 +38,8 @@ interface TranscriptSegment {
   timestamp: string;
 }
 
+const LIVEKIT_MEET_URL = "https://alloul.app/workspace/smart-meetings";
+
 export default function SmartMeetingScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -46,6 +47,7 @@ export default function SmartMeetingScreen() {
 
   const [topic, setTopic] = useState("");
   const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [room, setRoom] = useState<MeetingRoom | null>(null);
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
@@ -62,15 +64,40 @@ export default function SmartMeetingScreen() {
     try {
       const data = await apiFetch<MeetingRoom>("/livekit/rooms", {
         method: "POST",
-        body: JSON.stringify({ topic: t }),
+        body: JSON.stringify({ title: t }),
       });
       setRoom(data);
-    } catch {
-      Alert.alert("خطأ", "تعذّر إنشاء غرفة الاجتماع. تأكد من تشغيل LiveKit Service.");
+    } catch (e: any) {
+      Alert.alert("خطأ", e?.message || "تعذّر إنشاء غرفة الاجتماع");
     } finally {
       setCreating(false);
     }
   }, [topic]);
+
+  const joinMeeting = useCallback(async () => {
+    if (!room) return;
+    setJoining(true);
+    try {
+      const url = `${room.ws_url.replace("wss://", "https://").replace("ws://", "http://")}`;
+      const meetUrl = `${LIVEKIT_MEET_URL}?room=${encodeURIComponent(room.room_name)}&token=${encodeURIComponent(room.token)}&wsUrl=${encodeURIComponent(room.ws_url)}`;
+      await WebBrowser.openBrowserAsync(meetUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
+    } catch {
+      Alert.alert("خطأ", "تعذّر فتح الاجتماع");
+    } finally {
+      setJoining(false);
+    }
+  }, [room]);
+
+  const shareRoom = useCallback(async () => {
+    if (!room) return;
+    const meetUrl = `${LIVEKIT_MEET_URL}?room=${encodeURIComponent(room.room_name)}&token=${encodeURIComponent(room.token)}&wsUrl=${encodeURIComponent(room.ws_url)}`;
+    await Share.share({
+      message: `انضم للاجتماع: ${room.title}\n${meetUrl}`,
+      title: room.title,
+    });
+  }, [room]);
 
   const endMeeting = useCallback(async () => {
     if (!room) return;
@@ -90,6 +117,7 @@ export default function SmartMeetingScreen() {
   if (!room) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top }}>
+        {/* Header */}
         <View style={{
           flexDirection: "row", alignItems: "center",
           paddingHorizontal: 16, paddingVertical: 12,
@@ -129,6 +157,7 @@ export default function SmartMeetingScreen() {
             ))}
           </View>
 
+          {/* Topic input */}
           <View>
             <AppText style={{ color: c.textSecondary, fontSize: 13, marginBottom: 8 }}>
               موضوع الاجتماع *
@@ -152,6 +181,7 @@ export default function SmartMeetingScreen() {
             />
           </View>
 
+          {/* Create button */}
           <TouchableOpacity
             onPress={createRoom}
             disabled={creating || !topic.trim()}
@@ -169,7 +199,7 @@ export default function SmartMeetingScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Ionicons name="videocam" size={18} color="#fff" />
                 <AppText style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
-                  بدء الاجتماع
+                  إنشاء الاجتماع
                 </AppText>
               </View>
             )}
@@ -181,15 +211,16 @@ export default function SmartMeetingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top }}>
+      {/* Header */}
       <View style={{
         flexDirection: "row", alignItems: "center",
         paddingHorizontal: 16, paddingVertical: 12,
         borderBottomWidth: 1, borderBottomColor: c.border, gap: 10,
       }}>
         <View style={{ flex: 1 }}>
-          <AppText style={{ color: c.textPrimary, fontSize: 15, fontWeight: "700" }}>{topic}</AppText>
-          <AppText style={{ color: "#25D366", fontSize: 11 }}>
-            {meetingEnded ? "انتهى الاجتماع" : "🔴 جارٍ الاجتماع"}
+          <AppText style={{ color: c.textPrimary, fontSize: 15, fontWeight: "700" }}>{room.title}</AppText>
+          <AppText style={{ color: meetingEnded ? c.textMuted : "#25D366", fontSize: 11 }}>
+            {meetingEnded ? "انتهى الاجتماع" : "🟢 الغرفة جاهزة"}
           </AppText>
         </View>
         {!meetingEnded && (
@@ -208,18 +239,67 @@ export default function SmartMeetingScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }}>
-        {/* Room info */}
+      <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+        {/* Room info card */}
         <View style={{
           padding: 16, borderRadius: 14,
-          backgroundColor: c.bgCard, borderWidth: 1, borderColor: c.border,
+          backgroundColor: c.bgCard, borderWidth: 1, borderColor: c.border, gap: 8,
         }}>
-          <AppText style={{ color: c.textMuted, fontSize: 11, marginBottom: 6 }}>رمز الغرفة</AppText>
-          <AppText style={{ color: c.accentCyan, fontSize: 14, fontWeight: "700" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <AppText style={{ color: c.textMuted, fontSize: 11 }}>اسم الغرفة</AppText>
+            <TouchableOpacity onPress={shareRoom}>
+              <Ionicons name="share-outline" size={18} color={c.accentBlue} />
+            </TouchableOpacity>
+          </View>
+          <AppText style={{ color: c.accentCyan, fontSize: 13, fontWeight: "700" }}>
             {room.room_name}
           </AppText>
         </View>
 
+        {/* Join button */}
+        {!meetingEnded && (
+          <TouchableOpacity
+            onPress={joinMeeting}
+            disabled={joining}
+            style={{
+              paddingVertical: 16, borderRadius: 14,
+              backgroundColor: "#25D366", alignItems: "center",
+              opacity: joining ? 0.7 : 1,
+            }}
+          >
+            {joining ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="videocam" size={18} color="#fff" />
+                <AppText style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+                  انضم للاجتماع
+                </AppText>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* Share button */}
+        {!meetingEnded && (
+          <TouchableOpacity
+            onPress={shareRoom}
+            style={{
+              paddingVertical: 14, borderRadius: 14,
+              backgroundColor: c.bgCard, alignItems: "center",
+              borderWidth: 1, borderColor: c.border,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="link-outline" size={18} color={c.accentBlue} />
+              <AppText style={{ color: c.accentBlue, fontSize: 14, fontWeight: "600" }}>
+                مشاركة الرابط
+              </AppText>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Loading AI */}
         {loadingActions && (
           <View style={{ alignItems: "center", paddingVertical: 32, gap: 12 }}>
             <ActivityIndicator color={c.accentBlue} />
@@ -229,6 +309,7 @@ export default function SmartMeetingScreen() {
           </View>
         )}
 
+        {/* Action items */}
         {actionItems.length > 0 && (
           <View>
             <AppText style={{ color: c.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 12 }}>
@@ -249,6 +330,7 @@ export default function SmartMeetingScreen() {
           </View>
         )}
 
+        {/* Transcript */}
         {transcript.length > 0 && (
           <View>
             <AppText style={{ color: c.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 12 }}>
