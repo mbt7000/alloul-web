@@ -28,6 +28,7 @@ import ApprovalDetailScreen from "../../features/companies/screens/ApprovalDetai
 import CompanyProfileScreen from "../../shared/screens/CompanyProfileScreen";
 import CompanyFilesScreen from "../../features/companies/screens/CompanyFilesScreen";
 import HiringBoardScreen from "../../features/companies/screens/HiringBoardScreen";
+import RecruitmentScreen from "../../features/companies/screens/RecruitmentScreen";
 import NotificationsScreen from "../../features/notifications/screens/NotificationsScreen";
 import RolesScreen from "../../features/companies/screens/RolesScreen";
 import InternalSearchScreen from "../../features/companies/screens/InternalSearchScreen";
@@ -126,6 +127,7 @@ export default function CompanyNavigator() {
       <Stack.Screen name="Roles" component={RolesScreen} />
       <Stack.Screen name="InternalSearch" component={InternalSearchScreen} />
       <Stack.Screen name="HiringBoard" component={HiringBoardScreen} />
+      <Stack.Screen name="Recruitment" component={RecruitmentScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="CompanyOnboarding" component={CompanyOnboardingScreen} />
       <Stack.Screen name="AiAssistant" component={AiAssistantScreen} />

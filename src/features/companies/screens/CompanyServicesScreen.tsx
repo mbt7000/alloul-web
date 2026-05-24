@@ -73,7 +73,7 @@ const ALL_SERVICES: ServiceItem[] = [
   { key: "roles",     icon: "key",              label: "الأدوار",     desc: "صلاحيات الفريق",         route: "Roles",          palette: "emerald" },
   // التوظيف
   { key: "jobs",      icon: "briefcase",        label: "الوظائف",     desc: "الوظائف المتاحة",        route: "Jobs",           palette: "indigo"  },
-  { key: "hiring",    icon: "person-add",       label: "التوظيف",     desc: "طلبات التوظيف",          route: "HiringBoard",    palette: "blue"    },
+  { key: "hiring",    icon: "person-add",       label: "التوظيف",     desc: "طلبات التوظيف",          route: "Recruitment",    palette: "blue"    },
   { key: "workid",    icon: "id-card",          label: "الهوية المهنية",desc: "بطاقة العمل الرقمية",  route: "WorkId",         palette: "cyan"    },
   // الذكاء
   { key: "ai",        icon: "sparkles",         label: "المساعد AI",  desc: "ذكاء اصطناعي متكامل",   route: "AiAssistant",    palette: "fuchsia" },

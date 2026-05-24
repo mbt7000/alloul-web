@@ -666,3 +666,77 @@ export const acceptEmailInvite = (token: string, body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+
+// ─── Recruitment (Workspace) ─────────────────────────────────────────────────
+
+export interface RecruitmentDashboard {
+  open_jobs: number;
+  total_applicants: number;
+  new_this_week: number;
+  hired: number;
+  pending_review: number;
+}
+
+export interface RecruitmentJob {
+  id: number;
+  title: string;
+  job_type?: string | null;
+  location?: string | null;
+  min_experience?: number | null;
+  is_active: boolean;
+  applicants_count: number;
+  created_at?: string | null;
+}
+
+export interface JobApplicant {
+  id: number;
+  user_id: number;
+  username: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  stage: string;
+  note?: string | null;
+  applied_at?: string | null;
+}
+
+export interface TalentProfile {
+  id: number;
+  username: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  bio?: string | null;
+  location?: string | null;
+}
+
+export const getRecruitmentDashboard = () =>
+  apiFetch<RecruitmentDashboard>("/workspace/recruitment/dashboard");
+
+export const getRecruitmentJobs = () =>
+  apiFetch<RecruitmentJob[]>("/workspace/recruitment/jobs");
+
+export const createRecruitmentJob = (data: {
+  title: string;
+  job_type?: string;
+  location?: string;
+  description?: string;
+  min_experience?: number;
+}) =>
+  apiFetch<RecruitmentJob>("/workspace/recruitment/jobs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const getJobApplicants = (jobId: number) =>
+  apiFetch<JobApplicant[]>(`/workspace/recruitment/jobs/${jobId}/applicants`);
+
+export const updateApplicantStage = (applicationId: number, stage: string) =>
+  apiFetch(`/workspace/recruitment/applications/${applicationId}/stage`, {
+    method: "PATCH",
+    body: JSON.stringify({ stage }),
+  });
+
+export const getTalentPool = (search?: string) => {
+  const q = search ? `?search=${encodeURIComponent(search)}` : "";
+  return apiFetch<TalentProfile[]>(`/workspace/recruitment/talent-pool${q}`).catch(() => [] as TalentProfile[]);
+};
+
