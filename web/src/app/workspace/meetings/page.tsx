@@ -45,17 +45,16 @@ export default function MeetingsPage() {
     if (!newTitle.trim()) return;
     setCreating(true); setError(null);
     try {
-      // Generate a room name from the title
-      const slug = newTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
-      const roomName = `alloul-${slug}-${Math.random().toString(36).slice(2, 8)}`;
-      const userName = encodeURIComponent(newTitle.trim().slice(0, 32));
-
-      const res = await fetch(
-        `/api/connection-details?roomName=${encodeURIComponent(roomName)}&participantName=${userName}`,
-        { headers: { Authorization: `Bearer ${getToken()}` } },
-      );
-      if (!res.ok) throw new Error('تعذّر إنشاء الغرفة');
+      const res = await fetch('/api/connection-details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ title: newTitle.trim() }),
+      });
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.error || 'تعذّر إنشاء الغرفة');
       setActiveRoom({ ws_url: data.serverUrl, token: data.participantToken, title: newTitle });
       setShowNew(false); setNewTitle('');
     } catch (e: any) { setError(e?.message || 'خطأ'); }
