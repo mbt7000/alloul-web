@@ -43,6 +43,8 @@ import JobsScreen from "../../features/companies/screens/JobsScreen";
 import WorkIdScreen from "../../features/companies/screens/WorkIdScreen";
 import CallHistoryScreen from "../../screens/calls/CallHistoryScreen";
 import AccountingScreen from "../../features/companies/screens/AccountingScreen";
+import DealsScreen from "../../features/companies/screens/DealsScreen";
+import WorkspaceAdsScreen from "../../features/companies/screens/WorkspaceAdsScreen";
 import DirectMessageScreen from "../../features/chat/screens/DirectMessageScreen";
 import PublicProfileScreen from "../../features/profile/screens/PublicProfileScreen";
 import InfoPlaceholderScreen from "../../shared/screens/InfoPlaceholderScreen";
@@ -139,6 +141,9 @@ export default function CompanyNavigator() {
       <Stack.Screen name="WorkId" component={WorkIdScreen} />
       <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
       <Stack.Screen name="Accounting" component={AccountingScreen} />
+      <Stack.Screen name="Deals" component={DealsScreen} />
+      <Stack.Screen name="WorkspaceAds" component={WorkspaceAdsScreen} />
+      <Stack.Screen name="Subscription" component={SubscriptionPlansScreen} />
       <Stack.Screen name="DirectMessage" component={DirectMessageScreen} />
       <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
       <Stack.Screen name="UserProfile" component={PublicProfileScreen} />

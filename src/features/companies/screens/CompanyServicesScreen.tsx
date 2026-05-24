@@ -87,9 +87,9 @@ const ALL_SERVICES: ServiceItem[] = [
   { key: "analytics", icon: "bar-chart",        label: "التحليلات",   desc: "إحصائيات وتقارير ذكية", route: "Reports",        palette: "indigo"  },
   { key: "ads",       icon: "megaphone",        label: "الإعلانات",   desc: "إعلانات مساحة العمل",   route: "WorkspaceAds",   palette: "orange"  },
   { key: "subs",      icon: "card",             label: "الاشتراكات",  desc: "خطط وفواتير الاشتراك",  route: "Subscription",   palette: "lime"    },
-  { key: "hierarchy", icon: "git-network",      label: "الهيكل التنظيمي",desc: "مخطط الشركة",        route: "CompanyTeamHierarchy", palette: "sky" },
+  { key: "hierarchy", icon: "git-network",      label: "الهيكل التنظيمي",desc: "مخطط الشركة",        route: "TeamHierarchy",        palette: "sky" },
   { key: "knowledge", icon: "library",          label: "قاعدة المعرفة",desc: "وثائق ومراجع الشركة",  route: "Knowledge",      palette: "rose"    },
-  { key: "profile",   icon: "business",         label: "ملف الشركة",  desc: "معلومات وإعدادات الشركة",route: "CompanyProfileMenu", palette: "amber" },
+  { key: "profile",   icon: "business",         label: "ملف الشركة",  desc: "معلومات وإعدادات الشركة",route: "Profile",            palette: "amber" },
 ];
 
 const CATEGORIES: Category[] = [
