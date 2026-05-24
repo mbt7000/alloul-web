@@ -25,8 +25,10 @@ from routers import (
     projects, notifications, phone,
     meetings, channels, cv, job_postings, calls,
     ai_extract, ai_confirm, security, ai_system, ai_monitoring, settings as settings_router, employees,
-    accounting,
+    accounting, livekit as livekit_router,
+    recruitment, careers,
 )
+from routers import billing as billing_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -187,6 +189,10 @@ app.include_router(settings_router.router)
 app.include_router(calls.router)
 app.include_router(employees.router)
 app.include_router(accounting.router)
+app.include_router(billing_router.router)
+app.include_router(livekit_router.router)
+app.include_router(recruitment.router)
+app.include_router(careers.router)
 
 
 @app.get("/")

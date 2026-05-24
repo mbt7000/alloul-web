@@ -160,6 +160,62 @@ def create_job(
     db.refresh(job)
     return _job_to_response(job, db, current_user.id)
 
+class SeekerProfile(BaseModel):
+    user_id: int
+    username: str
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    title: Optional[str] = None
+    location: Optional[str] = None
+    years_experience: Optional[int] = None
+    skills: Optional[List[str]] = None
+    languages: Optional[List[str]] = None
+    summary: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+
+@router.get("/seekers", response_model=List[SeekerProfile])
+def list_job_seekers(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    search: Optional[str] = Query(None),
+    limit: int = Query(50, le=100),
+):
+    """List all users with account_type='job_seeker' who have a CV."""
+    import json as _json
+    seekers = (
+        db.query(User, UserCV)
+        .join(UserCV, UserCV.user_id == User.id)
+        .filter(User.account_type == "job_seeker")
+        .limit(limit)
+        .all()
+    )
+    def _parse(v):
+        if not v: return []
+        try: return _json.loads(v)
+        except: return [v]
+
+    result = []
+    for u, cv in seekers:
+        if search:
+            haystack = f"{u.name or ''} {cv.title or ''} {cv.location or ''} {cv.skills or ''}".lower()
+            if search.lower() not in haystack:
+                continue
+        result.append(SeekerProfile(
+            user_id=u.id, username=u.username, name=u.name or cv.full_name,
+            avatar_url=u.avatar_url, title=cv.title, location=cv.location or u.location,
+            years_experience=cv.years_experience, skills=_parse(cv.skills),
+            languages=_parse(cv.languages), summary=cv.summary,
+            linkedin_url=cv.linkedin_url, portfolio_url=cv.portfolio_url,
+            phone=cv.phone, email=cv.email,
+        ))
+    return result
+
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_job(
     job_id: int,
@@ -258,3 +314,4 @@ def update_application_status(
         cover_letter=app.cover_letter, status=app.status,
         created_at=app.created_at.isoformat() if app.created_at else None,
     )
+

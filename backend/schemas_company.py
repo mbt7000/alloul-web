@@ -44,6 +44,8 @@ class SubscribeResponse(BaseModel):
 class SubscriptionStatusResponse(BaseModel):
     plan_id: Optional[str] = None
     status: Optional[str] = None
+    effective_status: Optional[str] = None   # grace | suspended | expired | active | trialing
+    days_remaining: int = 0                  # days left in current phase
     current_period_end: Optional[str] = None
     trial_end: Optional[str] = None
     cancel_at_period_end: bool = False

@@ -59,7 +59,11 @@ export default function OnboardingPage() {
 
   useEffect(() => { if (!isAuthenticated()) router.replace('/login'); }, [router]);
   useEffect(() => {
-    if (localStorage.getItem('alloul_onboarding_done') === 'true') router.replace('/');
+    const u = getCachedUser() as any;
+    // Only skip onboarding if BOTH flag is set AND account_type is configured
+    if (localStorage.getItem('alloul_onboarding_done') === 'true' && u?.account_type) {
+      router.replace('/workspace');
+    }
   }, [router]);
 
   const copyCode = () => {

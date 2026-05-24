@@ -35,6 +35,8 @@ class User(Base):
     employee_no = Column(String(8), unique=True, index=True, nullable=True)
     # Telegram chat ID — saved after first login, used for auto-auth
     telegram_chat_id = Column(String(32), unique=True, index=True, nullable=True)
+    # Account type: 'owner', 'job_seeker', 'employee'
+    account_type = Column(String(16), nullable=True)
 
 
 # ─── Follows ─────────────────────────────────────────────────────────────────
@@ -98,10 +100,26 @@ class Subscription(Base):
     current_period_end = Column(DateTime(timezone=True), nullable=True)
     trial_end = Column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end = Column(Integer, default=0)
+    dunning_step = Column(Integer, default=0)          # 0-4: which dunning email sent
+    dunning_last_sent = Column(DateTime(timezone=True), nullable=True)
+    frozen_at = Column(DateTime(timezone=True), nullable=True)
+    deletion_scheduled_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     company = relationship("Company", back_populates="subscriptions")
+
+
+class BillingEvent(Base):
+    __tablename__ = "billing_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(64), nullable=False)
+    # Types: dunning_1|dunning_2|dunning_3|dunning_4|status_change|payment_received|data_deleted|reactivated
+    description = Column(Text, nullable=True)
+    extra = Column(Text, nullable=True)  # JSON
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class Department(Base):
@@ -169,11 +187,30 @@ class EmailInvitation(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     company = relationship("Company")
-    inviter = relationship("User")
+    inviter = relationship("User", foreign_keys=[inviter_id])
+
+
+class JoinRequest(Base):
+    """User-initiated request to join a company (no invite needed). Admin reviews and accepts/rejects."""
+    __tablename__ = "join_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(16), default="pending")  # pending, accepted, rejected
+    message = Column(Text, nullable=True)
+    role = Column(String(32), default="employee")
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
 
     company = relationship("Company")
-    inviter = relationship("User", foreign_keys=[inviter_id])
-    invitee = relationship("User", foreign_keys=[invitee_id])
+    user = relationship("User", foreign_keys=[user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "user_id", name="uq_join_request_company_user"),
+    )
 
 
 class ActivityLog(Base):

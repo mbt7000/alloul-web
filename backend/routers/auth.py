@@ -167,6 +167,7 @@ def _user_to_response(user: User) -> UserResponse:
         posts_count=user.posts_count or 0,
         created_at=user.created_at.isoformat() if user.created_at else None,
         is_admin=user_is_admin(user),
+        account_type=getattr(user, "account_type", None),
     )
 
 
@@ -265,7 +266,19 @@ def me(
     db: Annotated[Session, Depends(get_db)],
 ):
     _ensure_icode(current_user, db)
-    return _user_to_response(current_user)
+    resp = _user_to_response(current_user)
+    try:
+        from models import CompanyMember, Subscription
+        mem = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
+        if mem:
+            resp.company_role = mem.role
+            sub = db.query(Subscription).filter(Subscription.company_id == mem.company_id).first()
+            if sub:
+                resp.plan = sub.plan_id
+                resp.subscription_status = sub.status
+    except Exception:
+        pass
+    return resp
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -286,6 +299,8 @@ def update_me(
         current_user.location = body.location
     if body.skills is not None:
         current_user.skills = body.skills
+    if body.account_type is not None and body.account_type in ('owner', 'job_seeker', 'employee'):
+        current_user.account_type = body.account_type
     if body.username is not None and body.username != current_user.username:
         if getattr(current_user, "username_changed", 0):
             raise HTTPException(

@@ -84,6 +84,36 @@ async def stripe_webhook(
             if sub_record:
                 sub_record.status = "canceled"
                 db.commit()
+
+        elif event["type"] == "invoice.payment_succeeded":
+            inv = event["data"]["object"]
+            sub_id = inv.get("subscription")
+            if sub_id:
+                sub_record = db.query(Subscription).filter(
+                    Subscription.stripe_subscription_id == sub_id
+                ).first()
+                if sub_record and settings.STRIPE_SECRET_KEY:
+                    stripe.api_key = settings.STRIPE_SECRET_KEY
+                    s = stripe.Subscription.retrieve(sub_id)
+                    sub_record.status = s.get("status", "active")
+                    if s.get("current_period_end"):
+                        sub_record.current_period_end = datetime.fromtimestamp(s["current_period_end"], tz=timezone.utc)
+                    if s.get("current_period_start"):
+                        sub_record.current_period_start = datetime.fromtimestamp(s["current_period_start"], tz=timezone.utc)
+                    sub_record.dunning_step = 0
+                    sub_record.dunning_last_sent = None
+                    db.commit()
+
+        elif event["type"] == "invoice.payment_failed":
+            inv = event["data"]["object"]
+            sub_id = inv.get("subscription")
+            if sub_id:
+                sub_record = db.query(Subscription).filter(
+                    Subscription.stripe_subscription_id == sub_id
+                ).first()
+                if sub_record:
+                    sub_record.status = "past_due"
+                    db.commit()
     finally:
         db.close()
 

@@ -54,6 +54,10 @@ class UserResponse(BaseModel):
     posts_count: int = 0
     created_at: Optional[str] = None
     is_admin: bool = False
+    account_type: Optional[str] = None  # 'owner', 'job_seeker', 'employee'
+    plan: Optional[str] = None
+    subscription_status: Optional[str] = None
+    company_role: Optional[str] = None  # owner / admin / manager / employee
 
     class Config:
         from_attributes = True
@@ -67,6 +71,7 @@ class UserUpdate(BaseModel):
     cover_url: Optional[str] = None
     location: Optional[str] = None
     skills: Optional[str] = None
+    account_type: Optional[str] = None  # 'owner', 'job_seeker', 'employee'
 
 
 class FirebaseResponse(BaseModel):

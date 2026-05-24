@@ -33,8 +33,9 @@ export default function SmartMeetingsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setMeetings(prev => [{ id: data.room_name, title, room_url: data.room_url, created_at: new Date().toISOString() }, ...prev]);
-        setActiveRoom(data.room_url);
+        const meetUrl = `https://meet.livekit.io/custom?liveKitUrl=${encodeURIComponent('wss://livekit.alloul.app')}&token=${encodeURIComponent(data.token)}`;
+        setMeetings(prev => [{ id: data.room_name, title, room_url: meetUrl, created_at: new Date().toISOString() }, ...prev]);
+        setActiveRoom(meetUrl);
         setTitle('');
       }
     } catch {

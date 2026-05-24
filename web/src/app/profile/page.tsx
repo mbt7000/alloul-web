@@ -194,10 +194,11 @@ export default function ProfilePage() {
               <div className="mb-1 px-3 py-1.5 rounded-xl border border-accent-500/30 bg-accent-500/10 flex items-center gap-1.5">
                 <Sparkles size={11} className="text-accent-400" />
                 <span className="text-accent-400 text-xs font-bold">
-                  {user.plan === 'professional' ? 'Pro'
-                   : user.plan === 'business' ? 'Business'
+                  {(user.plan === 'professional' || user.plan === 'pro') ? 'Pro'
+                   : (user.plan === 'business' || user.plan === 'enterprise' || user.plan === 'pro_plus') ? 'Business'
                    : user.plan === 'starter' ? 'Starter'
                    : user.subscription_status === 'trialing' ? 'Pro Trial'
+                   : user.subscription_status === 'active' ? 'Pro'
                    : 'مجاني'}
                 </span>
               </div>
