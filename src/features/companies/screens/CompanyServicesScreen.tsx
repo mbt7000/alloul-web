@@ -63,12 +63,16 @@ const ALL_SERVICES: ServiceItem[] = [
   { key: "files",     icon: "folder-open",      label: "الملفات",     desc: "مستنداتك ومرفقاتك",      route: "CompanyFiles",   palette: "violet"  },
   { key: "approvals", icon: "document-text",    label: "الموافقات",   desc: "طلبات تحتاج رد",         route: "Inbox",          palette: "sky"     },
   // التواصل
-  { key: "meetings",  icon: "videocam",         label: "اجتماعات",    desc: "جدول الاجتماعات",        route: "Meetings",       palette: "emerald" },
-  { key: "chat",      icon: "chatbubbles",      label: "الدردشة",     desc: "محادثات الفريق",         route: "Chat",           palette: "sky"     },
-  { key: "team",      icon: "people",           label: "الفريق",      desc: "أعضاء وهيكل الشركة",    route: "Team",           palette: "violet"  },
+  { key: "meetings",      icon: "videocam",         label: "اجتماعات",       desc: "جدول الاجتماعات",          route: "Meetings",       palette: "emerald" },
+  { key: "smart-meetings",icon: "mic",              label: "اجتماع ذكي",     desc: "تفريغ تلقائي + بنود AI",   route: "SmartMeeting",   palette: "cyan"    },
+  { key: "calls",         icon: "call",             label: "سجل المكالمات",  desc: "تاريخ المكالمات",           route: "CallHistory",    palette: "teal"    },
+  { key: "whatsapp",      icon: "logo-whatsapp",    label: "واتساب",         desc: "صندوق رسائل WhatsApp",     route: "WhatsAppInbox",  palette: "emerald" },
+  { key: "chat",          icon: "chatbubbles",      label: "الدردشة",        desc: "محادثات الفريق",            route: "Chat",           palette: "sky"     },
+  { key: "team",          icon: "people",           label: "الفريق",         desc: "أعضاء وهيكل الشركة",       route: "Team",           palette: "violet"  },
   // الإدارة
   { key: "crm",       icon: "trending-up",      label: "العملاء CRM", desc: "إدارة علاقات العملاء",   route: "CRM",            palette: "rose"    },
   { key: "accounting",icon: "calculator",       label: "المحاسبة",    desc: "المعاملات المالية",       route: "Accounting",     palette: "amber"   },
+  { key: "invoices",  icon: "receipt",          label: "الفواتير",    desc: "إنشاء وإرسال الفواتير",  route: "Invoices",       palette: "lime"    },
   { key: "deals",     icon: "pricetag",         label: "الصفقات",     desc: "تتبع الصفقات التجارية",  route: "Deals",          palette: "orange"  },
   { key: "roles",     icon: "key",              label: "الأدوار",     desc: "صلاحيات الفريق",         route: "Roles",          palette: "emerald" },
   // التوظيف
@@ -90,8 +94,8 @@ const ALL_SERVICES: ServiceItem[] = [
 
 const CATEGORIES: Category[] = [
   { title: "العمل والإنتاجية",    icon: "flash",        items: ALL_SERVICES.filter(s => ["tasks","projects","handover","files","approvals"].includes(s.key)) },
-  { title: "التواصل والتعاون",    icon: "chatbubbles",  items: ALL_SERVICES.filter(s => ["meetings","chat","team"].includes(s.key)) },
-  { title: "الإدارة والأعمال",    icon: "briefcase",    items: ALL_SERVICES.filter(s => ["crm","accounting","deals","roles"].includes(s.key)) },
+  { title: "التواصل والتعاون",    icon: "chatbubbles",  items: ALL_SERVICES.filter(s => ["meetings","smart-meetings","calls","whatsapp","chat","team"].includes(s.key)) },
+  { title: "الإدارة والأعمال",    icon: "briefcase",    items: ALL_SERVICES.filter(s => ["crm","accounting","invoices","deals","roles"].includes(s.key)) },
   { title: "التوظيف والموارد",    icon: "people-circle",items: ALL_SERVICES.filter(s => ["jobs","hiring","workid","hierarchy"].includes(s.key)) },
   { title: "الذكاء الاصطناعي",   icon: "sparkles",     items: ALL_SERVICES.filter(s => ["ai","search","aihub","analytics"].includes(s.key)) },
   { title: "النمو والتسويق",      icon: "trending-up",  items: ALL_SERVICES.filter(s => ["ads","subs","knowledge","profile"].includes(s.key)) },
