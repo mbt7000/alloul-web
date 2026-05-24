@@ -4,16 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
-  ArrowRight, Calendar, Video, Loader2, Clock, Plus, PhoneOff,
+  ArrowRight, Calendar, Video, Loader2, Clock, Plus,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { getMeetings, ApiError, type Meeting } from '@/lib/api-client';
 import { isAuthenticated, clearToken, getToken } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 
-const LiveKitRoom     = dynamic(() => import('@livekit/components-react').then(m => m.LiveKitRoom),     { ssr: false });
-const VideoConference = dynamic(() => import('@livekit/components-react').then(m => m.VideoConference), { ssr: false });
-
+const MeetingRoomOverlay = dynamic(() => import('./MeetingRoomOverlay'), { ssr: false });
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:   { label: 'مجدول',  bg: '#2E8BFF22', color: '#2E8BFF' },
@@ -23,38 +21,6 @@ const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }>
 };
 
 interface ActiveRoom { ws_url: string; token: string; title: string; }
-
-function RoomOverlay({ room, onLeave }: { room: ActiveRoom; onLeave: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col" dir="ltr">
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80 border-b border-white/10">
-        <span className="text-white font-black text-sm">{room.title}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-black">LIVE</span>
-          <button
-            onClick={onLeave}
-            className="flex items-center gap-1.5 text-red-400 text-xs font-bold px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10"
-          >
-            <PhoneOff size={13} /> مغادرة
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <LiveKitRoom
-          serverUrl={room.ws_url}
-          token={room.token}
-          connect={true}
-          audio={true}
-          video={true}
-          onDisconnected={onLeave}
-          style={{ height: '100%' }}
-        >
-          <VideoConference />
-        </LiveKitRoom>
-      </div>
-    </div>
-  );
-}
 
 export default function MeetingsPage() {
   const router = useRouter();
@@ -96,7 +62,7 @@ export default function MeetingsPage() {
     finally { setCreating(false); }
   };
 
-  if (activeRoom) return <RoomOverlay room={activeRoom} onLeave={() => setActiveRoom(null)} />;
+  if (activeRoom) return <MeetingRoomOverlay room={activeRoom} onLeave={() => setActiveRoom(null)} />;
 
   return (
     <AppShell>
