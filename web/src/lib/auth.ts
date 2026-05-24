@@ -23,6 +23,8 @@ export interface AuthUser {
   location?: string | null;
   plan?: string | null;
   subscription_status?: string | null;
+  company_role?: string | null;
+  account_type?: string | null;
   created_at?: string | null;
 }
 
