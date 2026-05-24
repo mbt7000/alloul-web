@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import {
   Building2, Users, CheckCircle, Loader2, XCircle,
   ArrowRight, LogIn, UserPlus,
 } from 'lucide-react';
-import { isAuthenticated, getToken } from '@/lib/auth';
+import { isAuthenticated } from '@/lib/auth';
 import { apiFetch } from '@/lib/api-client';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
@@ -22,7 +22,20 @@ interface Preview {
 
 type Stage = 'loading' | 'preview' | 'joining' | 'success' | 'error' | 'no-code';
 
+// useSearchParams requires Suspense in Next.js App Router
 export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#070B14' }}>
+        <Loader2 size={28} className="text-primary animate-spin" />
+      </div>
+    }>
+      <JoinPageInner />
+    </Suspense>
+  );
+}
+
+function JoinPageInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const code         = searchParams.get('code')?.trim().toUpperCase() ?? '';
