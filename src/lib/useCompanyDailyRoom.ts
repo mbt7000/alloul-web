@@ -1,10 +1,16 @@
 import { useCallback, useState } from "react";
 import { Alert } from "react-native";
-import { getCompanyDailyJoinUrl } from "../api";
-import { openDailyJoinUrl } from "./openDailyJoinUrl";
+import * as WebBrowser from "expo-web-browser";
+import { apiFetch } from "../api/client";
 
-const DAILY_HINT =
-  "تأكد من ضبط DAILY_API_KEY و DAILY_SUBDOMAIN على الخادم، وأنك عضو في شركة.";
+const LIVEKIT_MEET_URL = "https://alloul.app/workspace/smart-meetings";
+
+interface LiveKitRoom {
+  room_name: string;
+  token: string;
+  ws_url: string;
+  title: string;
+}
 
 export function useCompanyDailyRoom() {
   const [dailyLoading, setDailyLoading] = useState(false);
@@ -12,12 +18,20 @@ export function useCompanyDailyRoom() {
   const openCompanyDaily = useCallback(async () => {
     setDailyLoading(true);
     try {
-      const r = await getCompanyDailyJoinUrl();
-      await openDailyJoinUrl(r.join_url);
+      const data = await apiFetch<LiveKitRoom>("/livekit/rooms", {
+        method: "POST",
+        body: JSON.stringify({ title: "غرفة الشركة المباشرة" }),
+      });
+      const meetUrl = `${LIVEKIT_MEET_URL}?room=${encodeURIComponent(data.room_name)}&token=${encodeURIComponent(data.token)}&wsUrl=${encodeURIComponent(data.ws_url)}`;
+      await WebBrowser.openBrowserAsync(meetUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
     } catch (e: unknown) {
       const msg =
-        e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "تعذّر فتح Daily";
-      Alert.alert("غرفة Daily", `${msg}\n\n${DAILY_HINT}`, [{ text: "حسناً" }]);
+        e && typeof e === "object" && "message" in e
+          ? String((e as { message: string }).message)
+          : "تعذّر فتح الاجتماع";
+      Alert.alert("غرفة الشركة", msg, [{ text: "حسناً" }]);
     } finally {
       setDailyLoading(false);
     }
