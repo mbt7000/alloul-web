@@ -1,9 +1,7 @@
 import { useCallback, useState } from "react";
 import { Alert } from "react-native";
-import * as WebBrowser from "expo-web-browser";
+import { useNavigation } from "@react-navigation/native";
 import { apiFetch } from "../api/client";
-
-const LIVEKIT_MEET_URL = "https://alloul.app/workspace/smart-meetings";
 
 interface LiveKitRoom {
   room_name: string;
@@ -13,6 +11,7 @@ interface LiveKitRoom {
 }
 
 export function useCompanyDailyRoom() {
+  const navigation = useNavigation<any>();
   const [dailyLoading, setDailyLoading] = useState(false);
 
   const openCompanyDaily = useCallback(async () => {
@@ -22,9 +21,11 @@ export function useCompanyDailyRoom() {
         method: "POST",
         body: JSON.stringify({ title: "غرفة الشركة المباشرة" }),
       });
-      const meetUrl = `${LIVEKIT_MEET_URL}?room=${encodeURIComponent(data.room_name)}&token=${encodeURIComponent(data.token)}&wsUrl=${encodeURIComponent(data.ws_url)}`;
-      await WebBrowser.openBrowserAsync(meetUrl, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      navigation.navigate("LiveRoom", {
+        room_name: data.room_name,
+        token: data.token,
+        ws_url: data.ws_url,
+        title: data.title,
       });
     } catch (e: unknown) {
       const msg =
@@ -35,7 +36,7 @@ export function useCompanyDailyRoom() {
     } finally {
       setDailyLoading(false);
     }
-  }, []);
+  }, [navigation]);
 
   return { openCompanyDaily, dailyLoading };
 }

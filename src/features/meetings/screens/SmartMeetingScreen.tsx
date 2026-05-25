@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import * as WebBrowser from "expo-web-browser";
 import AppText from "../../../shared/ui/AppText";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { apiFetch } from "../../../api/client";
@@ -74,21 +73,15 @@ export default function SmartMeetingScreen() {
     }
   }, [topic]);
 
-  const joinMeeting = useCallback(async () => {
+  const joinMeeting = useCallback(() => {
     if (!room) return;
-    setJoining(true);
-    try {
-      const url = `${room.ws_url.replace("wss://", "https://").replace("ws://", "http://")}`;
-      const meetUrl = `${LIVEKIT_MEET_URL}?room=${encodeURIComponent(room.room_name)}&token=${encodeURIComponent(room.token)}&wsUrl=${encodeURIComponent(room.ws_url)}`;
-      await WebBrowser.openBrowserAsync(meetUrl, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
-    } catch {
-      Alert.alert("خطأ", "تعذّر فتح الاجتماع");
-    } finally {
-      setJoining(false);
-    }
-  }, [room]);
+    navigation.navigate("LiveRoom", {
+      room_name: room.room_name,
+      token: room.token,
+      ws_url: room.ws_url,
+      title: room.title,
+    });
+  }, [room, navigation]);
 
   const shareRoom = useCallback(async () => {
     if (!room) return;

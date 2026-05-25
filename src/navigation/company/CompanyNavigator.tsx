@@ -51,6 +51,7 @@ import InfoPlaceholderScreen from "../../shared/screens/InfoPlaceholderScreen";
 import WorkspaceAssistantScreen from "../../features/ai/screens/WorkspaceAssistantScreen";
 import WhatsAppInboxScreen from "../../features/whatsapp/screens/WhatsAppInboxScreen";
 import SmartMeetingScreen from "../../features/meetings/screens/SmartMeetingScreen";
+import LiveRoomScreen from "../../features/meetings/screens/LiveRoomScreen";
 import InvoiceListScreen from "../../features/invoicing/screens/InvoiceListScreen";
 
 const Stack = createNativeStackNavigator();
@@ -159,6 +160,7 @@ export default function CompanyNavigator() {
       {FEATURES.SMART_MEETINGS && (
         <Stack.Screen name="SmartMeeting" component={SmartMeetingScreen} />
       )}
+      <Stack.Screen name="LiveRoom" component={LiveRoomScreen} />
       {FEATURES.ZATCA_INVOICES && (
         <Stack.Screen name="Invoices" component={InvoiceListScreen} />
       )}
