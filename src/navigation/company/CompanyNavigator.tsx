@@ -14,6 +14,7 @@ import TasksScreen from "../../features/companies/screens/TasksScreen";
 import MeetingsScreen from "../../features/meetings/screens/MeetingsScreen";
 import HandoverScreen from "../../features/handover/screens/HandoverScreen";
 import ChatScreen from "../../features/chat/screens/ChatScreen";
+import RocketChatScreen from "../../features/chat/screens/RocketChatScreen";
 import ChannelDetailScreen from "../../features/chat/screens/ChannelDetailScreen";
 import KnowledgeScreen from "../../shared/screens/KnowledgeScreen";
 import CRMScreen from "../../features/companies/screens/CRMScreen";
@@ -113,6 +114,7 @@ export default function CompanyNavigator() {
       <Stack.Screen name="Meetings" component={MeetingsScreen} />
       <Stack.Screen name="Handover" component={HandoverScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="RocketChat" component={RocketChatScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChannelDetail" component={ChannelDetailScreen} />
       <Stack.Screen name="Knowledge" component={KnowledgeScreen} />
       <Stack.Screen name="CRM" component={CRMScreen} />

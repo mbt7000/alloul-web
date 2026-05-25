@@ -67,7 +67,7 @@ const ALL_SERVICES: ServiceItem[] = [
   { key: "smart-meetings",icon: "mic",              label: "اجتماع ذكي",     desc: "تفريغ تلقائي + بنود AI",   route: "SmartMeeting",   palette: "cyan"    },
   { key: "calls",         icon: "call",             label: "سجل المكالمات",  desc: "تاريخ المكالمات",           route: "CallHistory",    palette: "teal"    },
   { key: "whatsapp",      icon: "logo-whatsapp",    label: "واتساب",         desc: "صندوق رسائل WhatsApp",     route: "WhatsAppInbox",  palette: "emerald" },
-  { key: "chat",          icon: "chatbubbles",      label: "الدردشة",        desc: "محادثات الفريق",            route: "Chat",           palette: "sky"     },
+  { key: "chat",          icon: "chatbubbles",      label: "الدردشة",        desc: "محادثات الفريق",            route: "RocketChat",     palette: "sky"     },
   { key: "team",          icon: "people",           label: "الفريق",         desc: "أعضاء وهيكل الشركة",       route: "Team",           palette: "violet"  },
   // الإدارة
   { key: "crm",       icon: "trending-up",      label: "العملاء CRM", desc: "إدارة علاقات العملاء",   route: "CRM",            palette: "rose"    },

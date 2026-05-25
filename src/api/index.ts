@@ -4,7 +4,6 @@ export * from "./notifications.api";
 export * from "./companies.api";
 export * from "./search.api";
 export * from "./admin.api";
-export * from "./daily.api";
 export * from "./phone.api";
 export * from "./calls.api";
 export * from "./ai.api";
