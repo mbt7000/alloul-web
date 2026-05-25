@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { View, TouchableOpacity, ActivityIndicator, StatusBar } from "react-native";
 import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AppText from "../../../shared/ui/AppText";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import { getToken } from "../../../api/client";
 
 interface RouteParams {
   room_name: string;
@@ -27,14 +28,44 @@ export default function LiveRoomScreen() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  // جلب توكن المستخدم من SecureStore
+  useEffect(() => {
+    getToken().then(setAuthToken);
+  }, []);
 
   const meetUrl = `${MEET_BASE}?room=${encodeURIComponent(room_name ?? "")}&token=${encodeURIComponent(token ?? "")}&wsUrl=${encodeURIComponent(ws_url ?? "")}`;
+
+  // حقن التوكن في localStorage قبل تحميل الصفحة — يمنع شاشة تسجيل الدخول
+  const injectedJS = authToken
+    ? `
+      (function() {
+        try {
+          localStorage.setItem('alloul_token', ${JSON.stringify(authToken)});
+          localStorage.setItem('access_token', ${JSON.stringify(authToken)});
+        } catch(e) {}
+      })();
+      true;
+    `
+    : undefined;
+
+  // لا نحمّل الـ WebView حتى نجلب التوكن
+  if (authToken === null) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <ActivityIndicator color="#3b82f6" size="large" />
+        <AppText style={{ color: "#888", fontSize: 13, marginTop: 12 }}>جارٍ التحقق من الهوية...</AppText>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* Header bar */}
+      {/* Header */}
       <View style={{
         paddingTop: insets.top,
         backgroundColor: "#111",
@@ -47,10 +78,7 @@ export default function LiveRoomScreen() {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           hitSlop={10}
-          style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: "#ffffff18", alignItems: "center", justifyContent: "center",
-          }}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#ffffff18", alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="close" size={20} color="#fff" />
         </TouchableOpacity>
@@ -68,10 +96,7 @@ export default function LiveRoomScreen() {
         <TouchableOpacity
           onPress={() => webRef.current?.reload()}
           hitSlop={10}
-          style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: "#ffffff18", alignItems: "center", justifyContent: "center",
-          }}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#ffffff18", alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="refresh" size={18} color="#fff" />
         </TouchableOpacity>
@@ -83,11 +108,13 @@ export default function LiveRoomScreen() {
           ref={webRef}
           source={{ uri: meetUrl }}
           style={{ flex: 1, backgroundColor: "#000" }}
+          injectedJavaScriptBeforeContentLoaded={injectedJS}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           allowsFullscreenVideo
           javaScriptEnabled
           domStorageEnabled
+          sharedCookiesEnabled
           onLoadStart={() => setLoading(true)}
           onLoadEnd={() => setLoading(false)}
           onError={() => { setLoading(false); setError(true); }}
@@ -100,10 +127,7 @@ export default function LiveRoomScreen() {
           <AppText style={{ color: "#888", fontSize: 14 }}>تعذّر تحميل الاجتماع</AppText>
           <TouchableOpacity
             onPress={() => { setError(false); setLoading(true); }}
-            style={{
-              paddingHorizontal: 24, paddingVertical: 10,
-              borderRadius: 10, backgroundColor: "#ffffff18",
-            }}
+            style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10, backgroundColor: "#ffffff18" }}
           >
             <AppText style={{ color: "#fff", fontSize: 14 }}>إعادة المحاولة</AppText>
           </TouchableOpacity>
