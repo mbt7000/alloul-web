@@ -8,7 +8,7 @@ import {
   Video, Loader2,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { getCallHistory, getCompanyDailyJoinUrl, ApiError, type CallHistoryItem } from '@/lib/api-client';
+import { getCallHistory, apiFetch, ApiError, type CallHistoryItem } from '@/lib/api-client';
 import { isAuthenticated } from '@/lib/auth';
 
 function formatDuration(s?: number | null) {
@@ -50,10 +50,13 @@ export default function CallsPage() {
   const startCompanyCall = async () => {
     setJoining(true);
     try {
-      const data = await getCompanyDailyJoinUrl();
-      if (data?.join_url) window.open(data.join_url, '_blank');
+      const data = await apiFetch<{ room_name: string; token: string; ws_url: string; title: string }>(
+        '/livekit/rooms', { method: 'POST', body: JSON.stringify({ title: 'غرفة الشركة المباشرة' }) }
+      );
+      const url = `/workspace/smart-meetings?room=${encodeURIComponent(data.room_name)}&token=${encodeURIComponent(data.token)}&wsUrl=${encodeURIComponent(data.ws_url)}`;
+      window.location.href = url;
     } catch {
-      alert('تعذّر بدء المكالمة — تأكد من خطة الشركة.');
+      alert('تعذّر بدء المكالمة — تأكد من الاتصال بالسيرفر.');
     } finally {
       setJoining(false);
     }

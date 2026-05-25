@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, Loader2, Users, Clock, CheckCircle, XCircle, UserPlus, X, Mail, Send } from 'lucide-react';
+import { ArrowRight, Loader2, Users, Clock, CheckCircle, XCircle, UserPlus, X, Mail, Send, MessageCircle } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { getCompanyMembers, ApiError, type CompanyMember, apiFetch } from '@/lib/api-client';
 import { isAuthenticated, clearToken, getCachedUser } from '@/lib/auth';
@@ -38,6 +38,7 @@ export default function TeamHierarchyPage() {
   const [inviteRole, setInviteRole] = useState('employee');
   const [inviting, setInviting] = useState(false);
   const [inviteMsg, setInviteMsg] = useState('');
+  const [dmLoading, setDmLoading] = useState<number | null>(null);
 
   const user = getCachedUser() as any;
   const isAdmin = ['owner', 'admin', 'manager'].includes(user?.role ?? '');
@@ -99,6 +100,14 @@ export default function TeamHierarchyPage() {
     } catch (e: any) {
       setInviteMsg(e?.detail || 'فشل إرسال الدعوة');
     } finally { setInviting(false); }
+  };
+
+  const openDm = async (memberId: number) => {
+    setDmLoading(memberId);
+    try {
+      await apiFetch('/chat/dm', { method: 'POST', body: JSON.stringify({ target_user_id: memberId }) });
+      router.push('/workspace/chat');
+    } catch { } finally { setDmLoading(null); }
   };
 
   // Group by role
@@ -329,6 +338,19 @@ export default function TeamHierarchyPage() {
                               </div>
                             )}
                           </div>
+                          {m.id !== user?.id && (
+                            <button
+                              onClick={() => openDm(m.id)}
+                              disabled={dmLoading === m.id}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/20 transition-colors"
+                              title="رسالة مباشرة"
+                            >
+                              {dmLoading === m.id
+                                ? <Loader2 size={13} className="animate-spin text-primary-400" />
+                                : <MessageCircle size={13} className="text-primary-400" />
+                              }
+                            </button>
+                          )}
                         </div>
 
                         {/* Connector dot */}
