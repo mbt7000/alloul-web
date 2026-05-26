@@ -63,9 +63,10 @@ const ALL_SERVICES: ServiceItem[] = [
   { key: "files",     icon: "folder-open",      label: "الملفات",     desc: "مستنداتك ومرفقاتك",      route: "CompanyFiles",   palette: "violet"  },
   { key: "approvals", icon: "document-text",    label: "الموافقات",   desc: "طلبات تحتاج رد",         route: "Inbox",          palette: "sky"     },
   // التواصل
-  { key: "meetings",      icon: "videocam",         label: "اجتماعات",       desc: "جدول الاجتماعات",          route: "Meetings",       palette: "emerald" },
-  { key: "smart-meetings",icon: "mic",              label: "اجتماع ذكي",     desc: "تفريغ تلقائي + بنود AI",   route: "SmartMeeting",   palette: "cyan"    },
-  { key: "calls",         icon: "call",             label: "سجل المكالمات",  desc: "تاريخ المكالمات",           route: "CallHistory",    palette: "teal"    },
+  { key: "meetings",      icon: "videocam",         label: "الاجتماعات",     desc: "أعضاء + مكالمات + شات",   route: "Meetings",       palette: "emerald" },
+  // مخفية مؤقتاً — تُفعَّل عند الحاجة
+  // { key: "smart-meetings",icon: "mic",              label: "اجتماع ذكي",     desc: "تفريغ تلقائي + بنود AI",   route: "SmartMeeting",   palette: "cyan"    },
+  // { key: "calls",         icon: "call",             label: "سجل المكالمات",  desc: "تاريخ المكالمات",           route: "CallHistory",    palette: "teal"    },
   { key: "whatsapp",      icon: "logo-whatsapp",    label: "واتساب",         desc: "صندوق رسائل WhatsApp",     route: "WhatsAppInbox",  palette: "emerald" },
   { key: "chat",          icon: "chatbubbles",      label: "الدردشة",        desc: "محادثات الفريق",            route: "RocketChat",     palette: "sky"     },
   { key: "team",          icon: "people",           label: "الفريق",         desc: "أعضاء وهيكل الشركة",       route: "Team",           palette: "violet"  },
@@ -94,7 +95,7 @@ const ALL_SERVICES: ServiceItem[] = [
 
 const CATEGORIES: Category[] = [
   { title: "العمل والإنتاجية",    icon: "flash",        items: ALL_SERVICES.filter(s => ["tasks","projects","handover","files","approvals"].includes(s.key)) },
-  { title: "التواصل والتعاون",    icon: "chatbubbles",  items: ALL_SERVICES.filter(s => ["meetings","smart-meetings","calls","whatsapp","chat","team"].includes(s.key)) },
+  { title: "التواصل والتعاون",    icon: "chatbubbles",  items: ALL_SERVICES.filter(s => ["meetings","whatsapp","chat","team"].includes(s.key)) },
   { title: "الإدارة والأعمال",    icon: "briefcase",    items: ALL_SERVICES.filter(s => ["crm","accounting","invoices","deals","roles"].includes(s.key)) },
   { title: "التوظيف والموارد",    icon: "people-circle",items: ALL_SERVICES.filter(s => ["jobs","hiring","workid","hierarchy"].includes(s.key)) },
   { title: "الذكاء الاصطناعي",   icon: "sparkles",     items: ALL_SERVICES.filter(s => ["ai","search","aihub","analytics"].includes(s.key)) },

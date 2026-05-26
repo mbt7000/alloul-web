@@ -52,6 +52,7 @@ import InfoPlaceholderScreen from "../../shared/screens/InfoPlaceholderScreen";
 import WorkspaceAssistantScreen from "../../features/ai/screens/WorkspaceAssistantScreen";
 import WhatsAppInboxScreen from "../../features/whatsapp/screens/WhatsAppInboxScreen";
 import SmartMeetingScreen from "../../features/meetings/screens/SmartMeetingScreen";
+import TeamMeetingsScreen from "../../features/meetings/screens/TeamMeetingsScreen";
 import LiveRoomScreen from "../../features/meetings/screens/LiveRoomScreen";
 import InvoiceListScreen from "../../features/invoicing/screens/InvoiceListScreen";
 
@@ -111,7 +112,8 @@ export default function CompanyNavigator() {
       <Stack.Screen name="Team" component={TeamScreen} />
       <Stack.Screen name="Projects" component={ProjectsScreen} />
       <Stack.Screen name="Tasks" component={TasksScreen} />
-      <Stack.Screen name="Meetings" component={MeetingsScreen} />
+      <Stack.Screen name="Meetings" component={TeamMeetingsScreen} />
+      <Stack.Screen name="MeetingsOld" component={MeetingsScreen} />
       <Stack.Screen name="Handover" component={HandoverScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RocketChat" component={RocketChatScreen} options={{ headerShown: false }} />
