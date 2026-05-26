@@ -20,9 +20,6 @@ import { getOnboardingCompleted, setOnboardingCompleted } from "./src/storage/se
 import RootNavigation from "./src/navigation/RootNavigator";
 import AuthNavigator from "./src/navigation/auth/AuthNavigator";
 import WebLandingScreen from "./src/features/web/WebLandingScreen";
-import { CallProvider } from "./src/context/CallContext";
-import IncomingCallScreen from "./src/components/calls/IncomingCallScreen";
-import DailyCallScreen from "./src/components/calls/DailyCallScreen";
 
 // ─── Global Error Boundary ────────────────────────────────────────────────────
 interface ErrorBoundaryState { hasError: boolean; error: string | null }
@@ -164,12 +161,7 @@ export default function App() {
               <NotificationsProvider>
                 <CompanyProvider>
                   <HomeModeProvider>
-                    <CallProvider>
-                      <AppNavigation />
-                      {/* Global call overlays — rendered above Navigation */}
-                      <IncomingCallScreen />
-                      <DailyCallScreen />
-                    </CallProvider>
+                    <AppNavigation />
                   </HomeModeProvider>
                 </CompanyProvider>
               </NotificationsProvider>
