@@ -42,7 +42,6 @@ import SubscriptionPlansScreen from "../../features/companies/screens/Subscripti
 import JobApplicationsScreen from "../../features/companies/screens/JobApplicationsScreen";
 import JobsScreen from "../../features/companies/screens/JobsScreen";
 import WorkIdScreen from "../../features/companies/screens/WorkIdScreen";
-import CallHistoryScreen from "../../screens/calls/CallHistoryScreen";
 import AccountingScreen from "../../features/companies/screens/AccountingScreen";
 import DealsScreen from "../../features/companies/screens/DealsScreen";
 import WorkspaceAdsScreen from "../../features/companies/screens/WorkspaceAdsScreen";
@@ -144,7 +143,6 @@ export default function CompanyNavigator() {
       <Stack.Screen name="Jobs" component={JobsScreen} />
       <Stack.Screen name="JobApplications" component={JobApplicationsScreen} />
       <Stack.Screen name="WorkId" component={WorkIdScreen} />
-      <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
       <Stack.Screen name="Accounting" component={AccountingScreen} />
       <Stack.Screen name="Deals" component={DealsScreen} />
       <Stack.Screen name="WorkspaceAds" component={WorkspaceAdsScreen} />

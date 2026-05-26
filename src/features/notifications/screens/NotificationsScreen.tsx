@@ -168,7 +168,7 @@ export default function NotificationsScreen() {
       return;
     }
     if (type.includes("call") && refId) {
-      navigation.navigate("CallHistory");
+      navigation.navigate("Meetings");
       return;
     }
     // Default: just mark as read (no navigation)
