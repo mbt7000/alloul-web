@@ -62,7 +62,7 @@ function CallCard({ url, callerName, title }: { url: string; callerName: string;
 }
 
 function MessageBubble({ msg, showAvatar }: { msg: Message; showAvatar: boolean }) {
-  const callMatch = msg.text.match(/https:\/\/alloul\.app\/workspace\/smart-meetings\S*/);
+  const callMatch = msg.text.match(/https:\/\/alloul\.app\/(?:meet|workspace\/smart-meetings)\S*/);
   const titleMatch = msg.text.match(/مكالمة[:\s]+(.+?)(?:\s*[|\n]|$)/);
   const callerMatch = msg.text.match(/^(.+?)\s+بدأ/);
 

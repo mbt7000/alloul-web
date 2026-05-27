@@ -6,13 +6,19 @@ import { useAuth } from "../state/auth/AuthContext";
 import { saveExpoPushToken } from "../api/calls.api";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const isCall = notification.request.content.data?.type === "incoming_call";
+    return {
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      priority: isCall
+        ? Notifications.AndroidNotificationPriority.MAX
+        : Notifications.AndroidNotificationPriority.DEFAULT,
+    };
+  },
 });
 
 async function registerForPushNotifications(): Promise<string | null> {

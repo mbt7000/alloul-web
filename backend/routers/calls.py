@@ -329,23 +329,33 @@ async def initiate_call(
     if receiver.presence_status == "busy":
         raise HTTPException(409, "المستخدم مشغول حالياً")
 
-    # Create 1-on-1 Daily room
-    from routers.daily_workspace import create_1on1_room
-    room_data = await create_1on1_room(current_user.id, body.receiver_id)
+    # Create 1-on-1 LiveKit room (deterministic name so both sides join same room)
+    from routers.livekit import _make_token, LIVEKIT_WS_URL
+    from models import CompanyMember
+    mem = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
+    company_id = mem.company_id if mem else 0
+    uid1, uid2 = min(current_user.id, body.receiver_id), max(current_user.id, body.receiver_id)
+    room_name = f"c{company_id}-1on1-{uid1}-{uid2}"
+
+    caller_name = current_user.name or current_user.username or str(current_user.id)
+    caller_token = _make_token(
+        room_name=room_name,
+        identity=str(current_user.id),
+        display_name=caller_name,
+    )
 
     log = CallLog(
         caller_id=current_user.id,
         receiver_id=body.receiver_id,
         call_type=body.call_type,
         status="ringing",
-        room_url=room_data["join_url"],
-        room_name=room_data["room_name"],
+        room_url=None,
+        room_name=room_name,
     )
     db.add(log)
     db.commit()
     db.refresh(log)
 
-    caller_name = current_user.name or current_user.username
     call_payload = {
         "type": "incoming_call",
         "call_id": log.id,
@@ -353,7 +363,8 @@ async def initiate_call(
         "caller_name": caller_name,
         "caller_avatar": current_user.avatar_url,
         "call_type": body.call_type,
-        "room_url": room_data["join_url"],
+        "room_name": room_name,
+        "ws_url": LIVEKIT_WS_URL,
     }
 
     delivered = await call_manager.send(body.receiver_id, call_payload)
@@ -369,8 +380,9 @@ async def initiate_call(
 
     return {
         "call_id": log.id,
-        "room_url": room_data["join_url"],
-        "room_name": room_data["room_name"],
+        "room_name": room_name,
+        "token": caller_token,
+        "ws_url": LIVEKIT_WS_URL,
     }
 
 
@@ -391,13 +403,27 @@ async def accept_call(
     current_user.presence_status = "busy"
     db.commit()
 
+    from routers.livekit import _make_token, LIVEKIT_WS_URL
+    receiver_name = current_user.name or current_user.username or str(current_user.id)
+    receiver_token = _make_token(
+        room_name=log.room_name,
+        identity=str(current_user.id),
+        display_name=receiver_name,
+    )
+
     await call_manager.send(log.caller_id, {
         "type": "call_accepted",
         "call_id": call_id,
-        "room_url": log.room_url,
+        "room_name": log.room_name,
+        "ws_url": LIVEKIT_WS_URL,
     })
 
-    return {"room_url": log.room_url, "room_name": log.room_name}
+    return {
+        "call_id": call_id,
+        "room_name": log.room_name,
+        "token": receiver_token,
+        "ws_url": LIVEKIT_WS_URL,
+    }
 
 
 @router.post("/call/reject/{call_id}")

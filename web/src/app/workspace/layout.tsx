@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getCachedUser, isAuthenticated } from '@/lib/auth';
 import { apiFetch } from '@/lib/api-client';
 import { AlertTriangle, X, CreditCard } from 'lucide-react';
+import IncomingCallOverlay from '@/components/IncomingCallOverlay';
 
 // ── Billing context (consumed by any workspace page that needs it) ──────────
 interface BillingCtx { effectiveStatus: string; daysRemaining: number; }
@@ -108,6 +109,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           <GraceBanner days={billingStatus.daysRemaining} onDismiss={() => setShowBanner(false)} />
         )}
         {children}
+        <IncomingCallOverlay />
       </div>
     </BillingContext.Provider>
   );

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>غرفة المكالمة</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #070B14; color: #fff; font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
+
+  #status { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
+  #status.hidden { display: none; }
+  .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-text { font-size: 14px; color: rgba(255,255,255,0.5); }
+  .error-box { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 12px; padding: 16px 24px; text-align: center; max-width: 300px; }
+  .error-box h3 { color: #f87171; margin-bottom: 8px; font-size: 15px; }
+  .error-box p { color: rgba(255,255,255,0.5); font-size: 12px; line-height: 1.5; }
+  .retry-btn { margin-top: 12px; padding: 8px 20px; border-radius: 8px; background: #3b82f6; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+
+  #room { width: 100%; height: 100%; display: none; flex-direction: column; }
+  #room.active { display: flex; }
+
+  /* Top bar */
+  #topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #0d1117; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+  .live-badge { display: flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35); font-size: 11px; font-weight: 700; color: #f87171; }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #f87171; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  #room-title { flex: 1; font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #participant-count { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+  /* Video grid */
+  #video-grid { flex: 1; display: grid; gap: 4px; padding: 4px; overflow: hidden; background: #0a0d16; min-height: 0; }
+  .video-cell { position: relative; background: #111827; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .video-cell video { width: 100%; height: 100%; object-fit: cover; }
+  .video-cell .name-tag { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #fff; }
+  .video-cell .avatar { width: 64px; height: 64px; border-radius: 50%; background: rgba(46,139,255,0.2); border: 2px solid rgba(46,139,255,0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #3b82f6; }
+  .muted-icon { position: absolute; top: 8px; right: 8px; background: rgba(239,68,68,0.8); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+
+  /* Controls */
+  #controls { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px; background: #0d1117; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+  .ctrl-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .ctrl-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+  .ctrl-circle:active { transform: scale(0.92); }
+  .ctrl-label { font-size: 10px; color: rgba(255,255,255,0.35); }
+  .ctrl-active { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+  .ctrl-muted  { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); }
+  .ctrl-end    { background: #ef4444; border: none; }
+  svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<!-- Loading/Error state -->
+<div id="status">
+  <div class="spinner"></div>
+  <p class="status-text" id="status-text">جارٍ الاتصال...</p>
+</div>
+
+<!-- Room UI -->
+<div id="room">
+  <div id="topbar">
+    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+    <span id="room-title">غرفة المكالمة</span>
+    <span id="participant-count">1</span>
+  </div>
+  <div id="video-grid"></div>
+  <div id="controls">
+    <div class="ctrl-btn" id="btn-mic" onclick="toggleMic()">
+      <div class="ctrl-circle ctrl-active" id="mic-circle">
+        <svg id="mic-on" color="#e2e8f0" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <svg id="mic-off" color="#f87171" viewBox="0 0 24 24" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </div>
+      <span class="ctrl-label" id="mic-label">كتم</span>
+    </div>
+    <div class="ctrl-btn" id="btn-cam" onclick="toggleCam()">
+      <div class="ctrl-circle ctrl-active" id="cam-circle">
+        <svg id="cam-on" color="#e2e8f0" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <svg id="cam-off" color="#f87171" viewBox="0 0 24 24" style="display:none"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </div>
+      <span class="ctrl-label" id="cam-label">إيقاف</span>
+    </div>
+    <div class="ctrl-btn" onclick="leaveRoom()">
+      <div class="ctrl-circle ctrl-end">
+        <svg color="#fff" viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C9.44 17.29 7.76 15.57 6.32 13.47A19.79 19.79 0 0 1 3.25 4.84 2 2 0 0 1 5.24 2.66h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.22 10.47a16 16 0 0 0 1.46 2.84z" style="fill:none"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
+      </div>
+      <span class="ctrl-label" style="color:#f87171">إنهاء</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const WS_URL     = params.get('wsUrl') || 'wss://livekit.alloul.app';
+const TOKEN      = params.get('token') || '';
+const CALL_ID    = params.get('callId') || '';
+const AUTH_TOKEN = params.get('authToken') || '';
+const API_BASE   = 'https://api.alloul.app';
+
+let room = null;
+let micEnabled = true;
+let camEnabled = true;
+let callEndedByUs = false;
+const participants = new Map();
+
+async function endCallOnServer() {
+  if (!CALL_ID || !AUTH_TOKEN || callEndedByUs) return;
+  callEndedByUs = true;
+  try {
+    await fetch(`${API_BASE}/call/end/${CALL_ID}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+    });
+  } catch { /* ignore — server will timeout the call anyway */ }
+}
+
+function setStatus(text, error) {
+  const el = document.getElementById('status');
+  const txt = document.getElementById('status-text');
+  el.classList.remove('hidden');
+  document.getElementById('room').classList.remove('active');
+  if (error) {
+    el.innerHTML = `<div class="error-box"><h3>فشل الاتصال</h3><p>${text}</p><button class="retry-btn" onclick="location.reload()">إعادة المحاولة</button></div>`;
+  } else {
+    el.innerHTML = `<div class="spinner"></div><p class="status-text">${text}</p>`;
+  }
+}
+
+function showRoom() {
+  document.getElementById('status').classList.add('hidden');
+  document.getElementById('room').classList.add('active');
+}
+
+function updateGrid() {
+  const grid = document.getElementById('video-grid');
+  const count = participants.size;
+  if (count <= 1) { grid.style.gridTemplateColumns = '1fr'; }
+  else if (count <= 2) { grid.style.gridTemplateColumns = '1fr 1fr'; }
+  else if (count <= 4) { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
+  else { grid.style.gridTemplateColumns = 'repeat(3, 1fr)'; }
+  document.getElementById('participant-count').textContent = count + ' مشاركين';
+}
+
+function getInitials(name) {
+  return (name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+}
+
+function addParticipant(participant) {
+  if (participants.has(participant.sid)) return;
+  const cell = document.createElement('div');
+  cell.className = 'video-cell';
+  cell.id = 'cell-' + participant.sid;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = getInitials(participant.name || participant.identity);
+
+  const video = document.createElement('video');
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = participant.isLocal;
+  video.style.display = 'none';
+
+  const nameTag = document.createElement('div');
+  nameTag.className = 'name-tag';
+  nameTag.textContent = participant.name || participant.identity || 'مشارك';
+
+  cell.appendChild(video);
+  cell.appendChild(avatar);
+  cell.appendChild(nameTag);
+  document.getElementById('video-grid').appendChild(cell);
+  participants.set(participant.sid, { cell, video, avatar });
+  updateGrid();
+
+  // Subscribe to existing tracks
+  participant.trackPublications.forEach(pub => {
+    if (pub.isSubscribed && pub.track) attachTrack(participant, pub.track);
+  });
+}
+
+function removeParticipant(participant) {
+  const p = participants.get(participant.sid);
+  if (p) { p.cell.remove(); participants.delete(participant.sid); updateGrid(); }
+}
+
+function attachTrack(participant, track) {
+  const p = participants.get(participant.sid);
+  if (!p) return;
+  if (track.kind === 'video') {
+    track.attach(p.video);
+    p.video.style.display = 'block';
+    p.avatar.style.display = 'none';
+  } else if (track.kind === 'audio' && !participant.isLocal) {
+    const audio = track.attach();
+    document.body.appendChild(audio);
+  }
+}
+
+function detachTrack(participant, track) {
+  const p = participants.get(participant.sid);
+  if (!p) return;
+  if (track.kind === 'video') {
+    track.detach(p.video);
+    p.video.style.display = 'none';
+    p.avatar.style.display = 'flex';
+  }
+}
+
+async function connect() {
+  if (!TOKEN) { setStatus('رابط المكالمة غير صالح — لا يوجد token', true); return; }
+  setStatus('جارٍ الاتصال...');
+
+  room = new LivekitClient.Room({
+    adaptiveStream: true,
+    dynacast: true,
+    publishDefaults: { simulcast: false },
+  });
+
+  room.on(LivekitClient.RoomEvent.Connected, () => {
+    showRoom();
+    // Add local participant first
+    addParticipant(room.localParticipant);
+    // Add existing remote participants
+    room.remoteParticipants.forEach(p => addParticipant(p));
+  });
+
+  room.on(LivekitClient.RoomEvent.ParticipantConnected, p => addParticipant(p));
+  room.on(LivekitClient.RoomEvent.ParticipantDisconnected, p => removeParticipant(p));
+
+  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, participant) => {
+    attachTrack(participant, track);
+  });
+  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+    detachTrack(participant, track);
+  });
+  room.on(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
+    if (pub.track) attachTrack(room.localParticipant, pub.track);
+  });
+
+  // DisconnectReason enum: 0=UNKNOWN, 1=CLIENT_INITIATED, 2=DUPLICATE_IDENTITY,
+  // 3=SERVER_SHUTDOWN, 4=PARTICIPANT_REMOVED, 6=JOIN_FAILURE, 9=SIGNAL_CLOSE
+  room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
+    const DR = LivekitClient.DisconnectReason || {};
+    const clientLeft = reason === 1 || reason === DR.CLIENT_INITIATED;
+    if (clientLeft || reason == null) {
+      window.close();
+      history.back();
+      return;
+    }
+    if (reason === 2 || reason === DR.DUPLICATE_IDENTITY) {
+      // Another session opened — wait for server cleanup then reload
+      setStatus('يتم الاتصال... جارٍ إعادة المحاولة', false);
+      setTimeout(() => location.reload(), 3000);
+      return;
+    }
+    const msgs = {
+      3: 'أُعيد تشغيل السيرفر — حاول مجدداً',
+      4: 'تمت إزالتك من الغرفة',
+      6: 'فشل الانضمام — تحقق من صلاحية الرابط',
+      9: 'انقطع الاتصال — تحقق من الشبكة',
+    };
+    setStatus(msgs[reason] || 'انقطع الاتصال، أعد المحاولة', true);
+  });
+
+  try {
+    await room.connect(WS_URL, TOKEN, { autoSubscribe: true });
+    await room.localParticipant.enableCameraAndMicrophone();
+  } catch (e) {
+    console.error('LiveKit connect error:', e);
+    const msg = String(e?.message || e || '');
+    if (msg.includes('duplicate') || msg.includes('Duplicate')) {
+      setStatus('يتم الاتصال... جارٍ إعادة المحاولة', false);
+      setTimeout(() => location.reload(), 3000);
+    } else {
+      setStatus('تعذّر الاتصال: ' + msg, true);
+    }
+  }
+}
+
+async function toggleMic() {
+  if (!room) return;
+  micEnabled = !micEnabled;
+  await room.localParticipant.setMicrophoneEnabled(micEnabled);
+  document.getElementById('mic-on').style.display  = micEnabled ? '' : 'none';
+  document.getElementById('mic-off').style.display = micEnabled ? 'none' : '';
+  document.getElementById('mic-circle').className = 'ctrl-circle ' + (micEnabled ? 'ctrl-active' : 'ctrl-muted');
+  document.getElementById('mic-label').textContent  = micEnabled ? 'كتم' : 'صوت';
+}
+
+async function toggleCam() {
+  if (!room) return;
+  camEnabled = !camEnabled;
+  await room.localParticipant.setCameraEnabled(camEnabled);
+  document.getElementById('cam-on').style.display  = camEnabled ? '' : 'none';
+  document.getElementById('cam-off').style.display = camEnabled ? 'none' : '';
+  document.getElementById('cam-circle').className = 'ctrl-circle ' + (camEnabled ? 'ctrl-active' : 'ctrl-muted');
+  document.getElementById('cam-label').textContent  = camEnabled ? 'إيقاف' : 'تشغيل';
+}
+
+async function leaveRoom() {
+  await endCallOnServer();
+  if (room) room.disconnect();
+  window.close();
+  history.back();
+}
+
+connect();
+</script>
+</body>
+</html>

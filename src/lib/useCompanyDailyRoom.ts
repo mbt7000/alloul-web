@@ -17,9 +17,8 @@ export function useCompanyDailyRoom() {
   const openCompanyDaily = useCallback(async () => {
     setDailyLoading(true);
     try {
-      const data = await apiFetch<LiveKitRoom>("/livekit/rooms", {
-        method: "POST",
-        body: JSON.stringify({ title: "غرفة الشركة المباشرة" }),
+      const data = await apiFetch<LiveKitRoom>("/livekit/company-room", {
+        method: "GET",
       });
       navigation.navigate("LiveRoom", {
         room_name: data.room_name,

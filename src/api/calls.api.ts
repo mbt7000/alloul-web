@@ -14,8 +14,16 @@ export interface CallLog {
 
 export interface InitiateCallResult {
   call_id: number;
-  room_url: string;
   room_name: string;
+  token: string;
+  ws_url: string;
+}
+
+export interface AcceptCallResult {
+  call_id: number;
+  room_name: string;
+  token: string;
+  ws_url: string;
 }
 
 export interface PresenceStatus {
@@ -30,7 +38,7 @@ export const initiateCall = (receiver_id: number, call_type: "video" | "audio" =
   });
 
 export const acceptCall = (call_id: number) =>
-  apiFetch<{ room_url: string; room_name: string }>(`/call/accept/${call_id}`, { method: "POST" });
+  apiFetch<AcceptCallResult>(`/call/accept/${call_id}`, { method: "POST" });
 
 export const rejectCall = (call_id: number) =>
   apiFetch<{ ok: boolean }>(`/call/reject/${call_id}`, { method: "POST" });

@@ -29,7 +29,7 @@ import {
   Clock,
 } from 'lucide-react';
 
-interface ActiveRoom { ws_url: string; token: string; title: string; }
+interface ActiveRoom { ws_url: string; token: string; title: string; call_id?: number; }
 
 // ── Inner room component (rendered inside LiveKitRoom context) ─────────────
 
@@ -286,6 +286,18 @@ function ControlButton({
 // ── Exported overlay wrapper ─────────────────────────────────────────────
 
 export default function MeetingRoomOverlay({ room, onLeave }: { room: ActiveRoom; onLeave: () => void }) {
+  const handleLeave = async () => {
+    if (room.call_id) {
+      try {
+        const { getToken } = await import('@/lib/auth');
+        await fetch(`https://api.alloul.app/call/end/${room.call_id}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+      } catch { /* ignore */ }
+    }
+    onLeave();
+  };
   return (
     <LiveKitRoom
       serverUrl={room.ws_url}
@@ -293,10 +305,10 @@ export default function MeetingRoomOverlay({ room, onLeave }: { room: ActiveRoom
       connect={true}
       audio={true}
       video={true}
-      onDisconnected={onLeave}
+      onDisconnected={handleLeave}
     >
       <LayoutContextProvider>
-        <RoomInner title={room.title} onLeave={onLeave} />
+        <RoomInner title={room.title} onLeave={handleLeave} />
       </LayoutContextProvider>
     </LiveKitRoom>
   );

@@ -1,25 +1,40 @@
 'use client';
 
-import { useState } from 'react';
-import { Zap, Video, FileText, Users, Plus, Loader2 } from 'lucide-react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { Zap, Video, Plus, Loader2 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
+import { getToken, isAuthenticated } from '@/lib/auth';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
-import { getToken } from '@/lib/auth';
 
-interface Meeting {
-  id: string;
-  title: string;
-  room_url: string;
-  transcript?: string;
-  action_items?: string[];
-  created_at: string;
-}
+const MeetingRoomOverlay = dynamic(
+  () => import('../meetings/MeetingRoomOverlay'),
+  { ssr: false }
+);
 
-export default function SmartMeetingsPage() {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
+interface ActiveRoom { ws_url: string; token: string; title: string; call_id?: number; }
+
+function SmartMeetingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState('');
   const [creating, setCreating] = useState(false);
-  const [activeRoom, setActiveRoom] = useState<string | null>(null);
+  const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated()) { router.replace('/login'); return; }
+
+    // If URL params contain room+token, auto-launch that room
+    const room = searchParams.get('room');
+    const token = searchParams.get('token');
+    const wsUrl = searchParams.get('wsUrl') || 'wss://livekit.alloul.app';
+    const callIdStr = searchParams.get('callId');
+    if (room && token) {
+      setActiveRoom({ ws_url: wsUrl, token, title: 'مكالمة واردة', call_id: callIdStr ? Number(callIdStr) : undefined });
+    }
+  }, [searchParams, router]);
 
   const createMeeting = async () => {
     if (!title.trim()) return;
@@ -33,17 +48,26 @@ export default function SmartMeetingsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        const meetUrl = `https://meet.livekit.io/custom?liveKitUrl=${encodeURIComponent('wss://livekit.alloul.app')}&token=${encodeURIComponent(data.token)}`;
-        setMeetings(prev => [{ id: data.room_name, title, room_url: meetUrl, created_at: new Date().toISOString() }, ...prev]);
-        setActiveRoom(meetUrl);
+        setActiveRoom({
+          ws_url: data.ws_url || 'wss://livekit.alloul.app',
+          token: data.token,
+          title,
+        });
         setTitle('');
+      } else {
+        alert('تعذّر إنشاء الاجتماع');
       }
     } catch {
-      // ignore
+      alert('تعذّر الاتصال بالسيرفر');
     } finally {
       setCreating(false);
     }
   };
+
+  // Native LiveKit room (no iframe)
+  if (activeRoom) {
+    return <MeetingRoomOverlay room={activeRoom} onLeave={() => setActiveRoom(null)} />;
+  }
 
   return (
     <AppShell>
@@ -58,7 +82,7 @@ export default function SmartMeetingsPage() {
           </div>
         </div>
 
-        {/* create meeting */}
+        {/* Create meeting */}
         <div className="bg-dark-bg-800 border border-white/10 rounded-2xl p-4 mb-6">
           <p className="text-white font-semibold mb-3 text-sm">اجتماع جديد</p>
           <div className="flex gap-2">
@@ -81,63 +105,23 @@ export default function SmartMeetingsPage() {
           </div>
         </div>
 
-        {/* active room */}
-        {activeRoom && (
-          <div className="bg-dark-bg-800 border border-yellow-500/30 rounded-2xl p-4 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-white font-bold text-sm">اجتماع نشط</span>
-            </div>
-            <a
-              href={activeRoom}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-yellow-400 text-sm font-semibold hover:underline"
-            >
-              <Video size={16} />
-              انضم للاجتماع
-            </a>
-          </div>
-        )}
-
-        {/* past meetings */}
-        {meetings.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <Zap size={48} className="mx-auto mb-3 opacity-30" />
-            <p>لا توجد اجتماعات سابقة</p>
-            <p className="text-xs mt-1">بعد انتهاء الاجتماع يظهر الملخص وبنود العمل تلقائياً</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {meetings.map(m => (
-              <div key={m.id} className="bg-dark-bg-800 border border-white/8 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Video size={16} className="text-yellow-400" />
-                  <span className="text-white font-semibold text-sm">{m.title}</span>
-                  <span className="text-gray-500 text-xs mr-auto">{new Date(m.created_at).toLocaleDateString('ar')}</span>
-                </div>
-                {m.transcript && (
-                  <div className="mt-2 p-3 bg-dark-bg-900 rounded-lg">
-                    <p className="text-gray-300 text-xs flex items-start gap-2">
-                      <FileText size={12} className="mt-0.5 text-gray-500 flex-shrink-0" />
-                      {m.transcript}
-                    </p>
-                  </div>
-                )}
-                {m.action_items && m.action_items.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {m.action_items.map((item, i) => (
-                      <p key={i} className="text-xs text-gray-400 flex items-start gap-2">
-                        <span className="text-yellow-400 mt-0.5">•</span>{item}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="text-center py-16 text-gray-500">
+          <Video size={48} className="mx-auto mb-3 opacity-30" />
+          <p>اضغط "ابدأ" لإنشاء اجتماع أو انضم عبر صفحة المكالمات</p>
+        </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function SmartMeetingsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', minHeight: '100vh' }}>
+        <Loader2 size={24} color="#3b82f6" />
+      </div>
+    }>
+      <SmartMeetingsContent />
+    </Suspense>
   );
 }

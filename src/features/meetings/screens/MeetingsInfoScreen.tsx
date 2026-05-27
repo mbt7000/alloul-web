@@ -16,7 +16,7 @@ import {
   getCompanyMembers, type CompanyMemberRow,
   getMeetings, type MeetingRow,
 } from "../../../api";
-import { getUserPresence } from "../../../api/calls.api";
+import { getUserPresence, initiateCall } from "../../../api/calls.api";
 import { openMeetingProvider } from "../openMeetingLinks";
 
 // ─── Presence colors ─────────────────────────────────────────────────────────
@@ -297,12 +297,18 @@ export default function MeetingsInfoScreen() {
   const { openCompanyDaily, dailyLoading } = useCompanyDailyRoom();
   const startRCCall = async (userId: number, name: string, type: "audio" | "video") => {
     try {
-      const title = `${type === "video" ? "مكالمة فيديو" : "مكالمة صوتية"} مع ${name}`;
-      const data = await apiFetch<{ room_name: string; token: string; ws_url: string; title: string }>(
-        "/livekit/rooms", { method: "POST", body: JSON.stringify({ title }) }
-      );
-      navigation.navigate("LiveRoom", { room_name: data.room_name, token: data.token, ws_url: data.ws_url, title: data.title });
-    } catch {}
+      const data = await initiateCall(userId, type);
+      // Caller gets their own token and enters the room immediately
+      navigation.navigate("LiveRoom", {
+        room_name: data.room_name,
+        token: data.token,
+        ws_url: data.ws_url,
+        title: `${type === "video" ? "مكالمة فيديو" : "مكالمة صوتية"} مع ${name}`,
+      });
+    } catch (e: any) {
+      const msg = e?.message || "تعذّر بدء المكالمة";
+      alert(msg);
+    }
   };
 
   const [members, setMembers] = useState<CompanyMemberRow[]>([]);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View, FlatList, TouchableOpacity, ActivityIndicator,
-  StatusBar, RefreshControl, Modal, ScrollView,
+  StatusBar, RefreshControl, Modal, ScrollView, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,9 +10,11 @@ import AppText from "../../../shared/ui/AppText";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { apiFetch } from "../../../api/client";
 import { getCompanyMembers } from "../../../api/companies.api";
+import { useAuth } from "../../../state/auth/AuthContext";
 
 interface Member {
-  id: number;
+  id: number;       // CompanyMember row id
+  user_id: number;  // actual user id (used for calling)
   user_name: string;
   job_title?: string;
   role?: string;
@@ -72,6 +74,7 @@ export default function TeamMeetingsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { colors: c } = useAppTheme();
+  const { user } = useAuth();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,21 +100,24 @@ export default function TeamMeetingsScreen() {
   useEffect(() => { load(); }, [load]);
 
   const startCall = async (member: Member, type: "audio" | "video") => {
-    setCallingId(member.id);
+    setCallingId(member.user_id);
     setCallType(type);
     try {
-      const title = `${type === "video" ? "مكالمة فيديو" : "مكالمة صوتية"} مع ${member.user_name}`;
-      const data = await apiFetch<{ room_name: string; token: string; ws_url: string; title: string }>(
-        "/livekit/rooms", { method: "POST", body: JSON.stringify({ title }) }
+      const data = await apiFetch<{ call_id: number; room_name: string; token: string; ws_url: string }>(
+        "/call/initiate",
+        { method: "POST", body: JSON.stringify({ receiver_id: member.user_id, call_type: type }) }
       );
-      // RC sends background notification automatically (backend handles it)
       navigation.navigate("LiveRoom", {
         room_name: data.room_name,
         token: data.token,
         ws_url: data.ws_url,
-        title: data.title,
+        call_id: data.call_id,
+        title: `${type === "video" ? "مكالمة فيديو" : "مكالمة صوتية"} مع ${member.user_name}`,
       });
-    } catch {} finally {
+    } catch (e: any) {
+      const msg: string = e?.message || "";
+      Alert.alert("خطأ", msg.includes("مشغول") ? "المستخدم مشغول حالياً" : "تعذّر بدء المكالمة");
+    } finally {
       setCallingId(null);
       setCallType(null);
     }
@@ -119,7 +125,7 @@ export default function TeamMeetingsScreen() {
 
   const openDM = async (member: Member) => {
     try {
-      await apiFetch("/chat/dm", { method: "POST", body: JSON.stringify({ target_user_id: member.id }) });
+      await apiFetch("/chat/dm", { method: "POST", body: JSON.stringify({ target_user_id: member.user_id }) });
       navigation.navigate("RocketChat");
     } catch {
       navigation.navigate("RocketChat");
@@ -130,7 +136,7 @@ export default function TeamMeetingsScreen() {
     if (selected.length === 0) return;
     setGroupLoading(true);
     try {
-      const names = members.filter(m => selected.includes(m.id)).map(m => m.user_name).join("، ");
+      const names = members.filter(m => selected.includes(m.user_id)).map(m => m.user_name).join("، ");
       const title = `اجتماع مجموعة: ${names}`;
       const data = await apiFetch<{ room_name: string; token: string; ws_url: string; title: string }>(
         "/livekit/rooms", { method: "POST", body: JSON.stringify({ title }) }
@@ -153,7 +159,7 @@ export default function TeamMeetingsScreen() {
 
   const renderMember = ({ item: m }: { item: Member }) => {
     const roleColor = ROLE_COLOR[m.role || "default"] || ROLE_COLOR.default;
-    const isCalling = callingId === m.id;
+    const isCalling = callingId === m.user_id;
 
     return (
       <View style={{
@@ -260,7 +266,7 @@ export default function TeamMeetingsScreen() {
       ) : (
         <FlatList
           data={members}
-          keyExtractor={m => String(m.id)}
+          keyExtractor={m => String(m.user_id)}
           renderItem={renderMember}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           refreshControl={
@@ -304,10 +310,10 @@ export default function TeamMeetingsScreen() {
             {/* Members list */}
             <ScrollView style={{ paddingTop: 8 }}>
               {members.map(m => {
-                const isSelected = selected.includes(m.id);
+                const isSelected = selected.includes(m.user_id);
                 return (
-                  <TouchableOpacity key={m.id}
-                    onPress={() => setSelected(s => isSelected ? s.filter(x => x !== m.id) : [...s, m.id])}
+                  <TouchableOpacity key={m.user_id}
+                    onPress={() => setSelected(s => isSelected ? s.filter(x => x !== m.user_id) : [...s, m.user_id])}
                     style={{
                       flexDirection: "row", alignItems: "center", gap: 12,
                       paddingHorizontal: 20, paddingVertical: 12,

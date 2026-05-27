@@ -297,12 +297,19 @@ export default function LobbyPage() {
             </div>
           )}
 
+          {/* Auto-refresh notice */}
+          <div className="w-full mb-2 px-1">
+            <p className="text-white/30 text-xs text-center">
+              الصفحة تتحقق تلقائياً كل 15 ثانية — ستظهر الدعوة هنا فور إرسالها
+            </p>
+          </div>
+
           <div className="w-full space-y-3">
             <button onClick={() => fetchStatus(false)}
               className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-2xl py-3.5 transition-colors"
               style={{ background: 'rgba(46,139,255,0.15)', border: '1px solid rgba(46,139,255,0.3)', color: '#2E8BFF' }}>
               {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              تحقق من الحالة
+              تحقق من الحالة الآن
             </button>
             <button onClick={handleChangeType}
               className="w-full text-white/60 font-bold rounded-2xl py-3.5 transition-colors"

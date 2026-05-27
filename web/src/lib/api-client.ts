@@ -173,13 +173,14 @@ export const getCompanyDailyJoinUrl = () =>
 // ─── Calls ───────────────────────────────────────────────────────────────
 export interface CallHistoryItem {
   id: number;
-  caller_id: number;
-  callee_id: number;
+  call_type: "video" | "audio";
+  status: "ringing" | "accepted" | "rejected" | "missed" | "ended";
+  duration?: number | null;
   started_at?: string | null;
-  ended_at?: string | null;
-  duration_seconds?: number | null;
-  status?: string | null;
-  call_type?: string | null;
+  is_outgoing: boolean;
+  other_user_id: number;
+  other_user_name: string;
+  other_user_avatar?: string | null;
 }
 
 export const getCallHistory = () => apiFetch<CallHistoryItem[]>('/call/history');

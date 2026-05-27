@@ -5,61 +5,41 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AppText from "../../../shared/ui/AppText";
-import { useAppTheme } from "../../../theme/ThemeContext";
-import { getToken } from "../../../api/client";
+import { getToken } from "../../../storage/token";
 
 interface RouteParams {
   room_name: string;
   token: string;
   ws_url: string;
   title: string;
+  call_id?: number;
 }
 
-const MEET_BASE = "https://alloul.app/workspace/smart-meetings";
+const LIVEKIT_WS = "wss://livekit.alloul.app";
 
 export default function LiveRoomScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const { colors: c } = useAppTheme();
   const webRef = useRef<WebView>(null);
 
-  const { room_name, token, ws_url, title } = (route.params ?? {}) as RouteParams;
+  const { room_name, token, ws_url, title, call_id } = (route.params ?? {}) as RouteParams;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [meetUrl, setMeetUrl] = useState<string | null>(null);
 
-  // جلب توكن المستخدم من SecureStore
   useEffect(() => {
-    getToken().then(setAuthToken);
-  }, []);
-
-  const meetUrl = `${MEET_BASE}?room=${encodeURIComponent(room_name ?? "")}&token=${encodeURIComponent(token ?? "")}&wsUrl=${encodeURIComponent(ws_url ?? "")}`;
-
-  // حقن التوكن في localStorage قبل تحميل الصفحة — يمنع شاشة تسجيل الدخول
-  const injectedJS = authToken
-    ? `
-      (function() {
-        try {
-          localStorage.setItem('alloul_token', ${JSON.stringify(authToken)});
-          localStorage.setItem('access_token', ${JSON.stringify(authToken)});
-        } catch(e) {}
-      })();
-      true;
-    `
-    : undefined;
-
-  // لا نحمّل الـ WebView حتى نجلب التوكن
-  if (authToken === null) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
-        <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <ActivityIndicator color="#3b82f6" size="large" />
-        <AppText style={{ color: "#888", fontSize: 13, marginTop: 12 }}>جارٍ التحقق من الهوية...</AppText>
-      </View>
-    );
-  }
+    if (!token || !room_name) return;
+    const wsEndpoint = ws_url || LIVEKIT_WS;
+    (async () => {
+      const authToken = await getToken();
+      let url = `https://alloul.app/liveroom.html?wsUrl=${encodeURIComponent(wsEndpoint)}&token=${encodeURIComponent(token)}`;
+      if (call_id) url += `&callId=${call_id}`;
+      if (authToken) url += `&authToken=${encodeURIComponent(authToken)}`;
+      setMeetUrl(url);
+    })();
+  }, [token, room_name, ws_url, call_id]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
@@ -103,23 +83,33 @@ export default function LiveRoomScreen() {
       </View>
 
       {/* WebView */}
-      {!error ? (
+      {!meetUrl ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <Ionicons name="alert-circle-outline" size={48} color="#555" />
+          <AppText style={{ color: "#888", fontSize: 14 }}>بيانات الاجتماع غير متوفرة</AppText>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10, backgroundColor: "#ffffff18" }}>
+            <AppText style={{ color: "#fff", fontSize: 14 }}>رجوع</AppText>
+          </TouchableOpacity>
+        </View>
+      ) : !error ? (
         <WebView
           ref={webRef}
           source={{ uri: meetUrl }}
           style={{ flex: 1, backgroundColor: "#000" }}
-          injectedJavaScriptBeforeContentLoaded={injectedJS}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           allowsFullscreenVideo
           javaScriptEnabled
           domStorageEnabled
           sharedCookiesEnabled
+          originWhitelist={["*"]}
+          mediaCapturePermissionGrantType="grant"
           onLoadStart={() => setLoading(true)}
           onLoadEnd={() => setLoading(false)}
           onError={() => { setLoading(false); setError(true); }}
-          originWhitelist={["*"]}
-          userAgent="ALLOULQ/1.0 Mobile"
+          onHttpError={({ nativeEvent }) => {
+            if (nativeEvent.statusCode >= 400) { setLoading(false); setError(true); }
+          }}
         />
       ) : (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16 }}>
