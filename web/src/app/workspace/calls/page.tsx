@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   Phone, Video, PhoneOff, PhoneIncoming, PhoneOutgoing, PhoneMissed,
-  Users, Clock, Loader2, Wifi, Plus, Calendar,
+  Users, Clock, Loader2, Plus, MessageCircle,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import {
@@ -21,7 +21,6 @@ const MeetingRoomOverlay = dynamic(
 );
 
 interface ActiveRoom { ws_url: string; token: string; title: string; call_id?: number; }
-interface CallRoom   { call_id: number; room_name: string; token: string; ws_url: string; title: string; }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -40,63 +39,97 @@ const STATUS_AR: Record<string, string> = {
   rejected: 'مرفوضة', ringing: 'لم تُجَب',
 };
 
-// ─── Member row ───────────────────────────────────────────────────────────────
+const ROLE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  owner:    { bg: 'rgba(255,178,77,0.15)',  text: '#FFB24D', label: 'مالك' },
+  admin:    { bg: 'rgba(255,71,87,0.15)',   text: '#FF4757', label: 'مشرف' },
+  manager:  { bg: 'rgba(139,92,246,0.15)', text: '#8B5CF6', label: 'مدير' },
+  employee: { bg: 'rgba(46,139,255,0.15)', text: '#2E8BFF', label: 'موظف' },
+  member:   { bg: 'rgba(46,139,255,0.15)', text: '#2E8BFF', label: 'عضو' },
+};
 
-function MemberRow({
+function getHue(name: string) {
+  return name ? (name.charCodeAt(0) * 47) % 360 : 200;
+}
+
+// ─── Member Card ──────────────────────────────────────────────────────────────
+
+function MemberCard({
   member,
   onCall,
+  onMessage,
   calling,
 }: {
   member: CompanyMember;
   onCall: (member: CompanyMember, type: 'audio' | 'video') => void;
+  onMessage: (member: CompanyMember) => void;
   calling: number | null;
 }) {
   const name     = member.user_name || member.user_email || `عضو #${member.user_id}`;
   const initials = name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
-  const roleAr: Record<string, string> = {
-    owner: 'مالك', admin: 'مشرف', manager: 'مدير', employee: 'موظف', member: 'عضو',
-  };
+  const hue      = getHue(name);
+  const role     = ROLE_COLORS[member.role] ?? ROLE_COLORS.member;
+  const isLoading = calling === member.user_id;
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+      className="flex flex-col items-center gap-3 p-4 rounded-2xl transition-all hover:scale-[1.02]"
+      style={{
+        background: 'rgba(255,255,255,0.035)',
+        border: '1px solid rgba(255,255,255,0.07)',
+      }}
     >
       {/* Avatar */}
       <div
-        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold"
-        style={{ background: 'rgba(46,139,255,0.15)', color: '#3B82F6', border: '1px solid rgba(46,139,255,0.25)' }}
+        className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 text-lg font-black"
+        style={{
+          background: `hsl(${hue},45%,18%)`,
+          border: `2px solid hsl(${hue},50%,32%)`,
+          color: `hsl(${hue},70%,72%)`,
+        }}
       >
         {initials}
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white truncate">{name}</p>
-        <p className="text-xs text-white/40">{member.job_title || roleAr[member.role] || member.role}</p>
+      <div className="flex flex-col items-center gap-1 w-full text-center">
+        <p className="text-sm font-bold text-white leading-tight truncate w-full">{name}</p>
+        {member.job_title ? (
+          <p className="text-xs text-white/40 truncate w-full">{member.job_title}</p>
+        ) : (
+          <span
+            className="inline-block text-xs font-bold px-2 py-0.5 rounded-md"
+            style={{ background: role.bg, color: role.text }}
+          >
+            {role.label}
+          </span>
+        )}
       </div>
 
-      {/* Call buttons */}
-      <div className="flex items-center gap-2">
-        {calling === member.user_id ? (
-          <Loader2 size={16} className="text-white/40 animate-spin" />
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 w-full">
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center py-2">
+            <Loader2 size={16} className="text-white/40 animate-spin" />
+          </div>
         ) : (
           <>
             <button
               onClick={() => onCall(member, 'audio')}
               title="اتصال صوتي"
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
-              style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)' }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90 active:scale-95"
+              style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E' }}
             >
-              <Phone size={14} style={{ color: '#22C55E' }} />
+              <Phone size={13} />
+              اتصال
             </button>
             <button
-              onClick={() => onCall(member, 'video')}
-              title="اتصال فيديو"
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
-              style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)' }}
+              onClick={() => onMessage(member)}
+              title="رسالة"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90 active:scale-95"
+              style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#8B5CF6' }}
             >
-              <Video size={14} style={{ color: '#3B82F6' }} />
+              <MessageCircle size={13} />
+              رسالة
             </button>
           </>
         )}
@@ -139,7 +172,6 @@ export default function CallsPage() {
     })();
   }, [router]);
 
-  // Start a 1-on-1 call with a team member
   const handleCall = useCallback(async (member: CompanyMember, type: 'audio' | 'video') => {
     setCalling(member.user_id);
     try {
@@ -159,7 +191,10 @@ export default function CallsPage() {
     }
   }, []);
 
-  // Join company-wide group meeting
+  const handleMessage = useCallback((member: CompanyMember) => {
+    router.push(`/workspace/chat?user=${member.user_id}`);
+  }, [router]);
+
   const startGroupMeeting = async () => {
     setJoining(true);
     try {
@@ -174,7 +209,6 @@ export default function CallsPage() {
     }
   };
 
-  // Create named meeting room
   const createNamedMeeting = async () => {
     if (!meetTitle.trim()) return;
     setCreating(true);
@@ -191,10 +225,8 @@ export default function CallsPage() {
     }
   };
 
-  // Filter out self from member list
   const teamMembers = members.filter(m => m.user_id !== myUserId);
 
-  // Active room — show fullscreen overlay
   if (activeRoom) {
     return <MeetingRoomOverlay room={activeRoom} onLeave={() => setActiveRoom(null)} />;
   }
@@ -205,7 +237,7 @@ export default function CallsPage() {
 
         {/* ── Header ── */}
         <div
-          className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+          className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
         >
           <h1 className="text-white font-black text-lg">الاجتماعات</h1>
@@ -220,11 +252,11 @@ export default function CallsPage() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
+        <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
 
           {/* ── New Meeting ── */}
-          <section className="px-4 pt-4 pb-2">
-            <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">اجتماع جديد</p>
+          <section className="px-5 pt-5 pb-2">
+            <p className="text-xs font-bold text-white/35 uppercase tracking-wider mb-2.5">اجتماع جديد</p>
             <div className="flex gap-2">
               <input
                 value={meetTitle}
@@ -252,21 +284,19 @@ export default function CallsPage() {
             </div>
           ) : (
             <>
-              {/* ── Team Members ── */}
+              {/* ── Team Member Cards ── */}
               {teamMembers.length > 0 && (
-                <section className="mb-2">
-                  <p className="px-4 pt-4 pb-2 text-xs font-bold text-white/40 uppercase tracking-wider">
-                    أعضاء الفريق
+                <section className="px-5 pt-5 pb-2">
+                  <p className="text-xs font-bold text-white/35 uppercase tracking-wider mb-3">
+                    أعضاء الفريق · {teamMembers.length}
                   </p>
-                  <div
-                    className="mx-4 rounded-2xl overflow-hidden"
-                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-                  >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {teamMembers.map(m => (
-                      <MemberRow
+                      <MemberCard
                         key={m.user_id}
                         member={m}
                         onCall={handleCall}
+                        onMessage={handleMessage}
                         calling={calling}
                       />
                     ))}
@@ -275,24 +305,28 @@ export default function CallsPage() {
               )}
 
               {/* ── Call History ── */}
-              <section>
-                <p className="px-4 pt-4 pb-2 text-xs font-bold text-white/40 uppercase tracking-wider">
-                  السجل
-                </p>
+              <section className="px-5 pt-5">
+                <p className="text-xs font-bold text-white/35 uppercase tracking-wider mb-3">سجل المكالمات</p>
                 {calls.length === 0 ? (
-                  <div className="mx-4 rounded-2xl p-10 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <Phone size={32} className="mx-auto mb-3 text-white/20" />
-                    <p className="text-white/40 text-sm">لا توجد مكالمات بعد</p>
+                  <div
+                    className="rounded-2xl p-10 text-center"
+                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    <Phone size={32} className="mx-auto mb-3 text-white/15" />
+                    <p className="text-white/35 text-sm">لا توجد مكالمات بعد</p>
                   </div>
                 ) : (
-                  <div className="mx-4 rounded-2xl overflow-hidden space-y-px" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    {calls.map(c => {
+                  <div
+                    className="rounded-2xl overflow-hidden"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                  >
+                    {calls.map((c, i) => {
                       const { Icon, color } = statusIcon(c);
                       return (
                         <div
                           key={c.id}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
-                          style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.025] transition-colors"
+                          style={{ borderBottom: i < calls.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
                         >
                           <div
                             className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -303,11 +337,11 @@ export default function CallsPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white truncate">
                               {c.other_user_name}
-                              <span className="text-white/30 font-normal text-xs mr-1">
+                              <span className="text-white/30 font-normal text-xs mr-1.5">
                                 · {c.call_type === 'video' ? 'فيديو' : 'صوت'}
                               </span>
                             </p>
-                            <p className="text-xs text-white/35 flex items-center gap-1">
+                            <p className="text-xs text-white/35 flex items-center gap-1 mt-0.5">
                               <Clock size={10} />
                               {c.started_at ? new Date(c.started_at).toLocaleString('ar') : '—'}
                               <span className="mx-1">·</span>
@@ -315,14 +349,13 @@ export default function CallsPage() {
                               {c.duration ? ` · ${formatDuration(c.duration)}` : ''}
                             </p>
                           </div>
-                          {/* Quick call-back button */}
                           <button
                             onClick={() => {
                               const member = members.find(m => m.user_id === c.other_user_id);
                               if (member) handleCall(member, c.call_type);
                             }}
                             title="اتصل مجدداً"
-                            className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 hover:opacity-100"
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
                             style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)' }}
                           >
                             <Phone size={12} style={{ color: '#3B82F6' }} />
