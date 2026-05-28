@@ -43,6 +43,9 @@ async def lifespan(app: FastAPI):
     # Start Shukra daily report background loop (6 PM AST)
     from routers.accounting import start_daily_report
     await start_daily_report()
+    # Start notification expiry cleanup loop (daily at 03:00 UTC)
+    from routers.notifications import start_cleanup_loop
+    await start_cleanup_loop()
     yield
 
 
