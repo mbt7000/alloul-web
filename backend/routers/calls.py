@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import httpx
@@ -10,8 +11,8 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from auth import decode_token, get_current_user
-from database import get_db
-from models import User, CallLog, DirectConversation, DirectMessage
+from database import get_db, SessionLocal
+from models import User, CallLog, DirectConversation, DirectMessage, Notification
 
 router = APIRouter(tags=["calls"])
 
@@ -50,10 +51,57 @@ class CallManager:
 
 call_manager = CallManager()
 
+RING_TIMEOUT_SECS = 35  # mark missed if no answer within this window
+
+
+async def _auto_missed(call_id: int) -> None:
+    """Background task: if call still 'ringing' after RING_TIMEOUT_SECS, mark missed."""
+    await asyncio.sleep(RING_TIMEOUT_SECS)
+    db = SessionLocal()
+    try:
+        log = db.query(CallLog).filter(CallLog.id == call_id, CallLog.status == "ringing").first()
+        if not log:
+            return
+        log.status = "missed"
+        log.ended_at = datetime.now(timezone.utc)
+
+        # Send call_ended to caller
+        await call_manager.send(log.caller_id, {"type": "call_ended", "call_id": call_id, "reason": "missed"})
+
+        # Create call_missed notification for receiver (48h expiry)
+        caller = db.query(User).filter(User.id == log.caller_id).first()
+        caller_name = (caller.name or caller.username) if caller else "شخص ما"
+        notif = Notification(
+            user_id=log.receiver_id,
+            type="call_missed",
+            title=f"مكالمة فائتة من {caller_name}",
+            body="اضغط للاتصال مجدداً",
+            reference_id=str(call_id),
+            actor_id=log.caller_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=48),
+        )
+        db.add(notif)
+        db.commit()
+
+        # Push notification to receiver if offline
+        receiver = db.query(User).filter(User.id == log.receiver_id).first()
+        if receiver and receiver.expo_push_token:
+            await _send_expo_push(
+                receiver.expo_push_token,
+                title=f"مكالمة فائتة — {caller_name}",
+                body="اضغط للاتصال مجدداً",
+                data={"type": "call_missed", "call_id": call_id, "screen": "CallsPanel"},
+                is_call=False,
+            )
+    except Exception:
+        pass
+    finally:
+        db.close()
+
 
 # ─── Expo Push Notification ──────────────────────────────────────────────────
 
-async def _send_expo_push(token: str, title: str, body: str, data: dict) -> None:
+async def _send_expo_push(token: str, title: str, body: str, data: dict, is_call: bool = False) -> None:
     if not token or not token.startswith("ExponentPushToken"):
         return
     payload = {
@@ -62,8 +110,8 @@ async def _send_expo_push(token: str, title: str, body: str, data: dict) -> None
         "body": body,
         "data": data,
         "priority": "high",
-        "sound": "default",
-        "channelId": "calls",
+        "sound": "ringtone.caf" if is_call else "default",
+        "channelId": "calls" if is_call else "default",
         "_displayInForeground": True,
     }
     async with httpx.AsyncClient(timeout=5) as client:
@@ -369,20 +417,27 @@ async def initiate_call(
 
     delivered = await call_manager.send(body.receiver_id, call_payload)
 
+    expires_ts = int((datetime.now(timezone.utc) + timedelta(hours=48)).timestamp())
+
     if not delivered and receiver.expo_push_token:
         label = "اتصال فيديو وارد" if body.call_type == "video" else "اتصال صوتي وارد"
         await _send_expo_push(
             receiver.expo_push_token,
             title=caller_name,
             body=label,
-            data={**call_payload, "screen": "IncomingCall"},
+            data={**call_payload, "screen": "IncomingCall", "expires_at": expires_ts},
+            is_call=True,
         )
+
+    # Launch background task: auto-mark missed if no answer in 35s
+    asyncio.create_task(_auto_missed(log.id))
 
     return {
         "call_id": log.id,
         "room_name": room_name,
         "token": caller_token,
         "ws_url": LIVEKIT_WS_URL,
+        "expires_at": expires_ts,
     }
 
 

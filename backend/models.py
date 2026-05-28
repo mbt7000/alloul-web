@@ -683,13 +683,14 @@ class Notification(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    type = Column(String(32), nullable=False)  # follow, like, comment, handover, system
+    type = Column(String(32), nullable=False)  # follow, like, comment, handover, system, call_missed
     title = Column(String(255), nullable=False)
     body = Column(Text, nullable=True)
     read = Column(Integer, default=0)
     reference_id = Column(String(64), nullable=True)
     actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
 
     recipient = relationship("User", foreign_keys=[user_id])
     actor = relationship("User", foreign_keys=[actor_id])

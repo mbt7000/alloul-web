@@ -45,7 +45,12 @@ function badgeForType(type: string, colors: AppPalette): { icon: keyof typeof Io
   if (t.includes("follow")) return { icon: "person-add", bg: colors.accentBlue };
   if (t.includes("comment") || t.includes("mention") || t.includes("message")) return { icon: "chatbubble", bg: colors.success };
   if (t.includes("repost") || t.includes("share")) return { icon: "repeat", bg: "#9B59B6" };
+  if (t.includes("call")) return { icon: "call", bg: colors.accentRose };
   return { icon: "notifications", bg: colors.textMuted };
+}
+
+function isCallNotification(type: string): boolean {
+  return type.toLowerCase().startsWith("call_");
 }
 
 export default function NotificationsScreen() {
@@ -54,7 +59,7 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
   const { colors, toggleMode } = useAppTheme();
   const {
-    notifications: items,
+    notifications: allNotifications,
     loading,
     refreshing,
     error,
@@ -63,6 +68,9 @@ export default function NotificationsScreen() {
     markAllNotificationsReadAndSync,
     clearError,
   } = useNotifications();
+
+  // Call notifications go to CallsPanel only — exclude from main feed
+  const items = allNotifications.filter((n) => !isCallNotification(n.type || ""));
 
   // Track invitation actions: invitationId → "loading" | "done"
   const [invitationActions, setInvitationActions] = useState<Record<number, "loading" | "done">>({});
@@ -206,8 +214,8 @@ export default function NotificationsScreen() {
       navigation.navigate("Conversation", { conversationId: refId });
       return;
     }
-    if (type.includes("call") && refId) {
-      navigation.navigate("Meetings");
+    if (type.includes("call")) {
+      navigation.navigate("CallsPanel");
       return;
     }
     // Default: just mark as read (no navigation)
