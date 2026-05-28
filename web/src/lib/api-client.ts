@@ -106,6 +106,8 @@ export const getDashboardActivity = (limit = 20) =>
 
 // ─── Company services (same endpoints as mobile) ───────────────────────────
 
+export type PresenceStatus = 'online' | 'busy' | 'away' | 'offline';
+
 export interface CompanyMember {
   id: number;
   user_id: number;
@@ -113,7 +115,14 @@ export interface CompanyMember {
   user_email?: string | null;
   role: string;
   job_title?: string | null;
+  presence_status?: PresenceStatus | null;
 }
+
+export const updateMyPresence = (status: PresenceStatus) =>
+  apiFetch<{ status: string }>('/users/presence', {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
 
 export interface Project {
   id: number;
