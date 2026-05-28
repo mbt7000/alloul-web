@@ -599,10 +599,12 @@ def list_members(
     result = []
     for m in members:
         name, email, phone, avatar_url = _member_info_for_user(db, m.user_id)
+        member_user = db.query(User).filter(User.id == m.user_id).first()
         result.append(CompanyMemberResponse(
             id=m.id, company_id=m.company_id, user_id=m.user_id, role=m.role,
             department_id=m.department_id, i_code=m.i_code, manager_id=m.manager_id, job_title=m.job_title,
             phone=phone, user_name=name, user_email=email, avatar_url=avatar_url,
+            presence_status=member_user.presence_status if member_user else "offline",
         ))
     return result
 

@@ -11,25 +11,20 @@ import { useAppTheme } from "../../../theme/ThemeContext";
 import { apiFetch } from "../../../api/client";
 import { getCompanyMembers } from "../../../api/companies.api";
 import { useAuth } from "../../../state/auth/AuthContext";
+import { UserCard, type PresenceStatus } from "../../../shared/components/UserCard";
 
 interface Member {
-  id: number;       // CompanyMember row id
-  user_id: number;  // actual user id (used for calling)
+  id: number;
+  user_id: number;
   user_name: string;
   job_title?: string;
   role?: string;
-  is_online?: boolean;
+  avatar_url?: string | null;
+  presence_status?: PresenceStatus | null;
 }
 
-const ROLE_COLOR: Record<string, string> = {
-  owner: "#FFB24D", admin: "#FF4757", manager: "#8B5CF6",
-  employee: "#2E8BFF", default: "#14E0A4",
-};
-
-function getHue(name: string) { return name ? (name.charCodeAt(0) * 47) % 360 : 200; }
-
-function MemberAvatar({ name, size = 46 }: { name: string; size?: number }) {
-  const hue = getHue(name);
+function MemberAvatar({ name, size = 38 }: { name: string; size?: number }) {
+  const hue = name ? (name.charCodeAt(0) * 47) % 360 : 200;
   return (
     <View style={{
       width: size, height: size, borderRadius: size * 0.28,
@@ -38,35 +33,9 @@ function MemberAvatar({ name, size = 46 }: { name: string; size?: number }) {
       alignItems: "center", justifyContent: "center",
     }}>
       <AppText style={{ color: `hsl(${hue},70%,72%)`, fontSize: size * 0.33, fontWeight: "800" }}>
-        {(name || "؟؟").slice(0, 2).toUpperCase()}
+        {(name || "؟").slice(0, 2).toUpperCase()}
       </AppText>
     </View>
-  );
-}
-
-function ActionBtn({
-  icon, color, label, onPress, loading,
-}: {
-  icon: string; color: string; label: string; onPress: () => void; loading?: boolean;
-}) {
-  return (
-    <TouchableOpacity onPress={onPress} disabled={loading}
-      style={{ alignItems: "center", gap: 5, flex: 1 }}>
-      <View style={{
-        width: 42, height: 42, borderRadius: 13,
-        backgroundColor: `${color}18`,
-        borderWidth: 1, borderColor: `${color}35`,
-        alignItems: "center", justifyContent: "center",
-      }}>
-        {loading
-          ? <ActivityIndicator size="small" color={color} />
-          : <Ionicons name={icon as any} size={18} color={color} />
-        }
-      </View>
-      <AppText style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: "600" }}>
-        {label}
-      </AppText>
-    </TouchableOpacity>
   );
 }
 
@@ -82,7 +51,6 @@ export default function TeamMeetingsScreen() {
   const [callingId, setCallingId] = useState<number | null>(null);
   const [callType, setCallType] = useState<"audio" | "video" | null>(null);
 
-  // Group call modal
   const [showGroup, setShowGroup] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [groupLoading, setGroupLoading] = useState(false);
@@ -155,64 +123,42 @@ export default function TeamMeetingsScreen() {
   };
 
   const bg = "#090d1a";
-  const cardBg = "rgba(255,255,255,0.035)";
 
   const renderMember = ({ item: m }: { item: Member }) => {
-    const roleColor = ROLE_COLOR[m.role || "default"] || ROLE_COLOR.default;
     const isCalling = callingId === m.user_id;
+    const isSelf = m.user_id === user?.id;
 
     return (
-      <View style={{
-        marginHorizontal: 16, marginBottom: 10,
-        backgroundColor: cardBg,
-        borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
-        padding: 14,
-      }}>
-        {/* Member info */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
-          <MemberAvatar name={m.user_name} size={46} />
-          <View style={{ flex: 1 }}>
-            <AppText style={{ color: "#e2e8f0", fontSize: 15, fontWeight: "700" }}>
-              {m.user_name}
-            </AppText>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
-              {m.job_title && (
-                <AppText style={{ color: "rgba(255,255,255,0.38)", fontSize: 12 }}>
-                  {m.job_title}
-                </AppText>
-              )}
-              {m.role && (
-                <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: `${roleColor}18` }}>
-                  <AppText style={{ color: roleColor, fontSize: 10, fontWeight: "700" }}>{m.role}</AppText>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <ActionBtn
-            icon="chatbubble"
-            color="#2E8BFF"
-            label="شات"
-            onPress={() => openDM(m)}
-          />
-          <ActionBtn
-            icon="call"
-            color="#14E0A4"
-            label="صوتي"
-            onPress={() => startCall(m, "audio")}
-            loading={isCalling && callType === "audio"}
-          />
-          <ActionBtn
-            icon="videocam"
-            color="#8B5CF6"
-            label="فيديو"
-            onPress={() => startCall(m, "video")}
-            loading={isCalling && callType === "video"}
-          />
-        </View>
+      <View style={{ marginHorizontal: 16, marginBottom: 10 }}>
+        <UserCard
+          name={m.user_name}
+          jobTitle={m.job_title}
+          role={m.role}
+          avatarUrl={m.avatar_url}
+          presence={m.presence_status ?? "offline"}
+          actions={isSelf ? [] : [
+            {
+              icon: "chatbubble",
+              color: "#2E8BFF",
+              label: "شات",
+              onPress: () => openDM(m),
+            },
+            {
+              icon: "call",
+              color: "#14E0A4",
+              label: "صوتي",
+              onPress: () => startCall(m, "audio"),
+              loading: isCalling && callType === "audio",
+            },
+            {
+              icon: "videocam",
+              color: "#8B5CF6",
+              label: "فيديو",
+              onPress: () => startCall(m, "video"),
+              loading: isCalling && callType === "video",
+            },
+          ]}
+        />
       </View>
     );
   };
@@ -239,6 +185,17 @@ export default function TeamMeetingsScreen() {
             {members.length} عضو
           </AppText>
         </View>
+
+        {/* Calls History button */}
+        <TouchableOpacity onPress={() => navigation.navigate("CallsPanel")} hitSlop={8}
+          style={{
+            width: 36, height: 36, borderRadius: 18,
+            backgroundColor: "rgba(255,75,87,0.12)",
+            borderWidth: 1, borderColor: "rgba(255,75,87,0.25)",
+            alignItems: "center", justifyContent: "center",
+          }}>
+          <Ionicons name="call" size={16} color="#FF4757" />
+        </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setShowGroup(true)}
           style={{
@@ -292,7 +249,6 @@ export default function TeamMeetingsScreen() {
             borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)",
             paddingBottom: insets.bottom + 16, maxHeight: "80%",
           }}>
-            {/* Modal header */}
             <View style={{
               flexDirection: "row", alignItems: "center", justifyContent: "space-between",
               paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14,
@@ -307,7 +263,6 @@ export default function TeamMeetingsScreen() {
               </AppText>
             </View>
 
-            {/* Members list */}
             <ScrollView style={{ paddingTop: 8 }}>
               {members.map(m => {
                 const isSelected = selected.includes(m.user_id);
@@ -343,7 +298,6 @@ export default function TeamMeetingsScreen() {
               })}
             </ScrollView>
 
-            {/* Start button */}
             <TouchableOpacity
               onPress={startGroupCall}
               disabled={selected.length === 0 || groupLoading}
