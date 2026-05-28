@@ -73,12 +73,27 @@ async def _auto_missed(call_id: int) -> None:
         log.status = "missed"
         log.ended_at = datetime.now(timezone.utc)
 
-        # Send call_ended to caller
-        await call_manager.send(log.caller_id, {"type": "call_ended", "call_id": call_id, "reason": "missed"})
-
-        # Create call_missed notification for receiver (48h expiry)
         caller = db.query(User).filter(User.id == log.caller_id).first()
         caller_name = (caller.name or caller.username) if caller else "شخص ما"
+
+        # 1. Notify caller: call_ended (so their UI collapses the outgoing call screen)
+        await call_manager.send(log.caller_id, {
+            "type": "call_ended",
+            "call_id": call_id,
+            "reason": "missed",
+        })
+
+        # 2. Notify receiver: independent call_missed event (so CallsPanel can update)
+        await call_manager.send(log.receiver_id, {
+            "type": "call_missed",
+            "call_id": call_id,
+            "caller_id": log.caller_id,
+            "caller_name": caller_name,
+            "caller_avatar": caller.avatar_url if caller else None,
+            "call_type": log.call_type,
+        })
+
+        # 3. Persist call_missed notification in DB (48h expiry) so it survives offline
         notif = Notification(
             user_id=log.receiver_id,
             type="call_missed",
@@ -91,7 +106,7 @@ async def _auto_missed(call_id: int) -> None:
         db.add(notif)
         db.commit()
 
-        # Push notification to receiver if offline
+        # 4. Push notification to receiver if offline (WS not connected)
         receiver = db.query(User).filter(User.id == log.receiver_id).first()
         if receiver and receiver.expo_push_token:
             await _send_expo_push(

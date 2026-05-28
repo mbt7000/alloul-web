@@ -54,6 +54,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     } else if (event.type === "call_rejected" || event.type === "call_ended") {
       acceptingRef.current = false;
       setIncomingCall(null);
+    } else if (event.type === "call_missed") {
+      // Receiver got a call_missed event — clear any lingering incoming call UI
+      setIncomingCall(prev =>
+        prev && prev.call_id === event.call_id ? null : prev
+      );
+      // CallsPanel will show the missed entry; no alert needed here
     }
   }, []);
 

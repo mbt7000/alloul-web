@@ -12,7 +12,8 @@ export type CallEvent =
   | { type: "incoming_call"; payload: IncomingCallPayload }
   | { type: "call_accepted"; call_id: number }
   | { type: "call_rejected"; call_id: number }
-  | { type: "call_ended"; call_id: number; duration?: number };
+  | { type: "call_ended"; call_id: number; duration?: number; reason?: string }
+  | { type: "call_missed"; call_id: number; caller_id: number; caller_name: string; caller_avatar: string | null; call_type: string };
 
 interface Options {
   onEvent: (event: CallEvent) => void;
@@ -78,7 +79,9 @@ export function useCallSocket({ onEvent }: Options) {
         } else if (data.type === "call_rejected") {
           onEventRef.current({ type: "call_rejected", call_id: data.call_id });
         } else if (data.type === "call_ended") {
-          onEventRef.current({ type: "call_ended", call_id: data.call_id, duration: data.duration });
+          onEventRef.current({ type: "call_ended", call_id: data.call_id, duration: data.duration, reason: data.reason });
+        } else if (data.type === "call_missed") {
+          onEventRef.current({ type: "call_missed", call_id: data.call_id, caller_id: data.caller_id, caller_name: data.caller_name, caller_avatar: data.caller_avatar, call_type: data.call_type });
         } else if (data.type === "chat:message") {
           chatBus.emit({ type: "chat:message", channel_id: data.channel_id, message: data.message });
         } else if (data.type === "chat:typing") {
