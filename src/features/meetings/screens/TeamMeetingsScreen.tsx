@@ -126,9 +126,9 @@ export default function TeamMeetingsScreen() {
   const openDM = async (member: Member) => {
     try {
       await apiFetch("/chat/dm", { method: "POST", body: JSON.stringify({ target_user_id: member.user_id }) });
-      navigation.navigate("RocketChat");
+      navigation.navigate("CompanyChat");
     } catch {
-      navigation.navigate("RocketChat");
+      navigation.navigate("CompanyChat");
     }
   };
 
