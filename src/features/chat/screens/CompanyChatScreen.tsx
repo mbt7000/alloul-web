@@ -5,14 +5,40 @@ import {
   StatusBar, Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import AppText from "../../../shared/ui/AppText";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { apiFetch } from "../../../api/client";
+import { chatBus, type ChatMessagePayload } from "../../../lib/chatBus";
+import { sendWsEvent } from "../../../hooks/useCallSocket";
 
-interface Channel { id: string; name: string; unread: number; last_message: string; members: number; }
-interface Message  { id: string; text: string; sender_name: string; created_at: string; is_mine: boolean; }
+// ─── Types matching backend MessageResponse / ChannelResponse ────────────────
+
+interface Author { id: number; name: string; avatar_url: string | null; }
+
+interface Message {
+  id: number;
+  channel_id: number;
+  user_id: number;
+  content: string;
+  author: Author;
+  created_at: string;
+  is_self: boolean;
+}
+
+interface Channel {
+  id: number;
+  name: string;
+  description: string | null;
+  type: string;
+  last_message: string | null;
+  last_message_at: string | null;
+  message_count: number;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatTime(ts: string) {
   try { return new Date(ts).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }); }
@@ -37,83 +63,40 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   );
 }
 
-function CallCard({ url, title }: { url: string; title: string }) {
-  const { colors: c } = useAppTheme();
-  return (
-    <View style={{
-      borderRadius: 16, overflow: "hidden",
-      borderWidth: 1, borderColor: "rgba(20,224,164,0.25)",
-      backgroundColor: "rgba(20,224,164,0.07)", width: 240,
-    }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 12 }}>
-        <View style={{
-          width: 36, height: 36, borderRadius: 10,
-          backgroundColor: "rgba(20,224,164,0.15)",
-          borderWidth: 1, borderColor: "rgba(20,224,164,0.3)",
-          alignItems: "center", justifyContent: "center",
-        }}>
-          <Ionicons name="videocam" size={15} color="#14E0A4" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppText style={{ color: "#fff", fontSize: 13, fontWeight: "700" }} numberOfLines={1}>
-            {title || "مكالمة فيديو"}
-          </AppText>
-          <AppText style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>مكالمة جماعية</AppText>
-        </View>
-      </View>
-      <TouchableOpacity style={{
-        marginHorizontal: 12, marginBottom: 12, paddingVertical: 9, borderRadius: 12,
-        alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
-        backgroundColor: "#14E0A4",
-      }}>
-        <Ionicons name="call" size={13} color="#0a0a0f" />
-        <AppText style={{ color: "#0a0a0f", fontSize: 13, fontWeight: "800" }}>انضم للمكالمة</AppText>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 function MessageItem({ msg, showAvatar }: { msg: Message; showAvatar: boolean }) {
-  const callMatch = msg.text.match(/https:\/\/alloul\.app\/workspace\/smart-meetings\S*/);
-  const titleMatch = msg.text.match(/مكالمة[:\s]+(.+?)(?:\s*[|]|$)/);
-
   return (
     <View style={{
-      flexDirection: msg.is_mine ? "row-reverse" : "row",
+      flexDirection: msg.is_self ? "row-reverse" : "row",
       alignItems: "flex-end", gap: 8, marginBottom: 4, paddingHorizontal: 16,
     }}>
-      {!msg.is_mine && (showAvatar
-        ? <Avatar name={msg.sender_name} size={30} />
+      {!msg.is_self && (showAvatar
+        ? <Avatar name={msg.author.name} size={30} />
         : <View style={{ width: 30 }} />
       )}
-      <View style={{ maxWidth: "72%", alignItems: msg.is_mine ? "flex-end" : "flex-start" }}>
-        {showAvatar && !msg.is_mine && (
+      <View style={{ maxWidth: "72%", alignItems: msg.is_self ? "flex-end" : "flex-start" }}>
+        {showAvatar && !msg.is_self && (
           <AppText style={{ color: "rgba(255,255,255,0.38)", fontSize: 11, marginBottom: 3, marginHorizontal: 4 }}>
-            {msg.sender_name}
+            {msg.author.name}
           </AppText>
         )}
-        {callMatch ? (
-          <CallCard url={callMatch[0]} title={titleMatch?.[1]?.trim() || "مكالمة الشركة"} />
-        ) : (
-          <View style={{
-            paddingHorizontal: 13, paddingVertical: 9,
-            borderRadius: msg.is_mine ? 18 : 4,
-            borderTopRightRadius: msg.is_mine ? 4 : 18,
-            borderTopLeftRadius: msg.is_mine ? 18 : 4,
-            borderBottomLeftRadius: 18, borderBottomRightRadius: 18,
-            backgroundColor: msg.is_mine ? "#1d4ed8" : "rgba(255,255,255,0.07)",
-            borderWidth: msg.is_mine ? 0 : 1,
-            borderColor: "rgba(255,255,255,0.08)",
-          }}>
-            <AppText style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 21 }}>
-              {msg.text}
-            </AppText>
-          </View>
-        )}
+        <View style={{
+          paddingHorizontal: 13, paddingVertical: 9,
+          borderRadius: msg.is_self ? 18 : 4,
+          borderTopRightRadius: msg.is_self ? 4 : 18,
+          borderTopLeftRadius: msg.is_self ? 18 : 4,
+          borderBottomLeftRadius: 18, borderBottomRightRadius: 18,
+          backgroundColor: msg.is_self ? "#1d4ed8" : "rgba(255,255,255,0.07)",
+          borderWidth: msg.is_self ? 0 : 1,
+          borderColor: "rgba(255,255,255,0.08)",
+        }}>
+          <AppText style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 21 }}>
+            {msg.content}
+          </AppText>
+        </View>
         <AppText style={{
           color: "rgba(255,255,255,0.25)", fontSize: 10,
           marginTop: 3, marginHorizontal: 4,
-          textAlign: msg.is_mine ? "right" : "left",
+          textAlign: msg.is_self ? "right" : "left",
         }}>
           {formatTime(msg.created_at)}
         </AppText>
@@ -122,63 +105,152 @@ function MessageItem({ msg, showAvatar }: { msg: Message; showAvatar: boolean })
   );
 }
 
-export default function RocketChatScreen() {
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
+export default function CompanyChatScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { colors: c } = useAppTheme();
 
-  const [channels, setChannels]   = useState<Channel[]>([]);
-  const [active, setActive]       = useState<Channel | null>(null);
-  const [messages, setMessages]   = useState<Message[]>([]);
-  const [text, setText]           = useState("");
-  const [loadingCh, setLoadingCh] = useState(true);
+  const [channels, setChannels]     = useState<Channel[]>([]);
+  const [active, setActive]         = useState<Channel | null>(null);
+  const activeRef = useRef<Channel | null>(null);
+  activeRef.current = active;
+
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [text, setText]             = useState("");
+  const [loadingCh, setLoadingCh]   = useState(true);
   const [loadingMsg, setLoadingMsg] = useState(false);
-  const [sending, setSending]     = useState(false);
+  const [sending, setSending]       = useState(false);
   const [showChannels, setShowChannels] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [typingName, setTypingName] = useState<string | null>(null);
+
   const listRef = useRef<FlatList>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastMsgIdRef = useRef<number>(0);
+
+  // ── Load channels ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    apiFetch<{ channels: Channel[] }>("/chat/channels")
+    apiFetch<Channel[]>("/channels/")
       .then(d => {
-        setChannels(d.channels || []);
-        if (d.channels?.length) setActive(d.channels[0]);
+        const list = Array.isArray(d) ? d : [];
+        setChannels(list);
+        if (list.length && !activeRef.current) setActive(list[0]);
       })
       .catch(() => {})
       .finally(() => setLoadingCh(false));
   }, []);
 
-  const loadMessages = useCallback(async (ch: Channel) => {
+  // ── Load messages for active channel ────────────────────────────────────
+
+  const loadMessages = useCallback(async (ch: Channel, replace = true) => {
     try {
-      const d = await apiFetch<{ messages: Message[] }>(`/chat/channels/${ch.id}/messages`);
-      setMessages(d.messages || []);
+      const params = replace ? "" : `?after_id=${lastMsgIdRef.current}`;
+      const d = await apiFetch<Message[]>(`/channels/${ch.id}/messages${params}`);
+      const list = Array.isArray(d) ? d : [];
+      if (replace) {
+        setMessages(list);
+        lastMsgIdRef.current = list.length ? list[list.length - 1].id : 0;
+      } else if (list.length) {
+        setMessages(prev => {
+          const existing = new Set(prev.map(m => m.id));
+          const fresh = list.filter(m => !existing.has(m.id));
+          if (!fresh.length) return prev;
+          lastMsgIdRef.current = fresh[fresh.length - 1].id;
+          return [...prev, ...fresh];
+        });
+      }
     } catch {}
   }, []);
 
   useEffect(() => {
     if (!active) return;
     setLoadingMsg(true);
-    loadMessages(active).finally(() => setLoadingMsg(false));
-    pollRef.current = setInterval(() => loadMessages(active), 4000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    void loadMessages(active, true).finally(() => setLoadingMsg(false));
   }, [active, loadMessages]);
+
+  // ── Re-fetch on screen focus (fallback for missed WS events) ────────────
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeRef.current) {
+        void loadMessages(activeRef.current, false);
+      }
+    }, [loadMessages])
+  );
+
+  // ── Real-time: subscribe to chatBus ─────────────────────────────────────
+
+  useEffect(() => {
+    const unsub = chatBus.subscribe((event) => {
+      if (event.type === "chat:message") {
+        // Only append if it's for the active channel
+        if (activeRef.current && event.channel_id === activeRef.current.id) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === event.message.id)) return prev; // deduplicate
+            lastMsgIdRef.current = event.message.id;
+            return [...prev, event.message];
+          });
+        }
+      } else if (event.type === "chat:typing") {
+        if (activeRef.current && event.channel_id === activeRef.current.id) {
+          setTypingName(event.user_name);
+          if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+          typingTimerRef.current = setTimeout(() => setTypingName(null), 3000);
+        }
+      }
+    });
+    return () => {
+      unsub();
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, []);
+
+  // ── Send message ─────────────────────────────────────────────────────────
 
   const sendMessage = async () => {
     if (!text.trim() || !active || sending) return;
     Keyboard.dismiss();
     setSending(true);
-    const optimistic: Message = {
-      id: Date.now().toString(), text: text.trim(),
-      sender_name: "أنت", created_at: new Date().toISOString(), is_mine: true,
-    };
-    setMessages(p => [...p, optimistic]);
-    const sent = text.trim();
+    const content = text.trim();
     setText("");
+
+    // Optimistic UI — local message
+    const optimistic: Message = {
+      id: Date.now(), // temporary id
+      channel_id: active.id,
+      user_id: -1,
+      content,
+      author: { id: -1, name: "أنت", avatar_url: null },
+      created_at: new Date().toISOString(),
+      is_self: true,
+    };
+    setMessages(prev => [...prev, optimistic]);
+
     try {
-      await apiFetch(`/chat/channels/${active.id}/messages`, {
-        method: "POST", body: JSON.stringify({ text: sent }),
+      const saved = await apiFetch<Message>(`/channels/${active.id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
       });
-    } catch {} finally { setSending(false); }
+      // Replace optimistic with real message
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? { ...saved, is_self: true } : m));
+      lastMsgIdRef.current = saved.id;
+    } catch {
+      // Remove optimistic on failure
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // ── Typing indicator: send WS event while typing ─────────────────────────
+
+  const onTyping = (val: string) => {
+    setText(val);
+    if (active && val.length > 0) {
+      sendWsEvent({ type: "chat:typing", channel_id: active.id });
+    }
   };
 
   const bg = "#090d1a";
@@ -204,11 +276,15 @@ export default function RocketChatScreen() {
           <AppText style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
             {active ? `# ${active.name}` : "دردشة الشركة"}
           </AppText>
-          {active && (
-            <AppText style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>
-              {active.members} أعضاء
+          {typingName ? (
+            <AppText style={{ color: "#14E0A4", fontSize: 11 }}>
+              {typingName} يكتب…
             </AppText>
-          )}
+          ) : active ? (
+            <AppText style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>
+              {active.message_count} رسالة
+            </AppText>
+          ) : null}
         </View>
 
         <TouchableOpacity onPress={() => setShowChannels(s => !s)} hitSlop={10}
@@ -245,11 +321,6 @@ export default function RocketChatScreen() {
               <AppText style={{ flex: 1, color: active?.id === ch.id ? "#e2e8f0" : "#64748b", fontSize: 14, fontWeight: active?.id === ch.id ? "700" : "400" }}>
                 {ch.name}
               </AppText>
-              {ch.unread > 0 && (
-                <View style={{ backgroundColor: "#2E8BFF", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
-                  <AppText style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>{ch.unread}</AppText>
-                </View>
-              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -274,11 +345,11 @@ export default function RocketChatScreen() {
           <FlatList
             ref={listRef}
             data={messages}
-            keyExtractor={m => m.id}
+            keyExtractor={m => String(m.id)}
             renderItem={({ item, index }) => (
               <MessageItem
                 msg={item}
-                showAvatar={!item.is_mine && (index === 0 || messages[index - 1]?.sender_name !== item.sender_name)}
+                showAvatar={!item.is_self && (index === 0 || messages[index - 1]?.author.id !== item.author.id)}
               />
             )}
             contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
@@ -301,7 +372,7 @@ export default function RocketChatScreen() {
           }}>
             <TextInput
               value={text}
-              onChangeText={setText}
+              onChangeText={onTyping}
               placeholder={active ? `رسالة في #${active.name}...` : "رسالة..."}
               placeholderTextColor="rgba(255,255,255,0.22)"
               style={{ color: "#e2e8f0", fontSize: 14, textAlign: "right", lineHeight: 20 }}

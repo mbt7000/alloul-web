@@ -86,6 +86,7 @@ class CompanyMemberResponse(BaseModel):
     user_name: Optional[str] = None
     user_email: Optional[str] = None
     avatar_url: Optional[str] = None
+    presence_status: Optional[str] = None  # online | busy | offline | away
 
     class Config:
         from_attributes = True

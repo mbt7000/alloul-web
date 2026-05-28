@@ -14,7 +14,7 @@ import TasksScreen from "../../features/companies/screens/TasksScreen";
 import MeetingsScreen from "../../features/meetings/screens/MeetingsScreen";
 import HandoverScreen from "../../features/handover/screens/HandoverScreen";
 import ChatScreen from "../../features/chat/screens/ChatScreen";
-import RocketChatScreen from "../../features/chat/screens/RocketChatScreen";
+import CompanyChatScreen from "../../features/chat/screens/CompanyChatScreen";
 import ChannelDetailScreen from "../../features/chat/screens/ChannelDetailScreen";
 import KnowledgeScreen from "../../shared/screens/KnowledgeScreen";
 import CRMScreen from "../../features/companies/screens/CRMScreen";
@@ -53,6 +53,7 @@ import WhatsAppInboxScreen from "../../features/whatsapp/screens/WhatsAppInboxSc
 import SmartMeetingScreen from "../../features/meetings/screens/SmartMeetingScreen";
 import TeamMeetingsScreen from "../../features/meetings/screens/TeamMeetingsScreen";
 import LiveRoomScreen from "../../features/meetings/screens/LiveRoomScreen";
+import CallsPanelScreen from "../../features/meetings/screens/CallsPanelScreen";
 import InvoiceListScreen from "../../features/invoicing/screens/InvoiceListScreen";
 
 const Stack = createNativeStackNavigator();
@@ -115,7 +116,7 @@ export default function CompanyNavigator() {
       <Stack.Screen name="MeetingsOld" component={MeetingsScreen} />
       <Stack.Screen name="Handover" component={HandoverScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen name="RocketChat" component={RocketChatScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CompanyChat" component={CompanyChatScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChannelDetail" component={ChannelDetailScreen} />
       <Stack.Screen name="Knowledge" component={KnowledgeScreen} />
       <Stack.Screen name="CRM" component={CRMScreen} />
@@ -163,6 +164,7 @@ export default function CompanyNavigator() {
         <Stack.Screen name="SmartMeeting" component={SmartMeetingScreen} />
       )}
       <Stack.Screen name="LiveRoom" component={LiveRoomScreen} />
+      <Stack.Screen name="CallsPanel" component={CallsPanelScreen} options={{ headerShown: false }} />
       {FEATURES.ZATCA_INVOICES && (
         <Stack.Screen name="Invoices" component={InvoiceListScreen} />
       )}
