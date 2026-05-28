@@ -107,7 +107,7 @@ function MessageItem({ msg, showAvatar }: { msg: Message; showAvatar: boolean })
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
-export default function RocketChatScreen() {
+export default function CompanyChatScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { colors: c } = useAppTheme();

@@ -14,7 +14,7 @@ import TasksScreen from "../../features/companies/screens/TasksScreen";
 import MeetingsScreen from "../../features/meetings/screens/MeetingsScreen";
 import HandoverScreen from "../../features/handover/screens/HandoverScreen";
 import ChatScreen from "../../features/chat/screens/ChatScreen";
-import CompanyChatScreen from "../../features/chat/screens/RocketChatScreen";
+import CompanyChatScreen from "../../features/chat/screens/CompanyChatScreen";
 import ChannelDetailScreen from "../../features/chat/screens/ChannelDetailScreen";
 import KnowledgeScreen from "../../shared/screens/KnowledgeScreen";
 import CRMScreen from "../../features/companies/screens/CRMScreen";
