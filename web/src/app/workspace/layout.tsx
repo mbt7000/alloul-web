@@ -2,17 +2,25 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { getCachedUser, isAuthenticated } from '@/lib/auth';
 import { apiFetch } from '@/lib/api-client';
 import { AlertTriangle, X, CreditCard } from 'lucide-react';
+import { CallProvider, useCallContext } from '@/context/CallContext';
 import IncomingCallOverlay from '@/components/IncomingCallOverlay';
+import OutgoingCallOverlay from '@/components/OutgoingCallOverlay';
 
-// ── Billing context (consumed by any workspace page that needs it) ──────────
+const MeetingRoomOverlay = dynamic(
+  () => import('./meetings/MeetingRoomOverlay'),
+  { ssr: false }
+);
+
+// ── Billing context ───────────────────────────────────────────────────────────
 interface BillingCtx { effectiveStatus: string; daysRemaining: number; }
 const BillingContext = createContext<BillingCtx>({ effectiveStatus: 'active', daysRemaining: 0 });
 export const useBilling = () => useContext(BillingContext);
 
-// ── Grace banner ─────────────────────────────────────────────────────────────
+// ── Grace banner ──────────────────────────────────────────────────────────────
 function GraceBanner({ days, onDismiss }: { days: number; onDismiss: () => void }) {
   const router = useRouter();
   return (
@@ -38,24 +46,33 @@ function GraceBanner({ days, onDismiss }: { days: number; onDismiss: () => void 
   );
 }
 
-// ── Layout ───────────────────────────────────────────────────────────────────
+// ── Call overlays (rendered inside CallProvider) ──────────────────────────────
+function CallOverlays() {
+  const { mode, activeRoom, endCall } = useCallContext();
+  return (
+    <>
+      <IncomingCallOverlay />
+      <OutgoingCallOverlay />
+      {mode === 'active' && activeRoom && (
+        <MeetingRoomOverlay room={activeRoom} onLeave={endCall} />
+      )}
+    </>
+  );
+}
+
+// ── Layout ────────────────────────────────────────────────────────────────────
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [checked,        setChecked]       = useState(false);
-  const [billingStatus,  setBillingStatus] = useState<BillingCtx>({ effectiveStatus: 'active', daysRemaining: 0 });
-  const [showBanner,     setShowBanner]    = useState(true);
+  const [checked,       setChecked]      = useState(false);
+  const [billingStatus, setBillingStatus] = useState<BillingCtx>({ effectiveStatus: 'active', daysRemaining: 0 });
+  const [showBanner,    setShowBanner]   = useState(true);
 
   useEffect(() => {
     const user = getCachedUser() as any;
     if (!isAuthenticated() || !user) { router.replace('/login'); return; }
-
-    // Step 1: account_type must be set — new users who skipped onboarding go back
-    if (!user.account_type) { router.replace('/onboarding'); return; }
-
-    // Step 2: job seekers don't have a company subscription → allow
+    if (!user.account_type)          { router.replace('/onboarding'); return; }
     if (user.account_type === 'job_seeker') { setChecked(true); return; }
 
-    // Step 3: check company subscription (owners + employees)
     apiFetch('/companies/subscription-status')
       .then((res: any) => {
         const effective = res?.effective_status || res?.status || 'none';
@@ -67,31 +84,17 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         } else if (effective === 'grace') {
           setBillingStatus({ effectiveStatus: 'grace', daysRemaining: days });
           setChecked(true);
-        } else if (effective === 'suspended') {
-          router.replace(`/subscribe?reason=suspended&days=${days}`);
-        } else if (effective === 'frozen') {
-          router.replace(`/subscribe?reason=frozen&days=${days}`);
-        } else if (effective === 'scheduled_deletion') {
-          router.replace(`/subscribe?reason=scheduled_deletion&days=${days}`);
-        } else if (effective === 'expired') {
-          router.replace('/subscribe?reason=expired');
+        } else if (effective === 'suspended')         { router.replace(`/subscribe?reason=suspended&days=${days}`);
+        } else if (effective === 'frozen')            { router.replace(`/subscribe?reason=frozen&days=${days}`);
+        } else if (effective === 'scheduled_deletion'){ router.replace(`/subscribe?reason=scheduled_deletion&days=${days}`);
+        } else if (effective === 'expired')           { router.replace('/subscribe?reason=expired');
         } else if (effective === 'none') {
-          // No subscription at all — owner goes to subscribe, employee has no company yet
-          if (user.account_type === 'owner') {
-            router.replace('/subscribe');
-          } else {
-            // employee not yet in a company — send to lobby (not onboarding to avoid redirect loop)
-            router.replace('/lobby');
-          }
+          user.account_type === 'owner' ? router.replace('/subscribe') : router.replace('/lobby');
         } else {
-          // Fail open on unexpected status (network edge cases)
           setChecked(true);
         }
       })
-      .catch(() => {
-        // Network error — allow access temporarily (fail open)
-        setChecked(true);
-      });
+      .catch(() => setChecked(true));
   }, [router]);
 
   if (!checked) {
@@ -104,13 +107,15 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   return (
     <BillingContext.Provider value={billingStatus}>
-      <div className="flex flex-col min-h-screen">
-        {billingStatus.effectiveStatus === 'grace' && showBanner && (
-          <GraceBanner days={billingStatus.daysRemaining} onDismiss={() => setShowBanner(false)} />
-        )}
-        {children}
-        <IncomingCallOverlay />
-      </div>
+      <CallProvider>
+        <div className="flex flex-col min-h-screen">
+          {billingStatus.effectiveStatus === 'grace' && showBanner && (
+            <GraceBanner days={billingStatus.daysRemaining} onDismiss={() => setShowBanner(false)} />
+          )}
+          {children}
+          <CallOverlays />
+        </div>
+      </CallProvider>
     </BillingContext.Provider>
   );
 }

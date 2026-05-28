@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import {
   Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
   Users, Clock, Loader2, Plus, MessageCircle, Video,
@@ -14,13 +13,7 @@ import {
   type CompanyMember, type CallHistoryItem,
 } from '@/lib/api-client';
 import { isAuthenticated, getCachedUser } from '@/lib/auth';
-
-const MeetingRoomOverlay = dynamic(
-  () => import('../meetings/MeetingRoomOverlay'),
-  { ssr: false }
-);
-
-interface ActiveRoom { ws_url: string; token: string; title: string; call_id?: number; }
+import { useCallContext } from '@/context/CallContext';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,15 +176,15 @@ function HistoryRow({ c, onCallback }: { c: CallHistoryItem; onCallback: () => v
 
 export default function CallsPage() {
   const router = useRouter();
-  const [members,  setMembers]  = useState<CompanyMember[]>([]);
-  const [calls,    setCalls]    = useState<CallHistoryItem[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [calling,  setCalling]  = useState<number | null>(null);
-  const [joining,  setJoining]  = useState(false);
-  const [creating, setCreating] = useState(false);
+  const { mode, initiateCall, startRoom } = useCallContext();
+  const [members,   setMembers]  = useState<CompanyMember[]>([]);
+  const [calls,     setCalls]    = useState<CallHistoryItem[]>([]);
+  const [loading,   setLoading]  = useState(true);
+  const [calling,   setCalling]  = useState<number | null>(null);
+  const [joining,   setJoining]  = useState(false);
+  const [creating,  setCreating] = useState(false);
   const [meetTitle, setMeetTitle] = useState('');
-  const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
-  const [myUserId, setMyUserId] = useState<number | null>(null);
+  const [myUserId,  setMyUserId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.replace('/login'); return; }
@@ -213,51 +206,43 @@ export default function CallsPage() {
   }, [router]);
 
   const handleCall = useCallback(async (member: CompanyMember, type: 'audio' | 'video') => {
+    if (mode !== 'idle') return;
+    const name = member.user_name || member.user_email || `#${member.user_id}`;
     setCalling(member.user_id);
-    try {
-      const data = await apiFetch<{ call_id: number; room_name: string; token: string; ws_url: string }>(
-        '/call/initiate', { method: 'POST', body: JSON.stringify({ receiver_id: member.user_id, call_type: type }) }
-      );
-      const name = member.user_name || member.user_email || 'مكالمة';
-      setActiveRoom({ ws_url: data.ws_url, token: data.token, title: `مكالمة مع ${name}`, call_id: data.call_id });
-    } catch (e: any) {
-      alert(e?.message?.includes('مشغول') ? 'المستخدم مشغول حالياً' : 'تعذّر بدء المكالمة');
-    } finally {
-      setCalling(null);
-    }
-  }, []);
+    await initiateCall(member.user_id, name, type);
+    setCalling(null);
+  }, [mode, initiateCall]);
 
   const handleMessage = useCallback((member: CompanyMember) => {
     router.push(`/workspace/chat?user=${member.user_id}`);
   }, [router]);
 
   const startGroupMeeting = async () => {
+    if (mode !== 'idle') return;
     setJoining(true);
     try {
       const data = await apiFetch<{ room_name: string; token: string; ws_url: string }>(
         '/livekit/company-room', { method: 'GET' }
       );
-      setActiveRoom({ ws_url: data.ws_url, token: data.token, title: 'اجتماع الفريق' });
+      startRoom({ ws_url: data.ws_url, token: data.token, title: 'اجتماع الفريق' });
     } catch { alert('تعذّر بدء الاجتماع'); }
     finally { setJoining(false); }
   };
 
   const createNamedMeeting = async () => {
-    if (!meetTitle.trim()) return;
+    if (!meetTitle.trim() || mode !== 'idle') return;
     setCreating(true);
     try {
       const data = await apiFetch<{ room_name: string; token: string; ws_url: string; title: string }>(
         '/livekit/rooms', { method: 'POST', body: JSON.stringify({ title: meetTitle.trim() }) }
       );
       setMeetTitle('');
-      setActiveRoom({ ws_url: data.ws_url, token: data.token, title: data.title || meetTitle });
+      startRoom({ ws_url: data.ws_url, token: data.token, title: data.title || meetTitle });
     } catch { alert('تعذّر إنشاء الاجتماع'); }
     finally { setCreating(false); }
   };
 
   const teamMembers = members.filter(m => m.user_id !== myUserId);
-
-  if (activeRoom) return <MeetingRoomOverlay room={activeRoom} onLeave={() => setActiveRoom(null)} />;
 
   return (
     <AppShell>

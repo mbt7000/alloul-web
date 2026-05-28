@@ -1,43 +1,21 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Zap, Video, Plus, Loader2 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { getToken, isAuthenticated } from '@/lib/auth';
+import { getToken } from '@/lib/auth';
+import { useCallContext } from '@/context/CallContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
 
-const MeetingRoomOverlay = dynamic(
-  () => import('../meetings/MeetingRoomOverlay'),
-  { ssr: false }
-);
-
-interface ActiveRoom { ws_url: string; token: string; title: string; call_id?: number; }
-
-function SmartMeetingsContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [title, setTitle] = useState('');
+export default function SmartMeetingsPage() {
+  const { mode, startRoom } = useCallContext();
+  const [title,    setTitle]    = useState('');
   const [creating, setCreating] = useState(false);
-  const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
-
-  useEffect(() => {
-    if (!isAuthenticated()) { router.replace('/login'); return; }
-
-    // If URL params contain room+token, auto-launch that room
-    const room = searchParams.get('room');
-    const token = searchParams.get('token');
-    const wsUrl = searchParams.get('wsUrl') || 'wss://livekit.alloul.app';
-    const callIdStr = searchParams.get('callId');
-    if (room && token) {
-      setActiveRoom({ ws_url: wsUrl, token, title: 'مكالمة واردة', call_id: callIdStr ? Number(callIdStr) : undefined });
-    }
-  }, [searchParams, router]);
 
   const createMeeting = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || mode !== 'idle') return;
     setCreating(true);
     try {
       const token = getToken();
@@ -48,11 +26,7 @@ function SmartMeetingsContent() {
       });
       if (res.ok) {
         const data = await res.json();
-        setActiveRoom({
-          ws_url: data.ws_url || 'wss://livekit.alloul.app',
-          token: data.token,
-          title,
-        });
+        startRoom({ ws_url: data.ws_url || 'wss://livekit.alloul.app', token: data.token, title });
         setTitle('');
       } else {
         alert('تعذّر إنشاء الاجتماع');
@@ -63,11 +37,6 @@ function SmartMeetingsContent() {
       setCreating(false);
     }
   };
-
-  // Native LiveKit room (no iframe)
-  if (activeRoom) {
-    return <MeetingRoomOverlay room={activeRoom} onLeave={() => setActiveRoom(null)} />;
-  }
 
   return (
     <AppShell>
@@ -82,7 +51,6 @@ function SmartMeetingsContent() {
           </div>
         </div>
 
-        {/* Create meeting */}
         <div className="bg-dark-bg-800 border border-white/10 rounded-2xl p-4 mb-6">
           <p className="text-white font-semibold mb-3 text-sm">اجتماع جديد</p>
           <div className="flex gap-2">
@@ -95,7 +63,7 @@ function SmartMeetingsContent() {
             />
             <button
               onClick={createMeeting}
-              disabled={!title.trim() || creating}
+              disabled={!title.trim() || creating || mode !== 'idle'}
               className="px-4 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-40 transition-colors"
               style={{ background: '#F59E0B' }}
             >
@@ -111,17 +79,5 @@ function SmartMeetingsContent() {
         </div>
       </div>
     </AppShell>
-  );
-}
-
-export default function SmartMeetingsPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', minHeight: '100vh' }}>
-        <Loader2 size={24} color="#3b82f6" />
-      </div>
-    }>
-      <SmartMeetingsContent />
-    </Suspense>
   );
 }

@@ -18,6 +18,7 @@ type CallEvent =
   | { type: 'call_accepted'; call_id: number }
   | { type: 'call_rejected'; call_id: number }
   | { type: 'call_ended'; call_id: number; duration?: number }
+  | { type: 'call_missed'; call_id: number; caller_id: number; caller_name: string }
   | { type: 'pong' };
 
 interface Options {
