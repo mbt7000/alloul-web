@@ -48,6 +48,14 @@ class CallManager:
     def is_online(self, user_id: int) -> bool:
         return user_id in self.connections
 
+    async def broadcast_to_users(self, user_ids: list[int], data: dict) -> int:
+        """Broadcast data to every listed user who has an active WebSocket. Returns delivery count."""
+        count = 0
+        for uid in user_ids:
+            if await self.send(uid, data):
+                count += 1
+        return count
+
 
 call_manager = CallManager()
 
@@ -352,6 +360,28 @@ async def websocket_endpoint(
                     if status in ("online", "busy", "offline", "away"):
                         user.presence_status = status
                         db.commit()
+
+                elif event == "chat:typing":
+                    # Client signals typing in a channel → broadcast to other online members
+                    channel_id = data.get("channel_id")
+                    if channel_id:
+                        from models import CompanyMember
+                        mem = db.query(CompanyMember).filter(CompanyMember.user_id == user_id).first()
+                        if mem:
+                            member_ids = [
+                                m.user_id
+                                for m in db.query(CompanyMember)
+                                .filter(CompanyMember.company_id == mem.company_id)
+                                .all()
+                                if m.user_id != user_id
+                            ]
+                            typing_payload = {
+                                "type": "chat:typing",
+                                "channel_id": channel_id,
+                                "user_id": user_id,
+                                "user_name": user.name or user.username or str(user_id),
+                            }
+                            await call_manager.broadcast_to_users(member_ids, typing_payload)
 
         except WebSocketDisconnect:
             pass

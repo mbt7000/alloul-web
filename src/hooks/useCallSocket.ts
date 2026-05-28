@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../state/auth/AuthContext";
 import { getToken } from "../storage/token";
 import { type IncomingCallPayload } from "../features/meetings/screens/IncomingCallScreen";
+import { chatBus } from "../lib/chatBus";
 
 const WS_BASE = "wss://api.alloul.app";
 const PING_MS = 25_000;
@@ -15,6 +16,16 @@ export type CallEvent =
 
 interface Options {
   onEvent: (event: CallEvent) => void;
+}
+
+/** Singleton ref exposed so other hooks can send events without opening a second connection. */
+export const _wsRef = { current: null as WebSocket | null };
+
+export function sendWsEvent(data: Record<string, unknown>): void {
+  const ws = _wsRef.current;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+  }
 }
 
 export function useCallSocket({ onEvent }: Options) {
@@ -45,6 +56,7 @@ export function useCallSocket({ onEvent }: Options) {
 
     const ws = new WebSocket(`${WS_BASE}/ws/${user.id}`, ["bearer", token]);
     wsRef.current = ws;
+    _wsRef.current = ws;
 
     ws.onopen = () => {
       clearTimers();
@@ -67,12 +79,17 @@ export function useCallSocket({ onEvent }: Options) {
           onEventRef.current({ type: "call_rejected", call_id: data.call_id });
         } else if (data.type === "call_ended") {
           onEventRef.current({ type: "call_ended", call_id: data.call_id, duration: data.duration });
+        } else if (data.type === "chat:message") {
+          chatBus.emit({ type: "chat:message", channel_id: data.channel_id, message: data.message });
+        } else if (data.type === "chat:typing") {
+          chatBus.emit({ type: "chat:typing", channel_id: data.channel_id, user_id: data.user_id, user_name: data.user_name });
         }
       } catch { /* malformed JSON — ignore */ }
     };
 
     ws.onclose = () => {
       clearTimers();
+      if (_wsRef.current === ws) _wsRef.current = null;
       if (!mountedRef.current) return;
       reconnectRef.current = setTimeout(() => {
         if (mountedRef.current) void connect();
