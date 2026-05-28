@@ -15,22 +15,21 @@
 - call/initiate, accept, reject, end working
 - TODO: 35s server-side timeout → missed status
 
-## Phase 3 — Rename + Clean Chat
-- Rename RocketChatScreen → CompanyChannelsChatScreen
-- Update all navigation references
-- Chat system (channels + DMs) already works
+## Phase 3 ✅ DONE — Rename + Clean Chat
+- Renamed RocketChat → CompanyChat in all navigation
+- CompanyNavigator, TeamMeetingsScreen, CompanyServicesScreen updated
 
-## Phase 4 — Notification Types + Routing + Expiry
-- Add expires_at to call notifications (48h)
-- Route: call_* → calls panel only, never chat thread
-- Add call_missed notification type
-- CallsPanel UI (history with missed in red)
+## Phase 4 ✅ DONE — Notification Types + Routing + Expiry
+- 35s auto-missed background task → call_missed notification in DB
+- 48h expires_at on call push notifications + DB column
+- call_* notifications routed to CallsPanel only (not main feed)
+- CallsPanelScreen: call history with missed calls in red
 
-## Phase 5 — Professional UI
-- UserCard unified component
-- IncomingCallModal full-screen
-- Improve TeamMeetingsScreen
-- Improve call history
+## Phase 5 ✅ DONE — Professional UI
+- UserCard: avatar + name + role badge + presence dot + actions
+- TeamMeetingsScreen: uses UserCard, presence dots (online/busy/offline)
+- TeamMeetingsScreen: shortcut button → CallsPanel
+- Backend: /companies/members returns presence_status
 
 ## Phase 6 — Native Ringing (deferred)
 - CallKit + PushKit (iOS)
