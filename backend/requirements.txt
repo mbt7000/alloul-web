@@ -23,9 +23,8 @@ azure-storage-blob==12.19.0
 anthropic==0.39.0
 openai==1.54.4
 httpx>=0.27.0
-chromadb>=0.5.0
-sentence-transformers>=3.0.0
 huggingface-hub>=0.24.0
+# chromadb and sentence-transformers excluded (too large for serverless, use API-based embeddings)
 
 # Env
 python-dotenv==1.0.1

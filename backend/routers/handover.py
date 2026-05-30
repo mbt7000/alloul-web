@@ -33,6 +33,8 @@ class HandoverResponse(BaseModel):
     score: int
     tasks: int
     completed_tasks: int
+    pending_actions: list[str] = []
+    risk_level: Optional[str] = None
     created_at: Optional[str] = None
 
     class Config:
@@ -40,6 +42,13 @@ class HandoverResponse(BaseModel):
 
 
 def _to_response(h: HandoverRecord) -> HandoverResponse:
+    import json as _json
+    pending: list[str] = []
+    if h.pending_actions_json:
+        try:
+            pending = _json.loads(h.pending_actions_json) or []
+        except Exception:
+            pending = []
     return HandoverResponse(
         id=h.id,
         user_id=h.user_id,
@@ -52,6 +61,8 @@ def _to_response(h: HandoverRecord) -> HandoverResponse:
         score=h.score or 0,
         tasks=h.tasks or 0,
         completed_tasks=h.completed_tasks or 0,
+        pending_actions=pending,
+        risk_level=h.risk_level,
         created_at=h.created_at.isoformat() if h.created_at else None,
     )
 

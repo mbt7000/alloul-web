@@ -95,10 +95,7 @@ export default function CompanyProfileScreen() {
 
   return (
     <Screen edges={["top", "left", "right", "bottom"]} style={{ backgroundColor: colors.mediaCanvas }}>
-      <AppHeader
-        title="ملف الشركة"
-        rightActions={<AppButton label="الخلاصة" size="sm" onPress={() => navigation.navigate("CompanyFeed")} />}
-      />
+      <AppHeader title="ملف الشركة" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <CompanyHeroCard
           eyebrow="ملف الشركة"
@@ -132,7 +129,6 @@ export default function CompanyProfileScreen() {
           <CompanySectionLabel label="شاشات الشركة الأساسية" />
           <View style={styles.grid}>
             <CompanyActionTile label="الشركات" subtitle="الدليل والشركة المرتبطة" icon="business-outline" tone="cyan" onPress={() => navigation.navigate("Companies")} />
-            <CompanyActionTile label="الخلاصة" subtitle="الإعلانات والتحديثات" icon="newspaper-outline" tone="teal" onPress={() => navigation.navigate("CompanyFeed")} />
             <CompanyActionTile label="الملفات" subtitle="المستندات والأصول المشتركة" icon="folder-open-outline" tone="blue" onPress={() => navigation.navigate("CompanyFiles")} />
             <CompanyActionTile label="الأعضاء" subtitle="الأدوار والتعاون" icon="people-outline" tone="teal" onPress={() => navigation.navigate("Teams")} />
           </View>
@@ -198,7 +194,6 @@ export default function CompanyProfileScreen() {
                   title={item.title}
                   subtitle={item.time ? `${item.type} · ${item.time}` : item.type}
                   iconLeft="pulse-outline"
-                  onPress={() => navigation.navigate("CompanyFeed")}
                 />
               ))}
             </View>

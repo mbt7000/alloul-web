@@ -54,7 +54,7 @@ export default function BillingScreen() {
   };
 
   const planKey = sub?.plan_id as string | null | undefined;
-  const plan = planKey && (planKey === "starter" || planKey === "pro" || planKey === "pro_plus")
+  const plan = planKey && (planKey === "starter" || planKey === "pro" || planKey === "business")
     ? PLANS[planKey]
     : null;
   const isAdminComp = planKey === "admin";

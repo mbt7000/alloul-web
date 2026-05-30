@@ -228,3 +228,50 @@ def get_company_daily_join(
     join_url = f"https://{subdomain}.daily.co/{room_name}?t={quote(token, safe='')}"
     _log_daily(db, mem.company_id, current_user.id, room_name)
     return DailyJoinResponse(join_url=join_url, room_name=room_name)
+
+
+# ── Ad-hoc meeting rooms ──────────────────────────────────────────────────────
+
+class CreateMeetingRequest(BaseModel):
+    title: str
+
+
+class MeetingRoomResponse(BaseModel):
+    join_url: str
+    room_name: str
+    provider: str = "daily"
+
+
+@router.post("/create-meeting", response_model=MeetingRoomResponse)
+def create_daily_meeting(
+    body: CreateMeetingRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Create an ad-hoc Daily.co meeting room and return a join URL with token."""
+    import uuid, re
+    from urllib.parse import quote
+
+    slug = re.sub(r"[^a-z0-9]+", "-", body.title.strip().lower())[:30].strip("-")
+    room_name = f"mtg-{slug}-{uuid.uuid4().hex[:6]}"
+    subdomain = _daily_subdomain()
+
+    create_body = {
+        "name": room_name,
+        "privacy": "private",
+        "properties": {
+            "enable_chat": True,
+            "enable_screenshare": True,
+            "start_video_off": False,
+            "start_audio_off": False,
+            "max_participants": 50,
+            "exp": int(__import__("time").time()) + 3600 * 6,
+        },
+    }
+    code, data = _daily_request("POST", "/rooms", create_body)
+    if code not in (200, 201):
+        raise HTTPException(status_code=502, detail=data.get("error") or f"Daily create room failed: {code}")
+
+    display = (current_user.name or current_user.username or "host")[:64]
+    token = _create_meeting_token(room_name=room_name, user_name=display)
+    join_url = f"https://{subdomain}.daily.co/{room_name}?t={quote(token, safe='')}"
+    return MeetingRoomResponse(join_url=join_url, room_name=room_name)

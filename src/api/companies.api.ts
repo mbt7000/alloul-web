@@ -10,6 +10,14 @@ export interface CompanyInfo {
 export const getMyCompany = () =>
   apiFetch<CompanyInfo | null>("/companies/me").catch(() => null);
 
+export const createCompany = (body: {
+  name: string;
+  company_type?: string;
+  size?: string;
+  founder_name?: string;
+  founder_email?: string;
+}) => apiFetch<CompanyInfo>("/companies", { method: "POST", body: JSON.stringify(body) });
+
 export const getSubscriptionStatus = () =>
   apiFetch<{ status: string | null; plan_id: string | null }>("/companies/subscription-status").catch(() => ({
     status: null,
@@ -23,36 +31,15 @@ export interface UserProfile {
   avatar_url?: string | null;
   cover_url?: string | null;
   bio?: string | null;
-  i_code?: string | null; // only returned when is_self=true
-  followers_count: number;
-  following_count: number;
-  posts_count: number;
-  is_following: boolean;
+  i_code?: string | null;
   is_self: boolean;
   created_at?: string | null;
 }
 
 export const getUserProfile = (id: number | string) =>
-  apiFetch<UserProfile>(`/follows/users/${id}/profile`);
-
-export const followUser = (id: number) => apiFetch(`/follows/${id}`, { method: "POST" });
-export const unfollowUser = (id: number) => apiFetch(`/follows/${id}`, { method: "DELETE" });
-export const blockUser = (id: number) => apiFetch(`/follows/${id}/block`, { method: "POST" });
-export const unblockUser = (id: number) => apiFetch(`/follows/${id}/block`, { method: "DELETE" });
-
-export interface FollowUser {
-  id: number;
-  username: string;
-  name: string | null;
-  avatar_url: string | null;
-  is_following: boolean;
-}
-
-export const getFollowers = (userId: number) =>
-  apiFetch<FollowUser[]>(`/follows/${userId}/followers`);
-
-export const getFollowing = (userId: number) =>
-  apiFetch<FollowUser[]>(`/follows/${userId}/following`);
+  apiFetch<UserProfile>(`/companies/members/${id}/profile`).catch(() =>
+    apiFetch<UserProfile>(`/auth/me`)
+  );
 
 export interface DashboardStats {
   total_memory_items?: number;
@@ -104,8 +91,20 @@ export interface TaskRow {
 }
 
 export const getProjects = (companyId?: number) => {
+  // Always include company projects when companyId is available
   const q = companyId != null ? `?company_id=${companyId}` : "";
-  return apiFetch<ProjectRow[]>(`/projects/${q}`);
+  return apiFetch<ProjectRow[]>(`/projects/${q}`).then((list) => {
+    // If we got company projects, also merge personal projects so nothing is hidden
+    if (companyId != null) {
+      return apiFetch<ProjectRow[]>("/projects/")
+        .then((personal) => {
+          const ids = new Set(list.map((p) => p.id));
+          return [...list, ...personal.filter((p) => !ids.has(p.id))];
+        })
+        .catch(() => list);
+    }
+    return list;
+  });
 };
 
 export const createProject = (body: {
@@ -159,11 +158,13 @@ export interface CompanyMemberRow {
   role: string;
   department_id?: number | null;
   i_code: string;
+  work_id?: string | null;
   manager_id?: number | null;
   job_title?: string | null;
   phone?: string | null;
   user_name?: string | null;
   user_email?: string | null;
+  avatar_url?: string | null;
 }
 
 export const getCompanyMembers = () => apiFetch<CompanyMemberRow[]>("/companies/members");
@@ -211,6 +212,8 @@ export interface HandoverRow {
   score: number;
   tasks: number;
   completed_tasks: number;
+  pending_actions?: string[] | null;
+  risk_level?: string | null;
   created_at?: string | null;
 }
 
@@ -583,3 +586,157 @@ export const sendChannelMessage = (channelId: number, content: string) =>
 
 export const deleteChannelMessage = (channelId: number, messageId: number) =>
   apiFetch(`/channels/${channelId}/messages/${messageId}`, { method: "DELETE" });
+
+// ─── Work ID / Employee Profile ───────────────────────────────────────────────
+
+export interface MyEmployeeProfile {
+  membership_id: number;
+  company_id: number;
+  company_name: string;
+  role: string;
+  job_title: string | null;
+  work_id: string;
+  joined_at: string | null;
+}
+
+export interface WorkIdPreview {
+  work_id: string;
+  user_id: number;
+  user_name: string | null;
+  user_email: string | null;
+  current_company: string | null;
+  role: string;
+  job_title: string | null;
+}
+
+export interface AddByWorkIdResponse {
+  message: string;
+  membership_id: number;
+  work_id: string;
+  user_name: string | null;
+}
+
+export const getMyEmployeeProfile = () =>
+  apiFetch<MyEmployeeProfile>("/employees/me");
+
+export const validateWorkId = (work_id: string) =>
+  apiFetch<WorkIdPreview>("/employees/validate-work-id", {
+    method: "POST",
+    body: JSON.stringify({ work_id }),
+  });
+
+export const addMemberByWorkId = (body: {
+  work_id: string;
+  role?: string;
+  job_title?: string;
+  department_id?: number;
+}) =>
+  apiFetch<AddByWorkIdResponse>("/employees/add-by-work-id", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+// ─── Email Invitations ──────────────────────────────────────────────────────
+
+export interface EmailInviteInfo {
+  token: string;
+  company_name: string;
+  company_logo?: string | null;
+  inviter_name?: string | null;
+  role: string;
+  email: string;
+  expires_at: string;
+}
+
+export const sendEmailInvite = (email: string, role = "member") =>
+  apiFetch<{ message: string; token: string }>("/companies/invite-email", {
+    method: "POST",
+    body: JSON.stringify({ email, role }),
+  });
+
+export const getEmailInviteInfo = (token: string) =>
+  apiFetch<EmailInviteInfo>(`/companies/email-invite/${token}`);
+
+export const acceptEmailInvite = (token: string, body: {
+  name: string;
+  username: string;
+  password: string;
+}) =>
+  apiFetch<{ access_token: string; token_type: string }>(`/companies/email-invite/${token}/accept`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+// ─── Recruitment (Workspace) ─────────────────────────────────────────────────
+
+export interface RecruitmentDashboard {
+  open_jobs: number;
+  total_applicants: number;
+  new_this_week: number;
+  hired: number;
+  pending_review: number;
+}
+
+export interface RecruitmentJob {
+  id: number;
+  title: string;
+  job_type?: string | null;
+  location?: string | null;
+  min_experience?: number | null;
+  is_active: boolean;
+  applicants_count: number;
+  created_at?: string | null;
+}
+
+export interface JobApplicant {
+  id: number;
+  user_id: number;
+  username: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  stage: string;
+  note?: string | null;
+  applied_at?: string | null;
+}
+
+export interface TalentProfile {
+  id: number;
+  username: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  bio?: string | null;
+  location?: string | null;
+}
+
+export const getRecruitmentDashboard = () =>
+  apiFetch<RecruitmentDashboard>("/workspace/recruitment/dashboard");
+
+export const getRecruitmentJobs = () =>
+  apiFetch<RecruitmentJob[]>("/workspace/recruitment/jobs");
+
+export const createRecruitmentJob = (data: {
+  title: string;
+  job_type?: string;
+  location?: string;
+  description?: string;
+  min_experience?: number;
+}) =>
+  apiFetch<RecruitmentJob>("/workspace/recruitment/jobs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const getJobApplicants = (jobId: number) =>
+  apiFetch<JobApplicant[]>(`/workspace/recruitment/jobs/${jobId}/applicants`);
+
+export const updateApplicantStage = (applicationId: number, stage: string) =>
+  apiFetch(`/workspace/recruitment/applications/${applicationId}/stage`, {
+    method: "PATCH",
+    body: JSON.stringify({ stage }),
+  });
+
+export const getTalentPool = (search?: string) => {
+  const q = search ? `?search=${encodeURIComponent(search)}` : "";
+  return apiFetch<TalentProfile[]>(`/workspace/recruitment/talent-pool${q}`).catch(() => [] as TalentProfile[]);
+};
+

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+from datetime import datetime, timezone
 from typing import Annotated, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -9,7 +14,29 @@ from auth import get_current_user
 from database import get_db
 from models import User, Notification
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+# Notification types that belong exclusively to CallsPanel — never shown in main feed
+_CALL_TYPES = {"call_incoming", "call_missed", "call_ended", "call_rejected"}
+
+
+def _base_query(db: Session, user_id: int):
+    """Shared base: live (not expired) + not call-type."""
+    return (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user_id,
+            # Exclude call notifications — they live only in CallsPanel
+            Notification.type.notin_(_CALL_TYPES),
+            # Exclude expired notifications
+            or_(
+                Notification.expires_at.is_(None),
+                Notification.expires_at > func.now(),
+            ),
+        )
+    )
 
 
 class NotificationResponse(BaseModel):
@@ -36,8 +63,7 @@ def list_notifications(
     limit: int = Query(50, ge=1, le=100),
 ):
     notifs = (
-        db.query(Notification)
-        .filter(Notification.user_id == current_user.id)
+        _base_query(db, current_user.id)
         .order_by(Notification.created_at.desc())
         .limit(limit)
         .all()
@@ -65,8 +91,8 @@ def unread_count(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     count = (
-        db.query(Notification)
-        .filter(Notification.user_id == current_user.id, Notification.read == 0)
+        _base_query(db, current_user.id)
+        .filter(Notification.read == 0)
         .count()
     )
     return UnreadCount(count=count)
@@ -93,10 +119,10 @@ def mark_all_read(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    db.query(Notification).filter(
-        Notification.user_id == current_user.id,
-        Notification.read == 0,
-    ).update({"read": 1})
+    # Mark only main-feed notifications (not call types, not expired)
+    _base_query(db, current_user.id).filter(Notification.read == 0).update(
+        {"read": 1}, synchronize_session=False
+    )
     db.commit()
 
 
@@ -114,3 +140,49 @@ def delete_notification(
         raise HTTPException(status_code=404, detail="Notification not found")
     db.delete(notif)
     db.commit()
+
+
+# ─── Daily cleanup loop ────────────────────────────────────────────────────────
+
+async def _cleanup_loop() -> None:
+    """Background loop: delete expired notifications once per day at 03:00 UTC."""
+    logger.info("Notification cleanup loop started.")
+    while True:
+        try:
+            now = datetime.now(timezone.utc)
+            # Sleep until next 03:00 UTC
+            next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
+            if next_run <= now:
+                from datetime import timedelta
+                next_run = next_run + timedelta(days=1)
+            wait_secs = (next_run - now).total_seconds()
+            await asyncio.sleep(wait_secs)
+
+            from database import SessionLocal
+            db = SessionLocal()
+            try:
+                deleted = (
+                    db.query(Notification)
+                    .filter(
+                        Notification.expires_at.isnot(None),
+                        Notification.expires_at <= func.now(),
+                    )
+                    .delete(synchronize_session=False)
+                )
+                db.commit()
+                logger.info(f"Notification cleanup: deleted {deleted} expired rows.")
+            except Exception as e:
+                logger.error(f"Notification cleanup DB error: {e}")
+                db.rollback()
+            finally:
+                db.close()
+
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"Notification cleanup loop error: {e}")
+            await asyncio.sleep(3600)  # retry in 1h on unexpected error
+
+
+async def start_cleanup_loop() -> None:
+    asyncio.create_task(_cleanup_loop())

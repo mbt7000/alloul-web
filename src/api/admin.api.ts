@@ -3,7 +3,6 @@ import { apiFetch } from "./client";
 export type AdminStats = {
   total_users: number;
   verified_users: number;
-  total_posts: number;
   total_companies: number;
 };
 

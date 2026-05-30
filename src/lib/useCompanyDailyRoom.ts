@@ -1,27 +1,41 @@
 import { useCallback, useState } from "react";
 import { Alert } from "react-native";
-import { getCompanyDailyJoinUrl } from "../api";
-import { openDailyJoinUrl } from "./openDailyJoinUrl";
+import { useNavigation } from "@react-navigation/native";
+import { apiFetch } from "../api/client";
 
-const DAILY_HINT =
-  "تأكد من ضبط DAILY_API_KEY و DAILY_SUBDOMAIN على الخادم، وأنك عضو في شركة.";
+interface LiveKitRoom {
+  room_name: string;
+  token: string;
+  ws_url: string;
+  title: string;
+}
 
 export function useCompanyDailyRoom() {
+  const navigation = useNavigation<any>();
   const [dailyLoading, setDailyLoading] = useState(false);
 
   const openCompanyDaily = useCallback(async () => {
     setDailyLoading(true);
     try {
-      const r = await getCompanyDailyJoinUrl();
-      await openDailyJoinUrl(r.join_url);
+      const data = await apiFetch<LiveKitRoom>("/livekit/company-room", {
+        method: "GET",
+      });
+      navigation.navigate("LiveRoom", {
+        room_name: data.room_name,
+        token: data.token,
+        ws_url: data.ws_url,
+        title: data.title,
+      });
     } catch (e: unknown) {
       const msg =
-        e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "تعذّر فتح Daily";
-      Alert.alert("غرفة Daily", `${msg}\n\n${DAILY_HINT}`, [{ text: "حسناً" }]);
+        e && typeof e === "object" && "message" in e
+          ? String((e as { message: string }).message)
+          : "تعذّر فتح الاجتماع";
+      Alert.alert("غرفة الشركة", msg, [{ text: "حسناً" }]);
     } finally {
       setDailyLoading(false);
     }
-  }, []);
+  }, [navigation]);
 
   return { openCompanyDaily, dailyLoading };
 }

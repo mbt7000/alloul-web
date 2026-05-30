@@ -3,11 +3,12 @@ import { initSentry, captureException } from "./src/config/sentry";
 initSentry();
 
 import React from "react";
-import { StatusBar, ActivityIndicator, View, Text, TouchableOpacity } from "react-native";
-import { NavigationContainer, DefaultTheme, Theme as NavTheme } from "@react-navigation/native";
+import { StatusBar, ActivityIndicator, View, Text, TouchableOpacity, Platform } from "react-native";
+import { NavigationContainer, DefaultTheme, Theme as NavTheme, createNavigationContainerRef } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { I18nextProvider } from "react-i18next";
+import * as Notifications from "expo-notifications";
 import i18n from "./src/i18n";
 import { AuthProvider, useAuth } from "./src/state/auth/AuthContext";
 import { NotificationsProvider } from "./src/state/notifications/NotificationsContext";
@@ -19,9 +20,12 @@ import OnboardingScreen from "./src/features/onboarding/screens/OnboardingScreen
 import { getOnboardingCompleted, setOnboardingCompleted } from "./src/storage/session";
 import RootNavigation from "./src/navigation/RootNavigator";
 import AuthNavigator from "./src/navigation/auth/AuthNavigator";
-import { CallProvider } from "./src/context/CallContext";
-import IncomingCallScreen from "./src/components/calls/IncomingCallScreen";
-import DailyCallScreen from "./src/components/calls/DailyCallScreen";
+import WebLandingScreen from "./src/features/web/WebLandingScreen";
+import { useExpoPushToken } from "./src/hooks/useExpoPushToken";
+import { CallProvider, useCall } from "./src/state/call/CallContext";
+import IncomingCallScreen from "./src/features/meetings/screens/IncomingCallScreen";
+
+export const navigationRef = createNavigationContainerRef<any>();
 
 // ─── Global Error Boundary ────────────────────────────────────────────────────
 interface ErrorBoundaryState { hasError: boolean; error: string | null }
@@ -45,7 +49,7 @@ class AppErrorBoundary extends React.Component<
       return (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0a0a0f", padding: 24 }}>
           <Text style={{ color: "#ef4444", fontSize: 18, fontWeight: "700", marginBottom: 12 }}>حدث خطأ غير متوقع</Text>
-          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", marginBottom: 32 }}>{this.state.error}</Text>
+          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center", marginBottom: 32 }}>حدث خطأ غير متوقع. إذا استمرت المشكلة، يرجى التواصل مع الدعم.</Text>
           <TouchableOpacity
             onPress={() => this.setState({ hasError: false, error: null })}
             style={{ backgroundColor: "#0ea5e9", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 }}
@@ -80,6 +84,55 @@ function RootNavigator() {
   const { colors } = useAppTheme();
   const [onboarded, setOnboarded] = React.useState<boolean | null>(null);
   const [startupTimedOut, setStartupTimedOut] = React.useState(false);
+  const [webLandingDone, setWebLandingDone] = React.useState(Platform.OS !== "web");
+
+  // تسجيل توكن الإشعارات عند تسجيل الدخول
+  useExpoPushToken();
+
+  // معالج النقر على الإشعار
+  React.useEffect(() => {
+    // إشعار وارد أثناء تشغيل التطبيق أو بعد فتحه
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as any;
+      if (!data) return;
+      if (data.type === "company_invite") {
+        if (navigationRef.isReady())
+          navigationRef.navigate("CompanyNavigator", { screen: "Inbox" });
+        return;
+      }
+      if (data.type === "incoming_call") {
+        // inject call into CallContext via global event
+        (globalThis as any).__pendingIncomingCall = {
+          call_id: data.call_id,
+          caller_id: data.caller_id,
+          caller_name: data.caller_name,
+          caller_avatar: data.caller_avatar ?? null,
+          call_type: data.call_type ?? "video",
+          room_name: data.room_name ?? "",
+          ws_url: data.ws_url,
+        };
+      }
+    });
+
+    // التطبيق كان مغلقاً تماماً — افحص آخر رد على إشعار
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      const data = response.notification.request.content.data as any;
+      if (data?.type === "incoming_call") {
+        (globalThis as any).__pendingIncomingCall = {
+          call_id: data.call_id,
+          caller_id: data.caller_id,
+          caller_name: data.caller_name,
+          caller_avatar: data.caller_avatar ?? null,
+          call_type: data.call_type ?? "video",
+          room_name: data.room_name ?? "",
+          ws_url: data.ws_url,
+        };
+      }
+    }).catch(() => {});
+
+    return () => sub.remove();
+  }, []);
 
   React.useEffect(() => {
     let on = true;
@@ -101,6 +154,14 @@ function RootNavigator() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Web: skip loading spinner + onboarding entirely — go straight to landing page
+  if (Platform.OS === "web") {
+    if (user) return <RootNavigation />;
+    if (!webLandingDone) return <WebLandingScreen onEnter={() => setWebLandingDone(true)} />;
+    return <AuthNavigator />;
+  }
+
+  // Native: normal loading + onboarding flow
   if ((loading && !startupTimedOut) || onboarded == null) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg }}>
@@ -122,7 +183,20 @@ function RootNavigator() {
     );
   }
 
-  return user ? <RootNavigation /> : <AuthNavigator />;
+  if (user) return <RootNavigation />;
+  return <AuthNavigator />;
+}
+
+function IncomingCallOverlay() {
+  const { incomingCall, acceptCall, rejectCall } = useCall();
+  if (!incomingCall) return null;
+  return (
+    <IncomingCallScreen
+      call={incomingCall}
+      onAccept={() => void acceptCall()}
+      onReject={rejectCall}
+    />
+  );
 }
 
 function AppNavigation() {
@@ -130,12 +204,13 @@ function AppNavigation() {
   const navTheme = React.useMemo(() => buildNavTheme(colors, mode === "dark"), [colors, mode]);
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <StatusBar
         barStyle={mode === "light" ? "dark-content" : "light-content"}
         backgroundColor={colors.bg}
       />
       <RootNavigator />
+      <IncomingCallOverlay />
     </NavigationContainer>
   );
 }
@@ -149,18 +224,15 @@ export default function App() {
           <ThemeProvider>
             <LanguageSync />
             <AuthProvider>
-              <NotificationsProvider>
-                <CompanyProvider>
-                  <HomeModeProvider>
-                    <CallProvider>
+              <CallProvider>
+                <NotificationsProvider>
+                  <CompanyProvider>
+                    <HomeModeProvider>
                       <AppNavigation />
-                      {/* Global call overlays — rendered above Navigation */}
-                      <IncomingCallScreen />
-                      <DailyCallScreen />
-                    </CallProvider>
-                  </HomeModeProvider>
-                </CompanyProvider>
-              </NotificationsProvider>
+                    </HomeModeProvider>
+                  </CompanyProvider>
+                </NotificationsProvider>
+              </CallProvider>
             </AuthProvider>
           </ThemeProvider>
         </SafeAreaProvider>

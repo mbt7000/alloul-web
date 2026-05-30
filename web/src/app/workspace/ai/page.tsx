@@ -4,12 +4,11 @@
  * ALLOUL&Q — AI Assistant (web)
  * -----------------------------
  * Mirrors the mobile AiAssistantScreen. Streams responses from /agent/chat
- * using Server-Sent Events. Company vs media mode, suggestion cards, and
+ * using Server-Sent Events. Company mode, suggestion cards, and
  * quick-analysis shortcuts that hit /agent/analyze.
  *
- * Requires ANTHROPIC_API_KEY on the server. If it's missing, the backend
- * returns a graceful fallback message via the same SSE stream, so the UI
- * still works (it just tells the user to configure the key).
+ * Primary provider: ALLOUL Agent (private SQL/data agent on the company server).
+ * Falls back to cloud AI (Claude/DeepSeek) if ALLOUL Agent is unreachable.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -32,7 +31,7 @@ type Message = {
   streaming?: boolean;
 };
 
-type Mode = 'company' | 'media';
+type Mode = 'company';
 
 const SUGGESTIONS = [
   { icon: BarChart3,  label: 'حلّل لوحة التحكم',  topic: 'dashboard', color: '#2E8BFF' },
@@ -47,12 +46,6 @@ const STARTER_PROMPTS: Record<Mode, string[]> = {
     'لخّص حالة المشاريع الحالية',
     'أي المهام متأخرة أو معلّقة؟',
     'اقترح خطة لهذا الأسبوع',
-  ],
-  media: [
-    'اكتب منشور LinkedIn احترافي',
-    'أفكار محتوى لشركتي',
-    'تغريدة عن منتج جديد',
-    'استراتيجية سوشال ميديا لشهر',
   ],
 };
 
@@ -97,7 +90,8 @@ export default function AiAssistantPage() {
       });
 
       if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`);
+        const err = Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
+        throw err;
       }
 
       const reader = res.body.getReader();
@@ -139,7 +133,7 @@ export default function AiAssistantPage() {
           ? 'جلستك انتهت. أعد تسجيل الدخول.'
           : status === 402 || status === 403
             ? 'هذه الميزة تحتاج باقة احترافية — ترقية الخطة مطلوبة.'
-            : 'تعذّر الاتصال بالذكاء الاصطناعي. تأكد من الإنترنت أو من إعداد ANTHROPIC_API_KEY على الخادم.';
+            : 'تعذّر الاتصال بـ ALLOUL Agent. تأكد من الإنترنت أو أن الخادم يعمل.';
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantId ? { ...m, content: msg, streaming: false } : m)),
       );
@@ -210,7 +204,7 @@ export default function AiAssistantPage() {
           <div className="flex-1">
             <h1 className="text-base font-bold">المساعد الذكي</h1>
             <p className="text-xs text-white/60">
-              {mode === 'company' ? 'وضع الشركة · مدعوم بـ Claude 4.5' : 'وضع السوشال ميديا'}
+              {mode === 'company' ? 'وضع الشركة · مدعوم بـ ALLOUL Agent' : 'وضع السوشال ميديا'}
             </p>
           </div>
 
@@ -225,24 +219,6 @@ export default function AiAssistantPage() {
           )}
         </div>
 
-        {/* Mode toggle */}
-        <div className="px-4 pt-4">
-          <div className="glass inline-flex p-1 gap-1">
-            {(['company', 'media'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  mode === m
-                    ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-glow-primary'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                {m === 'company' ? '🏢 الشركة' : '📱 سوشال ميديا'}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Chat area */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">

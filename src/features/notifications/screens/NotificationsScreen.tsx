@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Image,
   Pressable,
+  Alert,
   type ImageStyle,
   type TextStyle,
   type ViewStyle,
@@ -23,6 +24,7 @@ import InlineErrorRetry from "../../../shared/ui/InlineErrorRetry";
 import { useNotifications } from "../../../state/notifications/NotificationsContext";
 import type { NotificationItem } from "../../../api";
 import { useAppTheme } from "../../../theme/ThemeContext";
+import { acceptInvitation, rejectInvitation } from "../../../api/companies.api";
 
 const TAB_BAR_PAD = 108;
 
@@ -38,11 +40,17 @@ function timeShort(raw?: string): string {
 
 function badgeForType(type: string, colors: AppPalette): { icon: keyof typeof Ionicons.glyphMap; bg: string } {
   const t = type.toLowerCase();
+  if (t.includes("company_invite") || t.includes("invite")) return { icon: "business", bg: colors.accentCyan };
   if (t.includes("like") || t.includes("heart")) return { icon: "heart", bg: colors.accentRose };
   if (t.includes("follow")) return { icon: "person-add", bg: colors.accentBlue };
   if (t.includes("comment") || t.includes("mention") || t.includes("message")) return { icon: "chatbubble", bg: colors.success };
   if (t.includes("repost") || t.includes("share")) return { icon: "repeat", bg: "#9B59B6" };
+  if (t.includes("call")) return { icon: "call", bg: colors.accentRose };
   return { icon: "notifications", bg: colors.textMuted };
+}
+
+function isCallNotification(type: string): boolean {
+  return type.toLowerCase().startsWith("call_");
 }
 
 export default function NotificationsScreen() {
@@ -51,7 +59,7 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<any>();
   const { colors, toggleMode } = useAppTheme();
   const {
-    notifications: items,
+    notifications: allNotifications,
     loading,
     refreshing,
     error,
@@ -60,6 +68,45 @@ export default function NotificationsScreen() {
     markAllNotificationsReadAndSync,
     clearError,
   } = useNotifications();
+
+  // Call notifications go to CallsPanel only — exclude from main feed
+  const items = allNotifications.filter((n) => !isCallNotification(n.type || ""));
+
+  // Track invitation actions: invitationId → "loading" | "done"
+  const [invitationActions, setInvitationActions] = useState<Record<number, "loading" | "done">>({});
+
+  const handleInviteAccept = useCallback(async (notifId: number, invitationId: number, companyName: string) => {
+    setInvitationActions(prev => ({ ...prev, [invitationId]: "loading" }));
+    try {
+      await acceptInvitation(invitationId);
+      void markNotificationRead(notifId);
+      setInvitationActions(prev => ({ ...prev, [invitationId]: "done" }));
+      Alert.alert("تم القبول ✓", `انضممت إلى ${companyName} بنجاح`);
+    } catch {
+      setInvitationActions(prev => {
+        const next = { ...prev };
+        delete next[invitationId];
+        return next;
+      });
+      Alert.alert("خطأ", "تعذّر قبول الدعوة، حاول مجدداً");
+    }
+  }, [markNotificationRead]);
+
+  const handleInviteReject = useCallback(async (notifId: number, invitationId: number) => {
+    setInvitationActions(prev => ({ ...prev, [invitationId]: "loading" }));
+    try {
+      await rejectInvitation(invitationId);
+      void markNotificationRead(notifId);
+      setInvitationActions(prev => ({ ...prev, [invitationId]: "done" }));
+    } catch {
+      setInvitationActions(prev => {
+        const next = { ...prev };
+        delete next[invitationId];
+        return next;
+      });
+      Alert.alert("خطأ", "تعذّر رفض الدعوة، حاول مجدداً");
+    }
+  }, [markNotificationRead]);
 
   const styles = useMemo(
     () =>
@@ -167,8 +214,8 @@ export default function NotificationsScreen() {
       navigation.navigate("Conversation", { conversationId: refId });
       return;
     }
-    if (type.includes("call") && refId) {
-      navigation.navigate("CallHistory");
+    if (type.includes("call")) {
+      navigation.navigate("CallsPanel");
       return;
     }
     // Default: just mark as read (no navigation)
@@ -265,6 +312,19 @@ export default function NotificationsScreen() {
               colors={colors}
               styles={styles}
               onPress={() => void onPressItem(item)}
+              invitationActionState={
+                item.reference_id ? invitationActions[Number(item.reference_id)] : undefined
+              }
+              onInviteAccept={
+                item.type?.toLowerCase().includes("company_invite")
+                  ? (invId, companyName) => void handleInviteAccept(item.id, invId, companyName)
+                  : undefined
+              }
+              onInviteReject={
+                item.type?.toLowerCase().includes("company_invite")
+                  ? (invId) => void handleInviteReject(item.id, invId)
+                  : undefined
+              }
             />
           )}
         />
@@ -288,22 +348,117 @@ function NotificationListRow({
   onPress,
   colors,
   styles,
+  invitationActionState,
+  onInviteAccept,
+  onInviteReject,
 }: {
   item: NotificationItem;
   onPress: () => void;
   colors: AppPalette;
   styles: NotificationRowStyles;
+  invitationActionState?: "loading" | "done";
+  onInviteAccept?: (invitationId: number, companyName: string) => void;
+  onInviteReject?: (invitationId: number) => void;
 }) {
   const badge = badgeForType(item.type, colors);
   const actor = item.actor_name || item.title;
   const action = item.body || item.type;
-  const t = timeShort(item.created_at);
+  const timeLabel = timeShort(item.created_at);
+  const isInvite = item.type?.toLowerCase().includes("company_invite");
+  const invitationId = item.reference_id ? Number(item.reference_id) : null;
+
+  // Extract company name from title "دعوة من {name}"
+  const companyName = item.title?.replace(/^دعوة من\s*/i, "").trim() || item.title || "الشركة";
+
+  if (isInvite && invitationId) {
+    const isDone = invitationActionState === "done";
+    const isLoading = invitationActionState === "loading";
+
+    return (
+      <View style={[
+        styles.row,
+        !item.read && styles.rowUnread,
+        { flexDirection: "column", alignItems: "stretch", gap: 10 },
+        { borderColor: colors.accentCyan + "66", borderWidth: 1.5 },
+      ]}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={[styles.avatarPh, { backgroundColor: colors.accentCyan + "22" }]}>
+            <Ionicons name="business" size={22} color={colors.accentCyan} />
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <AppText variant="bodySm" weight="bold" numberOfLines={1}>
+              {item.title || "دعوة للانضمام"}
+            </AppText>
+            <AppText variant="caption" tone="muted" numberOfLines={2}>
+              {item.body || "تلقيت دعوة للانضمام إلى شركة"}
+            </AppText>
+          </View>
+          <AppText variant="micro" tone="muted">
+            {timeLabel}
+          </AppText>
+        </View>
+
+        {isDone ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center", paddingVertical: 4 }}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <AppText variant="caption" style={{ color: colors.success }}>
+              تمت المعالجة
+            </AppText>
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => onInviteReject?.(invitationId)}
+              disabled={isLoading}
+              style={{
+                flex: 1,
+                paddingVertical: 9,
+                borderRadius: radius.md,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: colors.accentRose,
+                opacity: isLoading ? 0.5 : 1,
+              }}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.accentRose} />
+              ) : (
+                <AppText variant="caption" weight="bold" style={{ color: colors.accentRose }}>
+                  رفض
+                </AppText>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onInviteAccept?.(invitationId, companyName)}
+              disabled={isLoading}
+              style={{
+                flex: 1,
+                paddingVertical: 9,
+                borderRadius: radius.md,
+                alignItems: "center",
+                backgroundColor: colors.accentCyan,
+                opacity: isLoading ? 0.5 : 1,
+              }}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <AppText variant="caption" weight="bold" style={{ color: colors.white }}>
+                  قبول
+                </AppText>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <TouchableOpacity activeOpacity={0.88} onPress={onPress}>
       <View style={[styles.row, !item.read && styles.rowUnread]}>
         <AppText variant="micro" tone="muted" style={styles.timeCol}>
-          {t}
+          {timeLabel}
         </AppText>
         <View style={{ flex: 1, gap: 4 }}>
           <AppText variant="bodySm" weight="bold" numberOfLines={1}>

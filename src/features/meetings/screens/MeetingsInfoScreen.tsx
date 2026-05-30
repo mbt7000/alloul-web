@@ -11,14 +11,13 @@ import AppText from "../../../shared/ui/AppText";
 import CompanyWorkModeTopBar from "../../companies/components/CompanyWorkModeTopBar";
 import { useCompany } from "../../../state/company/CompanyContext";
 import { useCompanyDailyRoom } from "../../../lib/useCompanyDailyRoom";
-import { useCallContext } from "../../../context/CallContext";
+import { apiFetch } from "../../../api/client";
 import {
   getCompanyMembers, type CompanyMemberRow,
   getMeetings, type MeetingRow,
 } from "../../../api";
-import { getUserPresence } from "../../../api/calls.api";
+import { getUserPresence, initiateCall } from "../../../api/calls.api";
 import { openMeetingProvider } from "../openMeetingLinks";
-import { startConversation } from "../../../api";
 
 // ─── Presence colors ─────────────────────────────────────────────────────────
 
@@ -296,7 +295,21 @@ export default function MeetingsInfoScreen() {
   const { colors: c } = useAppTheme();
   const { company } = useCompany();
   const { openCompanyDaily, dailyLoading } = useCompanyDailyRoom();
-  const { startCall } = useCallContext();
+  const startRCCall = async (userId: number, name: string, type: "audio" | "video") => {
+    try {
+      const data = await initiateCall(userId, type);
+      // Caller gets their own token and enters the room immediately
+      navigation.navigate("LiveRoom", {
+        room_name: data.room_name,
+        token: data.token,
+        ws_url: data.ws_url,
+        title: `${type === "video" ? "مكالمة فيديو" : "مكالمة صوتية"} مع ${name}`,
+      });
+    } catch (e: any) {
+      const msg = e?.message || "تعذّر بدء المكالمة";
+      alert(msg);
+    }
+  };
 
   const [members, setMembers] = useState<CompanyMemberRow[]>([]);
   const [presenceMap, setPresenceMap] = useState<Record<number, string>>({});
@@ -376,7 +389,7 @@ export default function MeetingsInfoScreen() {
           </AppText>
         </View>
         <TouchableOpacity
-          onPress={() => navigation.navigate("CallHistory")}
+          onPress={() => navigation.navigate("Meetings")}
           style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: c.accentBlue + "18", borderWidth: 1, borderColor: c.accentBlue + "44", alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="call-outline" size={18} color={c.accentBlue} />
@@ -589,23 +602,10 @@ export default function MeetingsInfoScreen() {
                 presence={presenceMap[member.user_id] ?? "offline"}
                 colors={c}
                 onMessage={async () => {
-                  try {
-                    const conv = await startConversation(member.user_id);
-                    navigation.navigate("Conversation", { conversationId: conv.id, otherUserName: member.user_name });
-                  } catch {}
+                  navigation.navigate("Chat");
                 }}
-                onAudioCall={() => void startCall(
-                  member.user_id,
-                  member.user_name || "مستخدم",
-                  undefined,
-                  "audio",
-                )}
-                onVideoCall={() => void startCall(
-                  member.user_id,
-                  member.user_name || "مستخدم",
-                  undefined,
-                  "video",
-                )}
+                onAudioCall={() => void startRCCall(member.user_id, member.user_name || "مستخدم", "audio")}
+                onVideoCall={() => void startRCCall(member.user_id, member.user_name || "مستخدم", "video")}
               />
             ))
           )}

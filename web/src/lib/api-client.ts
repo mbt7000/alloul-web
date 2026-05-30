@@ -62,41 +62,6 @@ export async function apiFetch<T = any>(
 
 // ─── Typed helpers (mirror the mobile app's API client) ────────────────────
 
-export interface ApiPost {
-  id: number;
-  user_id: number;
-  content: string;
-  image_url?: string | null;
-  likes_count: number;
-  comments_count: number;
-  reposts_count: number;
-  author_name?: string | null;
-  author_username?: string | null;
-  author_avatar?: string | null;
-  author_verified?: boolean;
-  created_at?: string | null;
-  liked_by_me: boolean;
-  reposted_by_me: boolean;
-  saved_by_me: boolean;
-}
-
-export interface StoryItem {
-  id: number;
-  user_id: number;
-  media_url: string | null;
-  media_type: string;
-  caption: string | null;
-  author_name: string | null;
-  author_username: string | null;
-  author_avatar: string | null;
-  is_news_channel?: boolean;
-  live_url?: string | null;
-  views_count: number;
-  viewed_by_me: boolean;
-  created_at: string | null;
-  expires_at: string | null;
-}
-
 export interface DashboardStats {
   total_memory_items?: number;
   total_handovers?: number;
@@ -134,20 +99,14 @@ export const loginWithFirebase = (idToken: string) =>
 
 export const getCurrentUser = () => apiFetch<import('./auth').AuthUser>('/auth/me');
 
-export const getPosts = (limit = 30, offset = 0) =>
-  apiFetch<ApiPost[]>(`/posts/?limit=${limit}&offset=${offset}`);
-
-export const getStories = () => apiFetch<StoryItem[]>('/stories/');
-
 export const getDashboardStats = () => apiFetch<DashboardStats>('/dashboard/stats');
 
 export const getDashboardActivity = (limit = 20) =>
   apiFetch<DashboardActivityItem[]>(`/dashboard/activity?limit=${limit}`);
 
-export const likePost = (id: number) => apiFetch(`/posts/${id}/like`, { method: 'POST' });
-export const unlikePost = (id: number) => apiFetch(`/posts/${id}/like`, { method: 'DELETE' });
-
 // ─── Company services (same endpoints as mobile) ───────────────────────────
+
+export type PresenceStatus = 'online' | 'busy' | 'away' | 'offline';
 
 export interface CompanyMember {
   id: number;
@@ -156,7 +115,14 @@ export interface CompanyMember {
   user_email?: string | null;
   role: string;
   job_title?: string | null;
+  presence_status?: PresenceStatus | null;
 }
+
+export const updateMyPresence = (status: PresenceStatus) =>
+  apiFetch<{ status: string }>('/users/presence', {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
 
 export interface Project {
   id: number;
@@ -216,13 +182,14 @@ export const getCompanyDailyJoinUrl = () =>
 // ─── Calls ───────────────────────────────────────────────────────────────
 export interface CallHistoryItem {
   id: number;
-  caller_id: number;
-  callee_id: number;
+  call_type: "video" | "audio";
+  status: "ringing" | "accepted" | "rejected" | "missed" | "ended";
+  duration?: number | null;
   started_at?: string | null;
-  ended_at?: string | null;
-  duration_seconds?: number | null;
-  status?: string | null;
-  call_type?: string | null;
+  is_outgoing: boolean;
+  other_user_id: number;
+  other_user_name: string;
+  other_user_avatar?: string | null;
 }
 
 export const getCallHistory = () => apiFetch<CallHistoryItem[]>('/call/history');
@@ -264,4 +231,31 @@ export const summarizeTasks = (
   apiFetch<{ summary: string; count: number }>('/agent/tasks/summary', {
     method: 'POST',
     body: JSON.stringify({ language: 'ar', ...opts }),
+  });
+
+// ─── User profile update ──────────────────────────────────────────────────────
+export const updateUser = (fields: {
+  name?: string;
+  bio?: string;
+  location?: string;
+  skills?: string;
+  avatar_url?: string;
+}) =>
+  apiFetch<import('./auth').AuthUser>('/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(fields),
+  });
+
+// ─── Company creation ─────────────────────────────────────────────────────────
+export const createCompany = (body: {
+  name: string;
+  email?: string;
+  company_type?: string;
+  location?: string;
+  team_size?: string;
+  phone?: string;
+}) =>
+  apiFetch('/companies', {
+    method: 'POST',
+    body: JSON.stringify(body),
   });

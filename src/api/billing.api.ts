@@ -3,20 +3,21 @@
  * integration used by Cowork and the production backend).
  *
  * Plan IDs match Stripe Dashboard:
- *   starter  → prod_UB8zDoyn2YPFFY ($24/mo)
- *   pro      → prod_UB90ckEsKlawsj ($59/mo)
- *   pro_plus → prod_UB91gU3Z32gHKq ($289/mo)
+ *   starter  → prod_UB8zDoyn2YPFFY ($30/mo)
+ *   pro      → prod_UB90ckEsKlawsj ($90/mo)
+ *   business → prod_UB91gU3Z32gHKq ($210/mo)
+ *   enterprise → contact sales
  */
 import { apiFetch } from "./client";
 
-export type PlanTier = "starter" | "pro" | "pro_plus" | "enterprise";
+export type PlanTier = "starter" | "pro" | "business" | "enterprise";
 
 export interface StripeConfig {
   publishable_key: string;
   plans: {
     starter: { price_id: string; amount: number; employees: number };
     pro: { price_id: string; amount: number; employees: number };
-    pro_plus: { price_id: string; amount: number; employees: number };
+    business: { price_id: string; amount: number; employees: number };
   };
 }
 
@@ -68,52 +69,54 @@ export const PLANS: Record<
   starter: {
     nameEn: "Starter",
     nameAr: "المبتدئ",
-    monthlyPriceUsd: 24,
+    monthlyPriceUsd: 30,
     employeeLimit: 5,
     trialDays: 14,
     accentColor: "#2E8BFF",
     features: [
       "حتى 5 موظفين",
-      "Media World كامل",
-      "Corporate World أساسي",
+      "لوحة تحكم الفريق",
+      "المشاريع والمهام",
+      "CRM أساسي",
       "10GB تخزين",
-      "AI محدود (50/شهر)",
+      "مساعد AI محدود (50/شهر)",
       "دعم إيميل",
-      "iOS + Android",
     ],
   },
   pro: {
     nameEn: "Pro",
     nameAr: "الاحترافي",
-    monthlyPriceUsd: 59,
-    employeeLimit: 21,
+    monthlyPriceUsd: 90,
+    employeeLimit: 25,
     trialDays: 14,
     accentColor: "#14E0A4",
     features: [
       "كل ميزات Starter",
-      "حتى 21 موظف",
-      "Corporate World كامل",
+      "حتى 25 موظف",
+      "مساعد AI كامل (500/شهر)",
+      "اجتماعات ذكية",
       "50GB تخزين",
-      "AI (500/شهر)",
-      "مكالمات فيديو",
+      "تكامل WhatsApp",
       "دعم أولوية",
     ],
   },
-  pro_plus: {
-    nameEn: "Pro Plus",
-    nameAr: "الاحترافي المتقدم",
-    monthlyPriceUsd: 289,
-    employeeLimit: 33,
+  business: {
+    nameEn: "Business",
+    nameAr: "الأعمال",
+    monthlyPriceUsd: 210,
+    employeeLimit: 100,
     trialDays: 14,
-    accentColor: "#00D4FF",
+    accentColor: "#C9A260",
     features: [
       "كل ميزات Pro",
-      "حتى 33 موظف",
+      "حتى 100 موظف",
       "AI غير محدود",
+      "Document AI + RAG",
+      "فواتير ZATCA/VAT",
+      "توليد العملاء (Automation)",
       "200GB تخزين",
       "API access",
       "دعم VIP 24/7",
-      "تقارير متقدمة",
     ],
   },
 };

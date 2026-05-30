@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Check,
   X,
@@ -12,54 +13,108 @@ import {
   Shield,
   Zap,
   Star,
+  Loader2,
 } from 'lucide-react';
+import { getToken, isAuthenticated } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.alloul.app';
 
 export default function PricingPage() {
+  const router = useRouter();
   const [isYearly, setIsYearly] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const toggleFAQ = (index: number) => {
     setOpenFAQ(openFAQ === index ? null : index);
   };
 
-  // ALLOUL&Q — real prices from Stripe Dashboard (via Cowork setup)
-  // starter  → prod_UB8zDoyn2YPFFY ($24/mo)
-  // pro      → prod_UB90ckEsKlawsj ($59/mo)
-  // pro_plus → prod_UB91gU3Z32gHKq ($289/mo)
+  const handleSubscribe = async (planId: string) => {
+    if (!isAuthenticated()) {
+      router.push('/login?redirect=/pricing');
+      return;
+    }
+    setLoadingPlan(planId);
+    try {
+      const token = getToken();
+      // Ensure company exists
+      const companyRes = await fetch(`${API_BASE}/companies/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!companyRes.ok || !(await companyRes.json())) {
+        // Create company first
+        await fetch(`${API_BASE}/companies`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: 'شركتي', company_type: 'startup', size: '1-10' }),
+        });
+      }
+      const res = await fetch(`${API_BASE}/companies/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan_id: planId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'حدث خطأ');
+      }
+      const data = await res.json() as { checkout_url: string };
+      if (data.checkout_url) window.location.href = data.checkout_url;
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert(err?.message || 'حدث خطأ، أعد المحاولة');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
+  // ALLOUL&Q — pricing 2026
+  // starter      → $30/شهر  حتى 5 موظفين
+  // pro          → $90/شهر  حتى 25 موظف  ← 14 يوم مجاني
+  // business     → $210/شهر حتى 100 موظف
   const prices = {
-    starter:      { monthly: 24,  yearly: 240,  employees: 5 },
-    professional: { monthly: 59,  yearly: 590,  employees: 21 },
-    business:     { monthly: 289, yearly: 2890, employees: 33 },
+    starter:      { monthly: 30,  yearly: 288, employees: 5  },
+    professional: { monthly: 90,  yearly: 864, employees: 25 },
+    business:     { monthly: 210, yearly: 2016, employees: 100 },
   };
 
   const monthlyPrice = isYearly ? 'سنوي' : 'شهري';
-  const savingsPercent = 17;
+  const savingsPercent = 20;
 
   const features = {
     starter: [
       'حتى 5 موظفين',
+      '$30 شهرياً — كل شيء مشمول',
       'Media World كامل',
       'Corporate World أساسي',
       '10GB تخزين',
       'AI Assistant محدود (50 رسالة/شهر)',
+      'شكرة AI Accountant — محاسب ذكي',
+      'مكالمات فيديو عبر Daily.co',
       'دعم إيميل',
       'iOS + Android',
     ],
     professional: [
+      'حتى 25 موظف',
+      '$90 شهرياً — كل شيء مشمول',
       'كل ميزات Starter',
-      'حتى 21 موظف',
       'Corporate World كامل',
       '50GB تخزين',
       'AI Assistant (500 رسالة/شهر)',
+      'شكرة AI Accountant — محاسب ذكي',
+      'WhatsApp Bot محاسب',
       'مكالمات فيديو عبر Daily.co',
       'دعم أولوية',
       'تحليلات أساسية',
     ],
     business: [
+      'حتى 100 موظف',
+      '$210 شهرياً — كل شيء مشمول',
       'كل ميزات Professional',
-      'حتى 33 موظف',
       'AI Assistant غير محدود',
+      'شكرة AI Accountant — متقدم',
+      'WhatsApp Bot محاسب + تقارير تلقائية',
       '200GB تخزين',
       'SSO + 2FA',
       'API Access',
@@ -85,7 +140,7 @@ export default function PricingPage() {
     },
     {
       q: 'هل تتضمن الخطط فترة تجربة مجانية؟',
-      a: 'نعم! جميع الخطط تتضمن 14 يوم تجربة مجانية بدون الحاجة لإدخال بيانات بطاقة ائتمان.',
+      a: 'نعم! خطة Pro تتضمن 14 يوم تجربة مجانية بدون الحاجة لإدخال بيانات بطاقة ائتمان.',
     },
     {
       q: 'هل يمكنني الترقية أو الترجيع بين الخطط؟',
@@ -117,7 +172,7 @@ export default function PricingPage() {
     },
     {
       q: 'هل هناك خصم للدفع السنوي؟',
-      a: 'نعم! الدفع السنوي يوفر 17% مقارنة بالدفع الشهري.',
+      a: 'نعم! الدفع السنوي يوفر 20% مقارنة بالدفع الشهري.',
     },
   ];
 
@@ -143,13 +198,15 @@ export default function PricingPage() {
   ];
 
   const comparisonData = [
-    { label: 'عدد الموظفين', starter: '5', professional: '15', business: '32', enterprise: 'غير محدود' },
+    { label: 'عدد الموظفين', starter: '5', professional: '25', business: '100', enterprise: 'غير محدود' },
     { label: 'التخزين', starter: '10GB', professional: '50GB', business: '200GB', enterprise: 'غير محدود' },
     { label: 'AI Messages', starter: '50/شهر', professional: '500/شهر', business: 'غير محدود', enterprise: 'غير محدود' },
     { label: 'Media World', starter: true, professional: true, business: true, enterprise: true },
     { label: 'Corporate World', starter: 'أساسي', professional: 'كامل', business: 'كامل', enterprise: 'كامل' },
+    { label: 'شكرة AI Accountant', starter: 'أساسي', professional: 'أساسي', business: 'متقدم', enterprise: 'متقدم' },
+    { label: 'WhatsApp Bot محاسب', starter: false, professional: true, business: true, enterprise: true },
     { label: 'CRM', starter: false, professional: true, business: true, enterprise: true },
-    { label: 'Video Meetings', starter: false, professional: true, business: true, enterprise: true },
+    { label: 'Video Meetings', starter: true, professional: true, business: true, enterprise: true },
     { label: 'API Access', starter: false, professional: false, business: true, enterprise: true },
     { label: 'SSO/2FA', starter: false, professional: false, business: true, enterprise: true },
     { label: 'Audit Logs', starter: false, professional: false, business: true, enterprise: true },
@@ -252,33 +309,35 @@ export default function PricingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {/* Starter Card */}
             <div className={`rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${isDark ? 'bg-slate-800 border border-slate-700 hover:border-blue-500' : 'bg-slate-100 border border-slate-300 hover:border-blue-500'}`}>
-              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-6 ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                14 يوم تجربة مجانية
+              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-6 ${isDark ? 'bg-slate-600/50 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>
+                للشركات الصغيرة
               </div>
 
               <h3 className="text-2xl font-bold mb-2">ALLOUL&Q Starter</h3>
 
               <div className="mb-6">
-                <div className="text-4xl font-bold">
-                  ${isYearly ? prices.starter.yearly : prices.starter.monthly}
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold">${isYearly ? prices.starter.yearly : prices.starter.monthly}</span>
+                  <span className={`text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{isYearly ? '/سنة' : '/شهر'}</span>
                 </div>
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  {isYearly ? 'سنوياً' : 'شهرياً'}
+                  حتى 5 موظفين • سعر ثابت شهري
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    أو <span className="line-through">$360</span> شهرياً
+                    وفّر <span className="text-green-400">$72</span> مقارنة بالشهري
                   </p>
                 )}
               </div>
 
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8">
-                ابدأ التجربة المجانية
+              <button
+                onClick={() => handleSubscribe('starter')}
+                disabled={!!loadingPlan}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loadingPlan === 'starter' ? <Loader2 size={18} className="animate-spin" /> : null}
+                اشترك الآن
               </button>
-
-              <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                بدون بطاقة ائتمان
-              </p>
 
               <div className="space-y-4">
                 {features.starter.map((feature, idx) => (
@@ -292,29 +351,43 @@ export default function PricingPage() {
 
             {/* Professional Card (Most Popular) */}
             <div className={`rounded-2xl p-8 ring-2 ring-blue-500 shadow-2xl shadow-blue-500/20 scale-105 transition-all duration-300 hover:scale-110 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-slate-100 border border-slate-300'}`}>
-              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-6 font-semibold ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                ⭐ الأكثر شعبية
+              <div className="flex gap-2 mb-6">
+                <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                  ⭐ الأكثر شعبية
+                </div>
+                <div className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-500/20 text-green-400">
+                  14 يوم مجاني
+                </div>
               </div>
 
               <h3 className="text-2xl font-bold mb-2">ALLOUL&Q Professional</h3>
 
               <div className="mb-6">
-                <div className="text-4xl font-bold">
-                  ${isYearly ? prices.professional.yearly : prices.professional.monthly}
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold">${isYearly ? prices.professional.yearly : prices.professional.monthly}</span>
+                  <span className={`text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{isYearly ? '/سنة' : '/شهر'}</span>
                 </div>
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  {isYearly ? 'سنوياً' : 'شهرياً'}
+                  حتى 25 موظف • سعر ثابت شهري
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    أو <span className="line-through">$1080</span> شهرياً
+                    وفّر <span className="text-green-400">$216</span> مقارنة بالشهري
                   </p>
                 )}
               </div>
 
-              <button className="w-full bg-gradient-to-l from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 rounded-lg transition-colors mb-8">
-                اشترك الآن
+              <button
+                onClick={() => handleSubscribe('pro')}
+                disabled={!!loadingPlan}
+                className="w-full bg-gradient-to-l from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 rounded-lg transition-colors mb-4 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loadingPlan === 'pro' ? <Loader2 size={18} className="animate-spin" /> : null}
+                ابدأ التجربة المجانية
               </button>
+              <p className={`text-center text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+                بدون بطاقة ائتمان • يُلغى في أي وقت
+              </p>
 
               <div className="space-y-4">
                 {features.professional.map((feature, idx) => (
@@ -327,30 +400,39 @@ export default function PricingPage() {
             </div>
 
             {/* Business Card */}
-            <div className={`rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${isDark ? 'bg-slate-800 border border-slate-700 hover:border-blue-500' : 'bg-slate-100 border border-slate-300 hover:border-blue-500'}`}>
-              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-6 ${isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'}`}>
-                للشركات الكبيرة
+            <div className={`rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${isDark ? 'bg-gradient-to-br from-slate-800 to-slate-900 border border-purple-500/30 hover:border-purple-500' : 'bg-slate-100 border border-purple-300 hover:border-purple-500'}`}>
+              <div className={`inline-block px-3 py-1 rounded-full text-sm mb-6 font-semibold ${isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'}`}>
+                🏢 للشركات الكبيرة
               </div>
 
               <h3 className="text-2xl font-bold mb-2">ALLOUL&Q Business</h3>
 
               <div className="mb-6">
-                <div className="text-4xl font-bold">
-                  ${isYearly ? prices.business.yearly : prices.business.monthly}
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-bold">${isYearly ? prices.business.yearly : prices.business.monthly}</span>
+                  <span className={`text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{isYearly ? '/سنة' : '/شهر'}</span>
                 </div>
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  {isYearly ? 'سنوياً' : 'شهرياً'}
+                  حتى 100 موظف • سعر ثابت شهري
                 </p>
                 {isYearly && (
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-slate-500'}`}>
-                    أو <span className="line-through">$2520</span> شهرياً
+                    وفّر <span className="text-green-400">$504</span> مقارنة بالشهري
                   </p>
                 )}
               </div>
 
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mb-8">
+              <button
+                onClick={() => handleSubscribe('business')}
+                disabled={!!loadingPlan}
+                className="w-full bg-gradient-to-l from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white font-semibold py-3 rounded-lg transition-colors mb-4 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loadingPlan === 'business' ? <Loader2 size={18} className="animate-spin" /> : null}
                 اشترك الآن
               </button>
+              <p className={`text-center text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
+                14 يوم تجربة مجانية • يُلغى في أي وقت
+              </p>
 
               <div className="space-y-4">
                 {features.business.map((feature, idx) => (
@@ -374,7 +456,7 @@ export default function PricingPage() {
               <div>
                 <h3 className="text-3xl font-bold">ALLOUL&Q Enterprise</h3>
                 <p className={`text-lg mt-2 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-                  للشركات أكثر من 32 موظف - حلول مخصصة لمؤسستك
+                  للمؤسسات الكبيرة - حلول مخصصة بلا حدود
                 </p>
               </div>
             </div>
@@ -573,7 +655,7 @@ export default function PricingPage() {
           </h2>
 
           <p className={`text-lg mb-8 ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-            14 يوم تجربة مجانية • بدون بطاقة ائتمان
+            جرّب Professional مجاناً 14 يوم • بدون بطاقة ائتمان
           </p>
 
           <button className="px-8 py-4 bg-gradient-to-l from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold text-lg rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/50">

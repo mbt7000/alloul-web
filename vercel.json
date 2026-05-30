@@ -1,40 +1,18 @@
 {
-  "buildCommand": "cd web && npm run build",
-  "outputDirectory": "web/.next",
-  "framework": "nextjs",
-  "env": {
-    "EXPO_PUBLIC_API_URL": "@expo_public_api_url",
-    "EXPO_PUBLIC_FIREBASE_API_KEY": "@expo_public_firebase_api_key",
-    "EXPO_PUBLIC_FIREBASE_APP_ID": "@expo_public_firebase_app_id",
-    "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "@expo_public_firebase_auth_domain",
-    "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "@expo_public_firebase_messaging_sender_id",
-    "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "@expo_public_firebase_project_id",
-    "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "@expo_public_firebase_storage_bucket",
-    "EXPO_PUBLIC_WEB_APP_URL": "@expo_public_web_app_url"
-  },
+  "buildCommand": "npx expo export -p web",
+  "outputDirectory": "dist",
+  "framework": null,
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
   ],
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

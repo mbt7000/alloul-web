@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
+  Animated,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as AuthSession from "expo-auth-session";
@@ -17,7 +18,7 @@ import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
-import { login, register, loginWithFirebase, getApiBaseUrl, pingApiHealth } from "../../../api";
+import { login, register, loginWithFirebase, loginWithAppleNative, getApiBaseUrl } from "../../../api";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import Constants from "expo-constants";
@@ -56,6 +57,14 @@ export default function LoginScreen() {
   const [oauthDebug, setOauthDebug] = useState("");
   const [appleAvailableOnDevice, setAppleAvailableOnDevice] = useState(false);
 
+  // ─── Entrance animation ───────────────────────────────────────────────────
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+  }, []);
+
+  // ─── Auth config ──────────────────────────────────────────────────────────
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
   const debugAuthVersion = typeof extra?.debugAuthVersion === "string" ? extra.debugAuthVersion : "unknown";
   const firebase = (extra?.firebase as Record<string, string> | undefined) || {};
@@ -70,7 +79,6 @@ export default function LoginScreen() {
   const expoClientId = googleWebClientId;
   const expoOwner = Constants.expoConfig?.owner;
   const expoSlug = Constants.expoConfig?.slug;
-  // Use iOS client ID from Firebase project (458917264125) — same project = tokens match
   const googleNativeIosClientId = googleIosClientId || googleWebClientId;
   const googleIosClientBaseId = googleNativeIosClientId?.replace(".apps.googleusercontent.com", "");
   const googleClientId =
@@ -79,44 +87,42 @@ export default function LoginScreen() {
       : googleWebClientId;
   const googleReady = Boolean(googleClientId);
   const canUseGoogle = firebaseReady && googleReady;
-  /** Sign in with Apple لا يعمل داخل Expo Go — يحتاج EAS build / TestFlight. */
   const canUseApple =
     Platform.OS === "ios" && appleAvailableOnDevice && firebaseReady && Constants.appOwnership !== "expo";
   const projectNameForProxy = expoOwner && expoSlug ? `@${expoOwner}/${expoSlug}` : undefined;
   const generatedRedirectUri = AuthSession.makeRedirectUri({ useProxy: true } as never);
   const expoProxyRedirectUri = projectNameForProxy ? `https://auth.expo.io/${projectNameForProxy}` : generatedRedirectUri;
-  // iOS native redirect uses the reversed client ID scheme
   const googleIosNativeRedirect = googleIosClientBaseId
     ? `com.googleusercontent.apps.${googleIosClientBaseId}:/oauthredirect`
     : undefined;
+  // Web: use plain origin as redirect URI (register https://alloul-q-preview.vercel.app in Google Console)
   const googleRedirectUri = isExpoGo
     ? expoProxyRedirectUri
-    : Platform.OS === "ios" && googleIosNativeRedirect
-      ? AuthSession.makeRedirectUri({ native: googleIosNativeRedirect })
-      : AuthSession.makeRedirectUri({ scheme: "alloul", path: "oauthredirect" });
+    : Platform.OS === "web"
+      ? AuthSession.makeRedirectUri()
+      : Platform.OS === "ios" && googleIosNativeRedirect
+        ? AuthSession.makeRedirectUri({ native: googleIosNativeRedirect })
+        : AuthSession.makeRedirectUri({ scheme: "alloul", path: "oauthredirect" });
+
+  // Web uses implicit flow (token) — no client_secret needed.
+  // Native uses auth code + PKCE.
+  const isWeb = Platform.OS === "web";
   const [googleRequest, googleResponse, promptAsync] = Google.useAuthRequest({
     clientId: googleClientId || "",
     iosClientId: googleIosClientId || "",
     webClientId: googleWebClientId || "",
     redirectUri: googleRedirectUri,
-    responseType: AuthSession.ResponseType.Code,
+    responseType: isWeb ? AuthSession.ResponseType.Token : AuthSession.ResponseType.Code,
     scopes: ["openid", "profile", "email"],
-    usePKCE: true,
-    extraParams: {
-      access_type: "offline",
-    },
+    usePKCE: !isWeb,
+    extraParams: isWeb ? {} : { access_type: "offline" },
   } as never);
 
   const githubRedirectUri = isExpoGo
     ? expoProxyRedirectUri
     : AuthSession.makeRedirectUri({ scheme: "alloul", path: "oauth/github" });
   const [githubRequest, githubResponse, githubPromptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: githubClientId,
-      scopes: ["read:user", "user:email"],
-      redirectUri: githubRedirectUri,
-      usePKCE: true,
-    },
+    { clientId: githubClientId, scopes: ["read:user", "user:email"], redirectUri: githubRedirectUri, usePKCE: true },
     GITHUB_DISCOVERY
   );
   const canUseGitHub = firebaseReady && Boolean(githubClientId);
@@ -136,59 +142,16 @@ export default function LoginScreen() {
     void AppleAuthentication.isAvailableAsync().then((ok) => {
       if (alive) setAppleAvailableOnDevice(ok);
     });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
-  useEffect(() => {
-    setOauthDebug(
-      `debugVersion=${debugAuthVersion}\nrunId=${debugRunId}\napi=${getApiBaseUrl()}\nappOwnership=${
-        Constants.appOwnership ?? "-"
-      }\nplatform=${Platform.OS}\ngoogleClientType=${
-        Platform.OS === "ios"
-          ? isExpoGo
-            ? "web(expo-go)"
-            : "ios(standalone)"
-          : isExpoGo
-            ? "web(expo-go)"
-            : "android_or_web(standalone)"
-      }\ncanUseGoogle=${canUseGoogle ? "true" : "false"}\ncanUseGitHub=${
-        canUseGitHub ? "true" : "false"
-      }\ncanUseApple=${canUseApple ? "true" : "false"}`
-    );
-  }, [
-    canUseApple,
-    canUseGitHub,
-    canUseGoogle,
-    debugAuthVersion,
-    extra?.apiUrl,
-    firebaseReady,
-    googleClientId,
-    googleIosClientId,
-    googleReady,
-    googleWebClientId,
-    githubClientId,
-  ]);
-
+  // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setError("");
-    if (!email || !password) {
-      setError(t("auth.emailPasswordRequired"));
-      return;
-    }
-    if (!email.includes("@")) {
-      setError(t("auth.validEmail"));
-      return;
-    }
-    if (password.length < 8) {
-      setError(t("auth.passwordMin"));
-      return;
-    }
-    if (isRegister && !username) {
-      setError(t("auth.usernameRequired"));
-      return;
-    }
+    if (!email || !password) { setError(t("auth.emailPasswordRequired")); return; }
+    if (!email.includes("@")) { setError(t("auth.validEmail")); return; }
+    if (password.length < 8) { setError(t("auth.passwordMin")); return; }
+    if (isRegister && !username) { setError(t("auth.usernameRequired")); return; }
     setLoading(true);
     try {
       if (isRegister) await register(username, email, password);
@@ -201,8 +164,7 @@ export default function LoginScreen() {
       else if (e?.message === "SESSION_STORAGE_FAILED") setError(t("auth.sessionStorageFailed"));
       else if (typeof e?.status === "number" && e.status >= 500) {
         const detail = typeof e?.message === "string" ? e.message.trim() : "";
-        const generic =
-          !detail || detail === "Internal Server Error" || detail === "Request failed";
+        const generic = !detail || detail === "Internal Server Error" || detail === "Request failed";
         setError(generic ? t("auth.serverError") : `${t("auth.serverError")}\n${detail}`);
       } else setError(e?.message || t("auth.authFailed"));
     }
@@ -211,20 +173,10 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     setError("");
-    if (!canUseGoogle || !googleClientId) {
-      setError(t("auth.googleNotInBuild"));
-      return;
-    }
-    if (!googleRequest) {
-      setError("Google request is still loading. Try again.");
-      appendOauthDebug("[G0] request_not_ready");
-      return;
-    }
-
+    if (!canUseGoogle || !googleClientId) { setError(t("auth.googleNotInBuild")); return; }
+    if (!googleRequest) { setError("Google request is still loading. Try again."); appendOauthDebug("[G0] request_not_ready"); return; }
     setLoading(true);
-    appendOauthDebug(
-      `[G1] prompt start redirect=${googleRedirectUri} project=${projectNameForProxy ?? "-"} clientSuffix=${googleClientId.slice(-20)}`
-    );
+    appendOauthDebug(`[G1] prompt start redirect=${googleRedirectUri} project=${projectNameForProxy ?? "-"} clientSuffix=${googleClientId.slice(-20)}`);
     try {
       await promptAsync();
     } catch (err: unknown) {
@@ -238,113 +190,55 @@ export default function LoginScreen() {
   const handleAppleSignIn = async () => {
     setError("");
     if (Platform.OS !== "ios") return;
-    if (!firebaseReady) {
-      setError(t("auth.firebaseNotConfiguredShort"));
-      return;
-    }
-    if (Constants.appOwnership === "expo") {
-      setError(t("auth.appleNeedsDevBuild"));
-      return;
-    }
-    if (!appleAvailableOnDevice) {
-      setError(t("auth.appleNotAvailable"));
-      return;
-    }
+    if (!firebaseReady) { setError(t("auth.firebaseNotConfiguredShort")); return; }
+    if (Constants.appOwnership === "expo") { setError(t("auth.appleNeedsDevBuild")); return; }
+    if (!appleAvailableOnDevice) { setError(t("auth.appleNotAvailable")); return; }
     setLoading(true);
     try {
       const rawNonce = [...Array(32)].map(() => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("");
-      const nonceSha256 = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce, {
-        encoding: Crypto.CryptoEncoding.HEX,
-      });
+      const nonceSha256 = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce, { encoding: Crypto.CryptoEncoding.HEX });
       const appleCred = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
+        requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
         nonce: nonceSha256,
       });
-      if (!appleCred.identityToken) {
-        setError(t("auth.appleTokenMissing"));
-        return;
-      }
-      const firebaseIdToken = await exchangeAppleIdTokenForFirebaseIdToken(appleCred.identityToken, rawNonce);
-      await loginWithFirebase(firebaseIdToken);
+      if (!appleCred.identityToken) { setError(t("auth.appleTokenMissing")); return; }
+      await loginWithAppleNative(appleCred.identityToken, rawNonce);
       await refresh();
     } catch (e: unknown) {
       const coded = e as { code?: string; message?: string };
       if (coded?.code === "ERR_REQUEST_CANCELED" || coded?.code === "ERR_CANCELED") {
-        appendOauthDebug("[A0] apple_cancel");
-        setError("");
+        appendOauthDebug("[A0] apple_cancel"); setError("");
       } else {
         const msg = coded?.message || (e instanceof Error ? e.message : String(e ?? "unknown"));
         const code = coded?.code || "";
         appendOauthDebug(`[A1] apple_err code=${code} msg=${msg}`);
         setError(`${t("auth.appleFailed")}${msg ? `: ${msg}` : ""}`);
       }
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => {
     if (!googleResponse) return;
-
     const responseParams = "params" in googleResponse ? googleResponse.params : undefined;
-    appendOauthDebug(
-      `[G2] response.type=${googleResponse.type} params=${JSON.stringify(responseParams ?? {}).slice(0, 900)}`
-    );
-
+    appendOauthDebug(`[G2] response.type=${googleResponse.type} params=${JSON.stringify(responseParams ?? {}).slice(0, 900)}`);
     const finish = async () => {
       try {
-        if (googleResponse.type === "cancel" || googleResponse.type === "dismiss") {
-          appendOauthDebug("[G3] cancel_or_dismiss");
-          setError("OAuth: cancel");
-          return;
-        }
-
-        if (googleResponse.type === "error") {
-          appendOauthDebug(
-            `[G3] error code=${googleResponse.error?.code ?? "-"} description=${googleResponse.error?.description ?? "-"}`
-          );
-          setError(`OAuth error: ${googleResponse.error?.description || googleResponse.error?.code || "unknown"}`);
-          return;
-        }
-
-        if (googleResponse.type !== "success") {
-          appendOauthDebug(`[G3] unexpected_type=${googleResponse.type}`);
-          return;
-        }
-
+        if (googleResponse.type === "cancel" || googleResponse.type === "dismiss") { appendOauthDebug("[G3] cancel_or_dismiss"); setError("OAuth: cancel"); return; }
+        if (googleResponse.type === "error") { appendOauthDebug(`[G3] error code=${googleResponse.error?.code ?? "-"} description=${googleResponse.error?.description ?? "-"}`); setError(`OAuth error: ${googleResponse.error?.description || googleResponse.error?.code || "unknown"}`); return; }
+        if (googleResponse.type !== "success") { appendOauthDebug(`[G3] unexpected_type=${googleResponse.type}`); return; }
         const accessTokenFromAuth = googleResponse.authentication?.accessToken;
-        // Google returns id_token directly in params — use it without code exchange
         const directIdToken = responseParams?.id_token;
-        appendOauthDebug(
-          `[G4] accessToken=${accessTokenFromAuth ? "present" : "missing"} directIdToken=${directIdToken ? "present" : "missing"}`
-        );
-
+        appendOauthDebug(`[G4] accessToken=${accessTokenFromAuth ? "present" : "missing"} directIdToken=${directIdToken ? "present" : "missing"}`);
         let googleIdToken: string | undefined = directIdToken;
         const authIdToken = (googleResponse.authentication as unknown as Record<string, unknown>)?.idToken as string | undefined;
-        if (!googleIdToken && authIdToken) {
-          googleIdToken = authIdToken;
-          appendOauthDebug("[G4a] using authentication.idToken");
-        }
+        if (!googleIdToken && authIdToken) { googleIdToken = authIdToken; appendOauthDebug("[G4a] using authentication.idToken"); }
         let accessToken: string | undefined = accessTokenFromAuth;
-
-        // If no direct id_token, exchange the auth code (iOS clients don't need client_secret)
         if (!googleIdToken) {
           const authCode = responseParams?.code;
           if (authCode && googleRequest?.codeVerifier) {
             appendOauthDebug("[G4c] code_exchange with iOS client (no secret needed)");
             try {
-              const tokenResponse = await AuthSession.exchangeCodeAsync(
-                {
-                  clientId: googleClientId,
-                  code: authCode,
-                  redirectUri: googleRedirectUri,
-                  extraParams: { code_verifier: googleRequest.codeVerifier },
-                },
-                GOOGLE_DISCOVERY
-              );
+              const tokenResponse = await AuthSession.exchangeCodeAsync({ clientId: googleClientId, code: authCode, redirectUri: googleRedirectUri, extraParams: { code_verifier: googleRequest.codeVerifier } }, GOOGLE_DISCOVERY);
               googleIdToken = tokenResponse.idToken;
               accessToken = tokenResponse.accessToken || accessToken;
               appendOauthDebug(`[G4d] exchange ok idToken=${googleIdToken ? "yes" : "no"} access=${accessToken ? "yes" : "no"}`);
@@ -354,61 +248,83 @@ export default function LoginScreen() {
             }
           }
         }
+        // Web implicit flow: accessToken comes directly in authentication object
+        if (!googleIdToken && !accessToken && isWeb) {
+          const webToken = (googleResponse as unknown as { authentication?: { accessToken?: string } })?.authentication?.accessToken;
+          if (webToken) {
+            accessToken = webToken;
+            appendOauthDebug("[G4w] web implicit accessToken present");
+          }
+        }
 
-        // Use whatever tokens we have
         if (googleIdToken || accessToken) {
           appendOauthDebug(`[G5] idToken=${googleIdToken ? "yes" : "no"} accessToken=${accessToken ? "yes" : "no"}`);
           const firebaseIdToken = await exchangeGoogleIdTokenForFirebaseIdToken(googleIdToken || null, accessToken);
           await loginWithFirebase(firebaseIdToken);
-          await refresh();
-          return;
+          await refresh(); return;
         }
-
-        appendOauthDebug("[G5] no_tokens");
-        setError(t("auth.googleTokenMissing"));
+        appendOauthDebug("[G5] no_tokens"); setError(t("auth.googleTokenMissing"));
       } catch (err: unknown) {
         const payload = err as { message?: string; status?: number; code?: string };
         const msg = typeof payload?.message === "string" ? payload.message : err instanceof Error ? err.message : "";
         const code = typeof payload?.code === "string" ? payload.code : "";
         const detail = [code, msg].filter(Boolean).join(" — ");
-        appendOauthDebug(
-          `[G6] catch detail=${detail || "-"} status=${typeof payload?.status === "number" ? payload.status : "-"}`
-        );
-        if (msg === "FIREBASE_NOT_CONFIGURED") {
-          setError(t("auth.googleNotInBuild"));
-        } else if (msg.toLowerCase().includes("firebase not configured")) {
-          setError(t("auth.googleNotConfigured"));
-        } else if (msg === "NETWORK_UNREACHABLE" || msg === "NETWORK_TIMEOUT") {
-          setError(t("auth.networkError"));
-        } else if (msg === "SESSION_STORAGE_FAILED") {
-          setError(t("auth.sessionStorageFailed"));
-        } else if (typeof payload?.status === "number" && payload.status >= 500) {
-          const detail = msg.trim();
-          const generic =
-            !detail || detail === "Internal Server Error" || detail === "Request failed";
-          setError(generic ? t("auth.serverError") : `${t("auth.serverError")}\n${detail}`);
-        } else {
-          setError(detail ? `${t("auth.googleFailed")}\n${detail}` : t("auth.googleFailed"));
-        }
-      } finally {
-        setLoading(false);
-      }
+        appendOauthDebug(`[G6] catch detail=${detail || "-"} status=${typeof payload?.status === "number" ? payload.status : "-"}`);
+        if (msg === "FIREBASE_NOT_CONFIGURED") setError(t("auth.googleNotInBuild"));
+        else if (msg.toLowerCase().includes("firebase not configured")) setError(t("auth.googleNotConfigured"));
+        else if (msg === "NETWORK_UNREACHABLE" || msg === "NETWORK_TIMEOUT") setError(t("auth.networkError"));
+        else if (msg === "SESSION_STORAGE_FAILED") setError(t("auth.sessionStorageFailed"));
+        else if (typeof payload?.status === "number" && payload.status >= 500) {
+          const d = msg.trim();
+          const generic = !d || d === "Internal Server Error" || d === "Request failed";
+          setError(generic ? t("auth.serverError") : `${t("auth.serverError")}\n${d}`);
+        } else setError(detail ? `${t("auth.googleFailed")}\n${detail}` : t("auth.googleFailed"));
+      } finally { setLoading(false); }
     };
-
     void finish();
   }, [googleClientId, googleRedirectUri, googleRequest, googleResponse, refresh, t]);
 
+  useEffect(() => {
+    if (!githubResponse) return;
+    const responseParams = "params" in githubResponse ? githubResponse.params : undefined;
+    appendOauthDebug(`[GH2] type=${githubResponse.type} params=${JSON.stringify(responseParams ?? {}).slice(0, 600)}`);
+    const finish = async () => {
+      try {
+        if (githubResponse.type === "cancel" || githubResponse.type === "dismiss") { appendOauthDebug("[GH3] cancel_or_dismiss"); setError(""); return; }
+        if (githubResponse.type === "error") { appendOauthDebug(`[GH3] err code=${githubResponse.error?.code ?? "-"} ${githubResponse.error?.description ?? "-"}`); setError(githubResponse.error?.description || githubResponse.error?.code || t("auth.githubFailed")); return; }
+        if (githubResponse.type !== "success") { appendOauthDebug(`[GH3] unexpected_type=${githubResponse.type}`); return; }
+        const authCode = responseParams?.code;
+        if (!authCode || !githubRequest?.codeVerifier) { appendOauthDebug("[GH4] missing_code_or_verifier"); setError(t("auth.githubTokenMissing")); return; }
+        const tokenResponse = await AuthSession.exchangeCodeAsync({ clientId: githubClientId, code: authCode, redirectUri: githubRedirectUri, extraParams: { code_verifier: githubRequest.codeVerifier } }, GITHUB_DISCOVERY);
+        const ghAccess = tokenResponse.accessToken;
+        appendOauthDebug(`[GH5] accessToken=${ghAccess ? "present" : "missing"}`);
+        if (!ghAccess) { setError(t("auth.githubTokenMissing")); return; }
+        const firebaseIdToken = await exchangeGithubAccessTokenForFirebaseIdToken(ghAccess);
+        await loginWithFirebase(firebaseIdToken);
+        await refresh();
+      } catch (err: unknown) {
+        const payload = err as { message?: string; status?: number; code?: string };
+        const msg = typeof payload?.message === "string" ? payload.message : err instanceof Error ? err.message : "";
+        const code = typeof payload?.code === "string" ? payload.code : "";
+        const detail = [code, msg].filter(Boolean).join(" — ");
+        appendOauthDebug(`[GH6] catch ${detail || "-"}`);
+        if (msg === "FIREBASE_NOT_CONFIGURED") setError(t("auth.githubNotConfigured"));
+        else if (msg === "NETWORK_UNREACHABLE" || msg === "NETWORK_TIMEOUT") setError(t("auth.networkError"));
+        else if (msg === "SESSION_STORAGE_FAILED") setError(t("auth.sessionStorageFailed"));
+        else if (typeof payload?.status === "number" && payload.status >= 500) {
+          const d = msg.trim();
+          const generic = !d || d === "Internal Server Error" || d === "Request failed";
+          setError(generic ? t("auth.serverError") : `${t("auth.serverError")}\n${d}`);
+        } else setError(detail ? `${t("auth.githubFailed")}\n${detail}` : t("auth.githubFailed"));
+      } finally { setLoading(false); }
+    };
+    void finish();
+  }, [githubClientId, githubRedirectUri, githubRequest, githubResponse, refresh, t]);
+
   const handleGithubSignIn = async () => {
     setError("");
-    if (!canUseGitHub || !githubClientId) {
-      setError(t("auth.githubNotConfigured"));
-      return;
-    }
-    if (!githubRequest) {
-      setError(t("auth.githubAuthNotReady"));
-      appendOauthDebug("[GH0] request_not_ready");
-      return;
-    }
+    if (!canUseGitHub || !githubClientId) { setError(t("auth.githubNotConfigured")); return; }
+    if (!githubRequest) { setError(t("auth.githubAuthNotReady")); appendOauthDebug("[GH0] request_not_ready"); return; }
     setLoading(true);
     appendOauthDebug(`[GH1] prompt redirect=${githubRedirectUri}`);
     try {
@@ -421,347 +337,423 @@ export default function LoginScreen() {
     }
   };
 
-  useEffect(() => {
-    if (!githubResponse) return;
-
-    const responseParams = "params" in githubResponse ? githubResponse.params : undefined;
-    appendOauthDebug(
-      `[GH2] type=${githubResponse.type} params=${JSON.stringify(responseParams ?? {}).slice(0, 600)}`
-    );
-
-    const finish = async () => {
-      try {
-        if (githubResponse.type === "cancel" || githubResponse.type === "dismiss") {
-          appendOauthDebug("[GH3] cancel_or_dismiss");
-          setError("");
-          return;
-        }
-        if (githubResponse.type === "error") {
-          appendOauthDebug(
-            `[GH3] err code=${githubResponse.error?.code ?? "-"} ${githubResponse.error?.description ?? "-"}`
-          );
-          setError(
-            githubResponse.error?.description || githubResponse.error?.code || t("auth.githubFailed")
-          );
-          return;
-        }
-        if (githubResponse.type !== "success") {
-          appendOauthDebug(`[GH3] unexpected_type=${githubResponse.type}`);
-          return;
-        }
-        const authCode = responseParams?.code;
-        if (!authCode || !githubRequest?.codeVerifier) {
-          appendOauthDebug("[GH4] missing_code_or_verifier");
-          setError(t("auth.githubTokenMissing"));
-          return;
-        }
-        const tokenResponse = await AuthSession.exchangeCodeAsync(
-          {
-            clientId: githubClientId,
-            code: authCode,
-            redirectUri: githubRedirectUri,
-            extraParams: {
-              code_verifier: githubRequest.codeVerifier,
-            },
-          },
-          GITHUB_DISCOVERY
-        );
-        const ghAccess = tokenResponse.accessToken;
-        appendOauthDebug(`[GH5] accessToken=${ghAccess ? "present" : "missing"}`);
-        if (!ghAccess) {
-          setError(t("auth.githubTokenMissing"));
-          return;
-        }
-        const firebaseIdToken = await exchangeGithubAccessTokenForFirebaseIdToken(ghAccess);
-        await loginWithFirebase(firebaseIdToken);
-        await refresh();
-      } catch (err: unknown) {
-        const payload = err as { message?: string; status?: number; code?: string };
-        const msg = typeof payload?.message === "string" ? payload.message : err instanceof Error ? err.message : "";
-        const code = typeof payload?.code === "string" ? payload.code : "";
-        const detail = [code, msg].filter(Boolean).join(" — ");
-        appendOauthDebug(`[GH6] catch ${detail || "-"}`);
-        if (msg === "FIREBASE_NOT_CONFIGURED") {
-          setError(t("auth.githubNotConfigured"));
-        } else if (msg === "NETWORK_UNREACHABLE" || msg === "NETWORK_TIMEOUT") {
-          setError(t("auth.networkError"));
-        } else if (msg === "SESSION_STORAGE_FAILED") {
-          setError(t("auth.sessionStorageFailed"));
-        } else if (typeof payload?.status === "number" && payload.status >= 500) {
-          const d = msg.trim();
-          const generic =
-            !d || d === "Internal Server Error" || d === "Request failed";
-          setError(generic ? t("auth.serverError") : `${t("auth.serverError")}\n${d}`);
-        } else {
-          setError(detail ? `${t("auth.githubFailed")}\n${detail}` : t("auth.githubFailed"));
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void finish();
-  }, [githubClientId, githubRedirectUri, githubRequest, githubResponse, refresh, t]);
-
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        container: { flexGrow: 1, backgroundColor: colors.bg, paddingHorizontal: 24 },
-        logoContainer: { alignItems: "center", marginBottom: 48 },
-        logoCircle: {
-          width: 72,
-          height: 72,
-          borderRadius: 20,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.accent,
-          shadowColor: colors.accent,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.4,
-          shadowRadius: 20,
-        },
-        logoText: { color: colors.white, fontSize: 32, fontWeight: "900" },
-        brandName: { color: colors.textPrimary, fontSize: 28, fontWeight: "900", marginTop: 16 },
-        tagline: { color: colors.textMuted, fontSize: 14, marginTop: 6 },
-        form: { gap: 14 },
-        input: {
-          backgroundColor: colors.bgCard,
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: 14,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          color: colors.textPrimary,
-          fontSize: 15,
-        },
-        passwordRow: {
-          flexDirection: "row",
-          alignItems: "center",
-          backgroundColor: colors.bgCard,
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: 14,
-        },
-        passwordInput: {
-          flex: 1,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          color: colors.textPrimary,
-          fontSize: 15,
-        },
-        eyeBtn: { paddingHorizontal: 14, paddingVertical: 14 },
-        eyeText: { color: colors.accentCyan, fontSize: 12, fontWeight: "700" },
-        error: { color: colors.danger, fontSize: 13, textAlign: "center" },
-        submitBtn: {
-          backgroundColor: colors.accent,
-          borderRadius: 14,
-          paddingVertical: 16,
-          alignItems: "center",
-          marginTop: 8,
-          shadowColor: colors.accent,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-        },
-        submitText: { color: colors.white, fontSize: 16, fontWeight: "700" },
-        socialPaused: {
-          color: colors.textMuted,
-          fontSize: 12,
-          textAlign: "center",
-          marginTop: 4,
-          lineHeight: 18,
-        },
-        divider: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
-        dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-        dividerText: { color: colors.textMuted, fontSize: 11, letterSpacing: 1 },
-        socialBtn: {
-          backgroundColor: colors.bgCard,
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: 14,
-          paddingVertical: 14,
-          alignItems: "center",
-        },
-        socialBtnOff: { opacity: 0.55 },
-        socialText: { color: colors.textPrimary, fontSize: 14, fontWeight: "700" },
-        socialTextMuted: { color: colors.textMuted },
-        switchText: { color: colors.textMuted, fontSize: 14, textAlign: "center", marginTop: 16 },
-        diagBox: {
-          marginTop: 28,
-          padding: 14,
-          borderRadius: 14,
-          backgroundColor: colors.card,
-          borderWidth: 1,
-          borderColor: colors.border,
-          gap: 8,
-        },
-        diagTitle: { color: colors.textSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
-        diagLabel: { color: colors.textMuted, fontSize: 11, marginTop: 4 },
-        diagUrl: {
-          color: colors.accentCyan,
-          fontSize: 11,
-          fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-        },
-        diagBtn: {
-          marginTop: 8,
-          paddingVertical: 10,
-          borderRadius: 10,
-          backgroundColor: colors.bgCard,
-          borderWidth: 1,
-          borderColor: colors.border,
-          alignItems: "center",
-        },
-        diagBtnText: { color: colors.accentBlue, fontSize: 13, fontWeight: "700" },
-        sessionNotice: {
-          marginBottom: 14,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: "rgba(255,92,124,0.36)",
-          backgroundColor: "rgba(255,92,124,0.12)",
-        },
-        sessionNoticeText: { color: colors.textPrimary, fontSize: 13, fontWeight: "700" },
-        sessionNoticeDismiss: { color: colors.textMuted, fontSize: 11, marginTop: 6 },
-      }),
-    [colors]
-  );
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* Background glow blobs */}
+      <View style={s.glowTopRight} pointerEvents="none" />
+      <View style={s.glowBottomLeft} pointerEvents="none" />
+
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 60 }]}
+        contentContainerStyle={[
+          s.scroll,
+          { paddingTop: insets.top + (Platform.OS === "web" ? 48 : 60), paddingBottom: insets.bottom + 40 },
+        ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>A</Text>
+        <Animated.View style={[s.card, { opacity: fade }]}>
+
+          {/* ── Logo ── */}
+          <View style={s.logoSection}>
+            <Image
+              source={require("../../../../assets/logo/alloul-logo-dark.png")}
+              style={s.logo}
+              resizeMode="contain"
+            />
+            <Text style={s.tagline}>المنصة الذكية لإدارة الشركات</Text>
           </View>
-          <Text style={styles.brandName}>{t("auth.brand")}</Text>
-          <Text style={styles.tagline}>{t("auth.tagline")}</Text>
-        </View>
 
-        {sessionNotice ? (
-          <TouchableOpacity style={styles.sessionNotice} activeOpacity={0.9} onPress={consumeSessionNotice}>
-            <Text style={styles.sessionNoticeText}>{sessionNotice}</Text>
-            <Text style={styles.sessionNoticeDismiss}>Tap to dismiss</Text>
-          </TouchableOpacity>
-        ) : null}
+          {/* ── Session notice ── */}
+          {sessionNotice ? (
+            <TouchableOpacity style={s.sessionNotice} activeOpacity={0.9} onPress={consumeSessionNotice}>
+              <Text style={s.sessionNoticeText}>{sessionNotice}</Text>
+              <Text style={s.sessionNoticeDismiss}>اضغط للإغلاق</Text>
+            </TouchableOpacity>
+          ) : null}
 
-        <View style={styles.form}>
-          {isRegister && (
-            <TextInput
-              style={styles.input}
-              placeholder={t("auth.username")}
-              placeholderTextColor={colors.textMuted}
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
-          )}
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.email")}
-            placeholderTextColor={colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <View style={styles.passwordRow}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder={t("auth.password")}
-              placeholderTextColor={colors.textMuted}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
-              <Text style={styles.eyeText}>{showPassword ? t("common.hide") : t("common.show")}</Text>
+          {/* ── Tab switcher ── */}
+          <View style={s.tabs}>
+            <TouchableOpacity
+              style={[s.tab, !isRegister && s.tabActive]}
+              onPress={() => { setIsRegister(false); setError(""); }}
+            >
+              <Text style={[s.tabText, !isRegister && s.tabTextActive]}>تسجيل الدخول</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.tab, isRegister && s.tabActive]}
+              onPress={() => { setIsRegister(true); setError(""); }}
+            >
+              <Text style={[s.tabText, isRegister && s.tabTextActive]}>إنشاء حساب</Text>
             </TouchableOpacity>
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.submitText}>{isRegister ? t("auth.createAccount") : t("auth.signIn")}</Text>
+          {/* ── Form ── */}
+          <View style={s.form}>
+            {isRegister && (
+              <View style={s.inputWrapper}>
+                <Text style={s.inputLabel}>اسم المستخدم</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="أدخل اسم المستخدم"
+                  placeholderTextColor="rgba(255,255,255,0.25)"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                />
+              </View>
             )}
-          </TouchableOpacity>
 
-          {!canUseGoogle && !canUseGitHub && !canUseApple ? (
-            <Text style={styles.socialPaused}>{t("auth.socialPaused")}</Text>
-          ) : null}
+            <View style={s.inputWrapper}>
+              <Text style={s.inputLabel}>البريد الإلكتروني</Text>
+              <TextInput
+                style={s.input}
+                placeholder="example@company.com"
+                placeholderTextColor="rgba(255,255,255,0.25)"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t("common.or")}</Text>
-            <View style={styles.dividerLine} />
-          </View>
+            <View style={s.inputWrapper}>
+              <Text style={s.inputLabel}>كلمة المرور</Text>
+              <View style={s.passwordRow}>
+                <TextInput
+                  style={s.passwordInput}
+                  placeholder="••••••••"
+                  placeholderTextColor="rgba(255,255,255,0.25)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+                  <Text style={s.eyeText}>{showPassword ? "إخفاء" : "إظهار"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={[styles.socialBtn, !canUseGoogle && styles.socialBtnOff]}
-            disabled={loading || !canUseGoogle}
-            onPress={() => {
-              void handleGoogleSignIn();
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <Text style={[styles.socialText, !canUseGoogle && styles.socialTextMuted]}>{t("auth.continueGoogle")}</Text>
-            )}
-          </TouchableOpacity>
+            {error ? <Text style={s.error}>{error}</Text> : null}
 
-          {Platform.OS === "ios" && firebaseReady ? (
-            <TouchableOpacity
-              style={[styles.socialBtn, !canUseApple && styles.socialBtnOff]}
-              disabled={loading || !canUseApple}
-              onPress={() => void handleAppleSignIn()}
-            >
+            {/* Primary action */}
+            <TouchableOpacity style={s.submitBtn} onPress={handleSubmit} disabled={loading}>
               {loading ? (
-                <ActivityIndicator color={colors.textPrimary} />
+                <ActivityIndicator color="#000" />
               ) : (
-                <Text style={[styles.socialText, !canUseApple && styles.socialTextMuted]}>
-                  {Constants.appOwnership === "expo"
-                    ? t("auth.continueAppleExpoGo")
-                    : !appleAvailableOnDevice
-                      ? t("auth.appleNotAvailable")
-                      : t("auth.continueApple")}
-                </Text>
+                <Text style={s.submitText}>{isRegister ? "إنشاء الحساب" : "تسجيل الدخول"}</Text>
               )}
             </TouchableOpacity>
-          ) : null}
 
-          <TouchableOpacity
-            style={[styles.socialBtn, !canUseGitHub && styles.socialBtnOff]}
-            disabled={loading || !canUseGitHub}
-            onPress={() => void handleGithubSignIn()}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <Text style={[styles.socialText, !canUseGitHub && styles.socialTextMuted]}>
-                {t("auth.continueGithub")}
-              </Text>
+            {/* ── Google on web ── */}
+            {Platform.OS === "web" && canUseGoogle && (
+              <>
+                <View style={s.divider}>
+                  <View style={s.dividerLine} />
+                  <Text style={s.dividerLabel}>أو</Text>
+                  <View style={s.dividerLine} />
+                </View>
+                <TouchableOpacity
+                  style={s.googleBtn}
+                  onPress={() => { void handleGoogleSignIn(); }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="rgba(255,255,255,0.7)" />
+                  ) : (
+                    <View style={s.googleBtnInner}>
+                      <Text style={s.googleIcon}>G</Text>
+                      <Text style={s.googleText}>المتابعة عبر Google</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </>
             )}
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => {
-              setIsRegister(!isRegister);
-              setError("");
-            }}
-          >
-            <Text style={styles.switchText}>{isRegister ? t("auth.switchSignIn") : t("auth.switchRegister")}</Text>
-          </TouchableOpacity>
-        </View>
+            {/* ── Native OAuth (hidden on web) ── */}
+            {Platform.OS !== "web" && (canUseGoogle || canUseGitHub || canUseApple) && (
+              <>
+                <View style={s.divider}>
+                  <View style={s.dividerLine} />
+                  <Text style={s.dividerLabel}>أو</Text>
+                  <View style={s.dividerLine} />
+                </View>
 
-{/* Diagnostic box hidden in production */}
+                <TouchableOpacity
+                  style={[s.socialBtn, !canUseGoogle && s.socialBtnOff]}
+                  disabled={loading || !canUseGoogle}
+                  onPress={() => { void handleGoogleSignIn(); }}
+                >
+                  {loading ? <ActivityIndicator color="rgba(255,255,255,0.7)" /> : (
+                    <Text style={[s.socialText, !canUseGoogle && s.socialTextMuted]}>{t("auth.continueGoogle")}</Text>
+                  )}
+                </TouchableOpacity>
+
+                {Platform.OS === "ios" && firebaseReady ? (
+                  <TouchableOpacity
+                    style={[s.socialBtn, !canUseApple && s.socialBtnOff]}
+                    disabled={loading || !canUseApple}
+                    onPress={() => void handleAppleSignIn()}
+                  >
+                    {loading ? <ActivityIndicator color="rgba(255,255,255,0.7)" /> : (
+                      <Text style={[s.socialText, !canUseApple && s.socialTextMuted]}>
+                        {Constants.appOwnership === "expo"
+                          ? t("auth.continueAppleExpoGo")
+                          : !appleAvailableOnDevice ? t("auth.appleNotAvailable") : t("auth.continueApple")}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[s.socialBtn, !canUseGitHub && s.socialBtnOff]}
+                  disabled={loading || !canUseGitHub}
+                  onPress={() => void handleGithubSignIn()}
+                >
+                  {loading ? <ActivityIndicator color="rgba(255,255,255,0.7)" /> : (
+                    <Text style={[s.socialText, !canUseGitHub && s.socialTextMuted]}>{t("auth.continueGithub")}</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+
+          {/* Terms */}
+          <Text style={s.terms}>
+            بالمتابعة، أنت توافق على{" "}
+            <Text style={s.termsLink}>شروط الخدمة</Text>
+            {" "}و{" "}
+            <Text style={s.termsLink}>سياسة الخصوصية</Text>
+          </Text>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const s = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  // Background glows
+  glowTopRight: {
+    position: "absolute",
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    backgroundColor: "#38e8ff",
+    opacity: 0.05,
+    top: -80,
+    right: -100,
+  },
+  glowBottomLeft: {
+    position: "absolute",
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "#a78bfa",
+    opacity: 0.04,
+    bottom: 60,
+    left: -80,
+  },
+  scroll: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  // Glass card
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 24,
+    padding: 28,
+    gap: 20,
+  },
+  // Logo
+  logoSection: {
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: 4,
+  },
+  logo: {
+    width: 140,
+    height: 50,
+  },
+  tagline: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 12,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  // Session notice
+  sessionNotice: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,92,124,0.36)",
+    backgroundColor: "rgba(255,92,124,0.1)",
+  },
+  sessionNoticeText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  sessionNoticeDismiss: { color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 4 },
+  // Tab switcher
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 12,
+    padding: 3,
+    gap: 3,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  tabActive: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  tabText: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  tabTextActive: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  // Form
+  form: { gap: 12 },
+  inputWrapper: { gap: 6 },
+  inputLabel: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  input: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: "#fff",
+    fontSize: 15,
+    textAlign: "right",
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 14,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: "#fff",
+    fontSize: 15,
+    textAlign: "right",
+  },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 14 },
+  eyeText: { color: "#38e8ff", fontSize: 12, fontWeight: "700" },
+  error: {
+    color: "#fb7185",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  // Primary button
+  submitBtn: {
+    backgroundColor: "#38e8ff",
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 4,
+    shadowColor: "#38e8ff",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+  },
+  submitText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  // Divider
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  dividerLabel: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  // Google button (web)
+  googleBtn: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  googleBtnInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  googleIcon: {
+    color: "#4285F4",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  googleText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  // Social buttons (native)
+  socialBtn: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  socialBtnOff: { opacity: 0.4 },
+  socialText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  socialTextMuted: { color: "rgba(255,255,255,0.3)" },
+  // Terms
+  terms: {
+    color: "rgba(255,255,255,0.2)",
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  termsLink: {
+    color: "#38e8ff",
+    fontSize: 11,
+  },
+});

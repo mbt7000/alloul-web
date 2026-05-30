@@ -31,6 +31,12 @@ class User(Base):
     expo_push_token = Column(String(512), nullable=True)
     presence_status = Column(String(16), default="offline")  # online, busy, offline, away
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # رقم المستخدم — unique 5-digit ID visible in profile, used for Shukra bot login
+    employee_no = Column(String(8), unique=True, index=True, nullable=True)
+    # Telegram chat ID — saved after first login, used for auto-auth
+    telegram_chat_id = Column(String(32), unique=True, index=True, nullable=True)
+    # Account type: 'owner', 'job_seeker', 'employee'
+    account_type = Column(String(16), nullable=True)
 
 
 # ─── Follows ─────────────────────────────────────────────────────────────────
@@ -94,10 +100,26 @@ class Subscription(Base):
     current_period_end = Column(DateTime(timezone=True), nullable=True)
     trial_end = Column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end = Column(Integer, default=0)
+    dunning_step = Column(Integer, default=0)          # 0-4: which dunning email sent
+    dunning_last_sent = Column(DateTime(timezone=True), nullable=True)
+    frozen_at = Column(DateTime(timezone=True), nullable=True)
+    deletion_scheduled_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     company = relationship("Company", back_populates="subscriptions")
+
+
+class BillingEvent(Base):
+    __tablename__ = "billing_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(64), nullable=False)
+    # Types: dunning_1|dunning_2|dunning_3|dunning_4|status_change|payment_received|data_deleted|reactivated
+    description = Column(Text, nullable=True)
+    extra = Column(Text, nullable=True)  # JSON
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class Department(Base):
@@ -121,6 +143,7 @@ class CompanyMember(Base):
     role = Column(String(32), nullable=False)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     i_code = Column(String(6), nullable=False)
+    work_id = Column(String(24), unique=True, index=True, nullable=True)  # EMP-YYYY-NNNN-XXXX
     manager_id = Column(Integer, ForeignKey("company_members.id"), nullable=True)
     job_title = Column(String(128), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -147,9 +170,47 @@ class CompanyInvitation(Base):
     role = Column(String(32), default="member")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class EmailInvitation(Base):
+    """Email-based invitation — invitee may not have an account yet."""
+    __tablename__ = "email_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    role = Column(String(32), nullable=False, default="member")
+    token = Column(String(128), unique=True, nullable=False, index=True)
+    status = Column(String(16), default="pending")  # pending, accepted, expired
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
     company = relationship("Company")
     inviter = relationship("User", foreign_keys=[inviter_id])
-    invitee = relationship("User", foreign_keys=[invitee_id])
+
+
+class JoinRequest(Base):
+    """User-initiated request to join a company (no invite needed). Admin reviews and accepts/rejects."""
+    __tablename__ = "join_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(16), default="pending")  # pending, accepted, rejected
+    message = Column(Text, nullable=True)
+    role = Column(String(32), default="employee")
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+
+    company = relationship("Company")
+    user = relationship("User", foreign_keys=[user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "user_id", name="uq_join_request_company_user"),
+    )
 
 
 class ActivityLog(Base):
@@ -392,6 +453,42 @@ class HandoverRecord(Base):
     owner = relationship("User", foreign_keys=[user_id])
 
 
+# ─── Work Summary Agent ───────────────────────────────────────────────────────
+
+class WorkLog(Base):
+    """Stores work submissions — always in English regardless of input language."""
+    __tablename__ = "work_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    employee_name = Column(String(255), nullable=False)
+    task_en = Column(Text, nullable=False)           # always English
+    status = Column(String(32), default="in_progress")  # in_progress, completed, pending
+    priority = Column(String(16), default="medium")     # high, medium, low
+    original_language = Column(String(8), default="ar") # detected input language
+    original_text = Column(Text, nullable=True)         # raw input preserved
+    ai_summary_en = Column(Text, nullable=True)         # English summary
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    company = relationship("Company", foreign_keys=[company_id])
+    employee = relationship("User", foreign_keys=[user_id])
+
+
+class HandoverLog(Base):
+    """Stores auto-generated handovers sent every 12 hours."""
+    __tablename__ = "handover_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    content_en = Column(Text, nullable=False)    # stored in English
+    sent_at = Column(DateTime(timezone=True), server_default=func.now())
+    trigger = Column(String(32), default="scheduled")  # scheduled, manual, shift_change
+
+    company = relationship("Company", foreign_keys=[company_id])
+
+
 class SalesLedger(Base):
     """Per-company sales / transaction ledger saved from AI extractions."""
     __tablename__ = "sales_ledger"
@@ -586,13 +683,14 @@ class Notification(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    type = Column(String(32), nullable=False)  # follow, like, comment, handover, system
+    type = Column(String(32), nullable=False)  # follow, like, comment, handover, system, call_missed
     title = Column(String(255), nullable=False)
     body = Column(Text, nullable=True)
     read = Column(Integer, default=0)
     reference_id = Column(String(64), nullable=True)
     actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
 
     recipient = relationship("User", foreign_keys=[user_id])
     actor = relationship("User", foreign_keys=[actor_id])
@@ -815,6 +913,134 @@ class OtpCode(Base):
 #
 # Securely store encrypted API keys for platform integrations (OpenAI, Slack, Gmail, etc).
 # Keys are encrypted at rest and should only be decrypted when actually used.
+
+# ─────────────────────────────────────────────────────────────
+# شكرة — AI Accountant (metadata only; details live in Google Sheets)
+# ─────────────────────────────────────────────────────────────
+
+class AccountingSetup(Base):
+    """Per-company accounting config."""
+    __tablename__ = "accounting_setup"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, unique=True, index=True)
+
+    # Google Sheets — company owns it, ALLOUL appends via service account
+    google_sheet_id  = Column(String(256), nullable=True)
+    google_sheet_url = Column(String(512), nullable=True)
+
+    # Telegram Bot — company creates bot via @BotFather, pastes token here
+    telegram_bot_token = Column(String(512), nullable=True)   # encrypted in prod
+    telegram_active    = Column(Boolean, default=False)
+
+    # WhatsApp Business Cloud API — company's own Meta credentials
+    whatsapp_phone_number_id = Column(String(64),  nullable=True)
+    whatsapp_access_token    = Column(Text,         nullable=True)   # encrypted in prod
+    whatsapp_verify_token    = Column(String(128),  nullable=True)   # random secret
+    whatsapp_active          = Column(Boolean, default=False)
+
+    # Currency default
+    currency  = Column(String(8), default="SAR")
+    is_active = Column(Boolean,   default=True)
+
+    # ── Privacy Settings (founder controls) ──────────────────────────────────
+    # ما يشوفه الموظفون في داشبورد شكرة
+    show_balances    = Column(Boolean, default=True)   # إخفاء/إظهار الأرصدة
+    show_profits     = Column(Boolean, default=True)   # إخفاء/إظهار الأرباح
+    show_amounts     = Column(Boolean, default=True)   # إخفاء/إظهار المبالغ
+    show_vendors     = Column(Boolean, default=True)   # إخفاء/إظهار أسماء الجهات
+    show_reports     = Column(Boolean, default=True)   # إخفاء/إظهار التقارير
+    employees_can_add = Column(Boolean, default=True)  # هل الموظف يقدر يضيف معاملة
+
+    # Capital tracking
+    initial_capital = Column(Float, default=0.0)       # رأس المال الابتدائي
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AccountingRecord(Base):
+    """
+    Metadata-only ledger row.
+    Sensitive invoice details (vendor name, description, line items) are in Google Sheets.
+    ALLOUL stores: amount, date, category, type — enough for dashboards and reports.
+    """
+    __tablename__ = "accounting_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    # Core financials (safe to store — no PII)
+    record_type = Column(String(16), nullable=False, index=True)   # income | expense
+    amount = Column(Float, nullable=False)
+    currency = Column(String(8), default="SAR")
+    category = Column(String(64), nullable=True, index=True)        # rent, salary, sales, utilities…
+    sub_category = Column(String(64), nullable=True)
+    recorded_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # Extended metadata
+    vendor         = Column(String(255), nullable=True)             # vendor / customer name
+    description    = Column(Text, nullable=True)                    # free-form note
+    payment_status = Column(String(32), default="مدفوع")           # مدفوع | غير مدفوع | مدفوع جزئياً
+
+    # Full transaction details (source of truth — not dependent on Google Sheet)
+    txn_number     = Column(String(32),  nullable=True, index=True) # TXN-2026-0001
+    employee_name  = Column(String(255), nullable=True)             # اسم الموظف المُدخِل
+    client_phone   = Column(String(32),  nullable=True)             # هاتف العميل/المورد
+    goods          = Column(Text, nullable=True)                    # البضاعة / الخدمة
+    duration       = Column(String(64),  nullable=True)             # مدة السداد
+    invoice_number = Column(String(128), nullable=True)             # رقم الفاتورة
+
+    # Source tracing
+    source = Column(String(32), default="manual")                   # manual | telegram | whatsapp | api
+    sheet_row_ref = Column(String(64), nullable=True)               # row ref in Google Sheet
+    external_ref = Column(String(128), nullable=True)               # PO # or other ref
+
+    # AI confidence from n8n OCR pipeline
+    ai_confidence = Column(Float, nullable=True)                    # 0.0–1.0
+    needs_review = Column(Boolean, default=False)                   # flagged for human review
+
+    # Soft delete
+    is_deleted = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AccountingPermission(Base):
+    """
+    صلاحيات موظف معين في نظام شكرة.
+    المؤسس يمنح / يسحب الصلاحيات لكل موظف بشكل مستقل.
+    """
+    __tablename__ = "accounting_permissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id  = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id"),     nullable=False, index=True)
+    granted_by  = Column(Integer, ForeignKey("users.id"),     nullable=False)  # المؤسس
+
+    # ── ما يقدر يشوفه الموظف ─────────────────────────────────────────────────
+    can_view_dashboard = Column(Boolean, default=True)   # يشوف الداشبورد
+    can_view_amounts   = Column(Boolean, default=False)  # يشوف المبالغ
+    can_view_profits   = Column(Boolean, default=False)  # يشوف الأرباح
+    can_view_reports   = Column(Boolean, default=False)  # يشوف التقارير
+    can_view_vendors   = Column(Boolean, default=False)  # يشوف أسماء الجهات
+
+    # ── ما يقدر يفعله الموظف ──────────────────────────────────────────────────
+    can_add_records    = Column(Boolean, default=True)   # يضيف معاملة
+    can_edit_records   = Column(Boolean, default=False)  # يعدل معاملة
+    can_delete_records = Column(Boolean, default=False)  # يحذف معاملة
+    can_use_bot        = Column(Boolean, default=True)   # يستخدم بوت Telegram/WhatsApp
+    bot_pin_hash       = Column(String(128), nullable=True)  # رمز سري مستقل للبوت (اختياري)
+
+    is_active  = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "user_id", name="uq_accounting_perm"),
+    )
+
 
 class APICredential(Base):
     __tablename__ = "api_credentials"

@@ -15,8 +15,8 @@ import AppText from "../../../shared/ui/AppText";
 import { BRAND } from "../../../brand";
 import { subscribe, PLANS, type PlanTier } from "../../../api/billing.api";
 
-type ActivePlanKey = "starter" | "pro" | "pro_plus";
-const PLAN_KEYS: ActivePlanKey[] = ["starter", "pro", "pro_plus"];
+type ActivePlanKey = "starter" | "pro" | "business";
+const PLAN_KEYS: ActivePlanKey[] = ["starter", "pro", "business"];
 
 export default function PricingScreen() {
   const nav = useNavigation<any>();
@@ -122,7 +122,7 @@ export default function PricingScreen() {
                     <Ionicons
                       name={
                         key === "starter" ? "rocket-outline" :
-                        key === "pro" ? "diamond-outline" : "flash-outline"
+                        key === "pro" ? "diamond-outline" : "briefcase-outline"
                       }
                       size={18}
                       color={plan.accentColor}
@@ -220,7 +220,7 @@ export default function PricingScreen() {
             <AppText style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>Enterprise</AppText>
           </View>
           <AppText style={{ color: BRAND.colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-            للفرق الكبيرة · تخصيصات · اتفاقية SLA · دعم مخصص · موظفين غير محدودين
+            للفرق الكبيرة (100+ موظف) · تخصيصات كاملة · اتفاقية SLA · دعم مخصص · White-label
           </AppText>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
             <AppText style={{ color: BRAND.colors.accent, fontSize: 12, fontWeight: "700" }}>

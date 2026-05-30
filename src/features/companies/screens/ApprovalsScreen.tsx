@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, Pressable, FlatList, RefreshControl, Alert } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { View, Pressable, FlatList, RefreshControl, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useAppTheme } from "../../../theme/ThemeContext";
@@ -14,8 +14,14 @@ import InlineErrorRetry from "../../../shared/ui/InlineErrorRetry";
 import PendingApprovalCard from "../components/PendingApprovalCard";
 import CompanyWorkModeTopBar from "../components/CompanyWorkModeTopBar";
 import { radius } from "../../../theme/radius";
+import {
+  getPendingInvitations,
+  acceptInvitation,
+  rejectInvitation,
+  type PendingInvitation,
+} from "../../../api/companies.api";
 
-type MainTab = "approvals" | "inbox";
+type MainTab = "approvals" | "inbox" | "invitations";
 
 type PendingRow = {
   id: string;
@@ -150,11 +156,61 @@ export default function ApprovalsScreen() {
   const [q, setQ] = useState("");
   const pending = useMemo(() => makePendingMock(), []);
 
+  // ── دعوات الشركة ─────────────────────────────────────────────────
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
+  const [invLoading, setInvLoading] = useState(false);
+  const [invAction, setInvAction] = useState<number | null>(null);
+
+  const loadInvitations = useCallback(async () => {
+    setInvLoading(true);
+    try {
+      const data = await getPendingInvitations();
+      setInvitations(data);
+    } finally {
+      setInvLoading(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       void refresh({ mode: "focus" });
-    }, [refresh])
+      void loadInvitations();
+    }, [refresh, loadInvitations])
   );
+
+  const handleAccept = useCallback(async (inv: PendingInvitation) => {
+    setInvAction(inv.id);
+    try {
+      await acceptInvitation(inv.id);
+      setInvitations((prev) => prev.filter((i) => i.id !== inv.id));
+      Alert.alert("تم القبول", `انضممت إلى ${inv.company_name} كـ${inv.role}`);
+    } catch {
+      Alert.alert("خطأ", "تعذّر قبول الدعوة، حاول مرة أخرى");
+    } finally {
+      setInvAction(null);
+    }
+  }, []);
+
+  const handleReject = useCallback((inv: PendingInvitation) => {
+    Alert.alert("رفض الدعوة", `هل تريد رفض دعوة ${inv.company_name}؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "رفض",
+        style: "destructive",
+        onPress: async () => {
+          setInvAction(inv.id);
+          try {
+            await rejectInvitation(inv.id);
+            setInvitations((prev) => prev.filter((i) => i.id !== inv.id));
+          } catch {
+            Alert.alert("خطأ", "تعذّر رفض الدعوة");
+          } finally {
+            setInvAction(null);
+          }
+        },
+      },
+    ]);
+  }, []);
 
   const chats = useMemo(() => makeMockChats(), []);
 
@@ -204,7 +260,7 @@ export default function ApprovalsScreen() {
       <CompanyWorkModeTopBar />
       <FlatList<ApprovalsListItem>
         style={{ flex: 1 }}
-        data={tab === "approvals" ? filteredPending : filteredInbox}
+        data={tab === "approvals" ? filteredPending : tab === "invitations" ? invitations : filteredInbox}
         keyExtractor={(it) => it.id}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -263,10 +319,7 @@ export default function ApprovalsScreen() {
             </View>
 
             <View style={styles.tabs}>
-              <Pressable
-                style={[styles.tab, tab === "approvals" && styles.tabActive]}
-                onPress={() => setTab("approvals")}
-              >
+              <Pressable style={[styles.tab, tab === "approvals" && styles.tabActive]} onPress={() => setTab("approvals")}>
                 <AppText variant="micro" weight="bold" style={{ color: tab === "approvals" ? colors.black : colors.textSecondary }}>
                   الموافقات
                 </AppText>
@@ -275,6 +328,21 @@ export default function ApprovalsScreen() {
                 <AppText variant="micro" weight="bold" style={{ color: tab === "inbox" ? colors.black : colors.textSecondary }}>
                   الوارد
                 </AppText>
+              </Pressable>
+              <Pressable
+                style={[styles.tab, tab === "invitations" && styles.tabActive, { flexDirection: "row", alignItems: "center", gap: 5 }]}
+                onPress={() => setTab("invitations")}
+              >
+                <AppText variant="micro" weight="bold" style={{ color: tab === "invitations" ? colors.black : colors.textSecondary }}>
+                  الدعوات
+                </AppText>
+                {invitations.length > 0 && (
+                  <View style={{ backgroundColor: "#ef4444", borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1 }}>
+                    <AppText variant="micro" weight="bold" style={{ color: "#fff", fontSize: 10 }}>
+                      {invitations.length}
+                    </AppText>
+                  </View>
+                )}
               </Pressable>
             </View>
 
@@ -320,6 +388,60 @@ export default function ApprovalsScreen() {
               />
             );
           }
+
+          if (tab === "invitations") {
+            const inv = item as PendingInvitation;
+            const busy = invAction === inv.id;
+            return (
+              <View style={{
+                marginBottom: 12, borderRadius: 20, padding: 16,
+                backgroundColor: "rgba(20,224,164,0.06)",
+                borderWidth: 1, borderColor: "rgba(20,224,164,0.2)",
+              }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 14,
+                    backgroundColor: "rgba(20,224,164,0.15)",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Ionicons name="business-outline" size={20} color={colors.accentCyan} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="bodySm" weight="bold" numberOfLines={1}>
+                      {inv.company_name}
+                    </AppText>
+                    <AppText variant="caption" tone="muted">
+                      {inv.inviter_name ? `دعوة من ${inv.inviter_name}` : "دعوة للانضمام"} · {inv.role}
+                    </AppText>
+                  </View>
+                  {inv.created_at && (
+                    <AppText variant="micro" tone="muted">{timeShort(inv.created_at)}</AppText>
+                  )}
+                </View>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => handleAccept(inv)}
+                    style={{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
+                      backgroundColor: colors.accentCyan, opacity: busy ? 0.6 : 1 }}
+                  >
+                    {busy ? <ActivityIndicator size="small" color="#000" /> :
+                      <AppText variant="bodySm" weight="bold" style={{ color: "#000" }}>قبول</AppText>}
+                  </Pressable>
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => handleReject(inv)}
+                    style={{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
+                      backgroundColor: "rgba(239,68,68,0.12)", borderWidth: 1,
+                      borderColor: "rgba(239,68,68,0.3)", opacity: busy ? 0.6 : 1 }}
+                  >
+                    <AppText variant="bodySm" weight="bold" style={{ color: "#ef4444" }}>رفض</AppText>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          }
+
           const r = item as InboxRow;
           return (
             <Pressable

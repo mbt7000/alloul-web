@@ -163,6 +163,11 @@ export default function CompanyTeamHierarchyScreen() {
                                 {m.job_title}
                               </AppText>
                             )}
+                            {m.work_id && (
+                              <AppText style={{ color: "#555", fontSize: 10, fontFamily: "monospace" }} numberOfLines={1}>
+                                {m.work_id}
+                              </AppText>
+                            )}
                           </View>
                         </View>
 

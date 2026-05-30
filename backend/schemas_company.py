@@ -44,6 +44,8 @@ class SubscribeResponse(BaseModel):
 class SubscriptionStatusResponse(BaseModel):
     plan_id: Optional[str] = None
     status: Optional[str] = None
+    effective_status: Optional[str] = None   # grace | suspended | expired | active | trialing
+    days_remaining: int = 0                  # days left in current phase
     current_period_end: Optional[str] = None
     trial_end: Optional[str] = None
     cancel_at_period_end: bool = False
@@ -77,11 +79,14 @@ class CompanyMemberResponse(BaseModel):
     role: str
     department_id: Optional[int] = None
     i_code: str
+    work_id: Optional[str] = None
     manager_id: Optional[int] = None
     job_title: Optional[str] = None
     phone: Optional[str] = None
     user_name: Optional[str] = None
     user_email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    presence_status: Optional[str] = None  # online | busy | offline | away
 
     class Config:
         from_attributes = True
@@ -134,3 +139,30 @@ class PendingInvitationResponse(BaseModel):
     inviter_name: Optional[str] = None
     role: str
     created_at: Optional[str] = None
+
+
+class EmailInviteRequest(BaseModel):
+    email: str
+    role: str = "member"
+
+
+class EmailInviteInfoResponse(BaseModel):
+    token: str
+    company_name: str
+    company_logo: Optional[str] = None
+    inviter_name: Optional[str] = None
+    role: str
+    email: str
+    expires_at: str
+
+
+class AcceptEmailInviteRequest(BaseModel):
+    token: str
+    name: str
+    username: str
+    password: str
+
+
+class AcceptEmailInviteResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

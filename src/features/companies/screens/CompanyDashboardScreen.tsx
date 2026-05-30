@@ -15,13 +15,14 @@
 import React, { useCallback, useState } from "react";
 import {
   View, ScrollView, Pressable, ActivityIndicator, Text,
-  RefreshControl,
+  RefreshControl, Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import Screen from "../../../shared/layout/Screen";
 import AppText from "../../../shared/ui/AppText";
 import CompanyBottomBar from "../components/CompanyBottomBar";
+import WebSidebar from "../components/WebSidebar";
 import { useAppTheme } from "../../../theme/ThemeContext";
 import { useAuth } from "../../../state/auth/AuthContext";
 import { useCompany } from "../../../state/company/CompanyContext";
@@ -41,7 +42,8 @@ const QUICK_ACTIONS = [
   { key: "meet",     icon: "videocam"          as const, label: "اجتماع",     route: "Meetings",     color: "#10b981" },
   { key: "task",     icon: "checkmark-circle"  as const, label: "مهمة",       route: "Tasks",        color: "#3b82f6" },
   { key: "handover", icon: "swap-horizontal"   as const, label: "تسليم",      route: "Handover",     color: "#f59e0b" },
-  { key: "deals",    icon: "trending-up"       as const, label: "صفقات",      route: "CRM",          color: "#ef4444" },
+  { key: "deals",       icon: "trending-up"       as const, label: "صفقات",      route: "CRM",          color: "#ef4444" },
+  { key: "accounting", icon: "receipt"           as const, label: "شكرة",       route: "Accounting",   color: "#10b981" },
 ];
 
 const MAIN_SERVICES = [
@@ -49,8 +51,9 @@ const MAIN_SERVICES = [
   { key: "projects", icon: "folder"           as const, label: "المشاريع",    sub: "كل المشاريع",       route: "Projects",   color: "#06b6d4" },
   { key: "tasks",    icon: "list"             as const, label: "المهام",      sub: "قائمة كاملة",       route: "Tasks",      color: "#3b82f6" },
   { key: "meetings", icon: "calendar"         as const, label: "الاجتماعات",  sub: "الجدولة والفريق",   route: "Meetings",   color: "#10b981" },
-  { key: "knowledge",icon: "book"             as const, label: "المعرفة",     sub: "الملفات والوثائق",  route: "Knowledge",  color: "#f59e0b" },
-  { key: "reports",  icon: "bar-chart"        as const, label: "التقارير",    sub: "الأداء والتحليل",   route: "Reports",    color: "#ef4444" },
+  { key: "knowledge",   icon: "book"             as const, label: "المعرفة",     sub: "الملفات والوثائق",  route: "Knowledge",  color: "#f59e0b" },
+  { key: "reports",    icon: "bar-chart"        as const, label: "التقارير",    sub: "الأداء والتحليل",   route: "Reports",    color: "#ef4444" },
+  { key: "accounting", icon: "receipt"          as const, label: "شكرة",        sub: "محاسب AI ذكي",      route: "Accounting", color: "#10b981" },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -85,13 +88,12 @@ export default function CompanyDashboardScreen() {
 
   const firstName = (user?.name || user?.username || "").split(/\s+/)[0];
 
-  return (
-    <Screen edges={["top"]} style={{ backgroundColor: "#0b0b0b" }}>
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={c.accentCyan} onRefresh={() => { setRefreshing(true); void load(); }} />}
-      >
+  const isWeb = Platform.OS === "web";
+  const contentPad = isWeb ? 32 : 16;
+
+  const innerContent = (
+    <>
+        {/* ═══════════════ 1. TOP HEADER ═══════════════ */}
         {/* ═══════════════ 1. TOP HEADER ═══════════════ */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
           <View style={{ flex: 1 }}>
@@ -261,26 +263,33 @@ export default function CompanyDashboardScreen() {
             <ActivityIndicator color={c.accentCyan} />
           </View>
         ) : (
-          <View style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}>
-            <StatCard
-              icon="people"
-              label="الفريق"
-              value={String(stats?.team_size ?? 0)}
-              color="#06b6d4"
-            />
-            <StatCard
-              icon="checkmark-done"
-              label="مهام معلقة"
-              value={String(stats?.pending_tasks ?? 0)}
-              color="#3b82f6"
-            />
-            <StatCard
-              icon="swap-horizontal"
-              label="تسليمات"
-              value={String(stats?.total_handovers ?? 0)}
-              color="#f59e0b"
-            />
-          </View>
+          <>
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+              <StatCard icon="people"          label="الفريق"       value={String(stats?.team_size ?? 0)}       color="#06b6d4" />
+              <StatCard icon="checkmark-done"  label="مهام معلقة"   value={String(stats?.pending_tasks ?? 0)}   color="#3b82f6" />
+              <StatCard icon="swap-horizontal" label="تسليمات"      value={String(stats?.total_handovers ?? 0)} color="#f59e0b" />
+            </View>
+            {/* Health scores */}
+            <View style={{ backgroundColor: "#151515", borderRadius: 18, borderWidth: 1, borderColor: "#222", padding: 16, marginBottom: 24 }}>
+              <AppText style={{ color: "#fff", fontSize: 13, fontWeight: "700", marginBottom: 14 }}>مؤشرات الصحة</AppText>
+              {[
+                { label: "المعرفة",    value: stats?.knowledge_health_score     ?? 70, color: "#06b6d4" },
+                { label: "التسليمات", value: stats?.handover_completion_rate    ?? 70, color: "#f59e0b" },
+                { label: "التوثيق",   value: stats?.documentation_rate          ?? 70, color: "#8b5cf6" },
+                { label: "الاستقرار", value: stats?.team_stability_score         ?? 70, color: "#10b981" },
+              ].map((h) => (
+                <View key={h.label} style={{ marginBottom: 10 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+                    <AppText style={{ color: "#aaa", fontSize: 12 }}>{h.label}</AppText>
+                    <AppText style={{ color: h.color, fontSize: 12, fontWeight: "700" }}>{h.value}%</AppText>
+                  </View>
+                  <View style={{ height: 6, backgroundColor: "#222", borderRadius: 3, overflow: "hidden" }}>
+                    <View style={{ width: `${h.value}%`, height: "100%", backgroundColor: h.color, borderRadius: 3 }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
         )}
 
         {/* ═══════════════ 5. RECENT ACTIVITY ═══════════════ */}
@@ -329,6 +338,32 @@ export default function CompanyDashboardScreen() {
             ))
           )}
         </View>
+    </>
+  );
+
+  if (isWeb) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#0b0b0b" }}>
+        <WebSidebar />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: contentPad, paddingBottom: 60 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {innerContent}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  return (
+    <Screen edges={["top"]} style={{ backgroundColor: "#0b0b0b" }}>
+      <ScrollView
+        contentContainerStyle={{ padding: contentPad, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={c.accentCyan} onRefresh={() => { setRefreshing(true); void load(); }} />}
+      >
+        {innerContent}
       </ScrollView>
       <CompanyBottomBar />
     </Screen>

@@ -1,10 +1,10 @@
 // ALLOUL&Q — Firebase Web SDK init
-// Same project as the mobile app (see app.json extra.firebase)
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getAuth, GoogleAuthProvider, GithubAuthProvider, OAuthProvider,
-  signInWithPopup, type User as FirebaseUser,
+  getAuth, GoogleAuthProvider, OAuthProvider,
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  type User as FirebaseUser,
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -19,38 +19,52 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// ─── Providers ──────────────────────────────────────────────────────────────
-
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-const githubProvider = new GithubAuthProvider();
-githubProvider.addScope('read:user');
-githubProvider.addScope('user:email');
-
-// Apple Sign In
 const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
 
-// ─── Sign-in functions ─────────────────────────────────────────────────────
-
+// Popup-based flow (primary). Falls back to redirect if popups are blocked.
 export async function signInWithGoogle(): Promise<string> {
-  const result = await signInWithPopup(auth, googleProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
-}
-
-export async function signInWithGithub(): Promise<string> {
-  const result = await signInWithPopup(auth, githubProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user.getIdToken();
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    // If popup was blocked, fall back to redirect
+    if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+      await signInWithRedirect(auth, googleProvider);
+      return ''; // page navigates away
+    }
+    throw err;
+  }
 }
 
 export async function signInWithApple(): Promise<string> {
-  const result = await signInWithPopup(auth, appleProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
+  try {
+    const result = await signInWithPopup(auth, appleProvider);
+    return result.user.getIdToken();
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+      await signInWithRedirect(auth, appleProvider);
+      return '';
+    }
+    throw err;
+  }
+}
+
+// Called on page mount to pick up redirect result (fallback path only)
+export async function getOAuthRedirectResult(): Promise<string | null> {
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
+    return result.user.getIdToken();
+  } catch {
+    return null;
+  }
 }
 
 export type { FirebaseUser };

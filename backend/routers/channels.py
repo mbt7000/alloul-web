@@ -191,7 +191,7 @@ def get_messages(
 
 
 @router.post("/{channel_id}/messages", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-def send_message(
+async def send_message(
     channel_id: int,
     body: MessageCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -215,9 +215,41 @@ def send_message(
     db.commit()
     db.refresh(msg)
 
-    # Reload with relationship
+    # Reload with relationship for author info
     msg = db.query(ChannelMessage).filter(ChannelMessage.id == msg.id).first()
-    return _to_msg_response(msg, current_user.id)
+    response = _to_msg_response(msg, current_user.id)
+
+    # Broadcast chat:message to all online company members via WebSocket
+    try:
+        from routers.calls import call_manager
+        member_ids = [
+            m.user_id
+            for m in db.query(CompanyMember).filter(CompanyMember.company_id == company_id).all()
+        ]
+        author_name = response.author.name
+        author_avatar = response.author.avatar_url
+        ws_payload = {
+            "type": "chat:message",
+            "channel_id": channel_id,
+            "message": {
+                "id": response.id,
+                "channel_id": channel_id,
+                "user_id": response.user_id,
+                "content": response.content,
+                "author": {
+                    "id": response.user_id,
+                    "name": author_name,
+                    "avatar_url": author_avatar,
+                },
+                "created_at": response.created_at,
+                "is_self": False,  # receiver side; sender handles optimistic UI
+            },
+        }
+        await call_manager.broadcast_to_users(member_ids, ws_payload)
+    except Exception:
+        pass  # WS broadcast is best-effort; HTTP response always succeeds
+
+    return response
 
 
 @router.delete("/{channel_id}/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)

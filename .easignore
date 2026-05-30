@@ -14,3 +14,6 @@ dist/
 .expo/
 .claude/
 node_modules/
+web/node_modules/
+web/.next/
+web/.cache/

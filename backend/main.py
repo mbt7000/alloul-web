@@ -18,15 +18,17 @@ init_sentry()
 import database
 from config import settings
 from database import engine, Base
-from features import is_feature_enabled
 from routers import (
     auth, companies, webhooks, upload,
-    posts, handover, memory, deals,
-    dashboard, marketplace, search, agent, sendbird, stream_chat, daily_workspace, admin, ads,
-    stories, follows, projects, notifications, communities, phone,
-    meetings, channels, messages, cv, job_postings, calls,
-    ai_extract, ai_confirm, security, ai_system, ai_monitoring, settings,
+    handover, memory, deals,
+    dashboard, search, agent, daily_workspace, admin,
+    projects, notifications, phone,
+    meetings, channels, cv, job_postings, calls,
+    ai_extract, ai_confirm, security, ai_system, ai_monitoring, settings as settings_router, employees,
+    accounting, livekit as livekit_router,
+    recruitment, careers,
 )
+from routers import billing as billing_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,6 +40,12 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
     _validate_runtime_safety()
     _seed_bootstrap_users()
+    # Start Shukra daily report background loop (6 PM AST)
+    from routers.accounting import start_daily_report
+    await start_daily_report()
+    # Start notification expiry cleanup loop (daily at 03:00 UTC)
+    from routers.notifications import start_cleanup_loop
+    await start_cleanup_loop()
     yield
 
 
@@ -164,12 +172,10 @@ app.include_router(handover.router)
 app.include_router(memory.router)
 app.include_router(deals.router)
 app.include_router(dashboard.router)
-app.include_router(marketplace.router)
 app.include_router(search.router)
 app.include_router(agent.router)
 app.include_router(daily_workspace.router)
 app.include_router(admin.router)
-app.include_router(ads.router)
 app.include_router(projects.router)
 app.include_router(notifications.router)
 app.include_router(phone.router)
@@ -182,18 +188,14 @@ app.include_router(ai_confirm.router)
 app.include_router(ai_system.router)
 app.include_router(security.router)
 app.include_router(ai_monitoring.router)
-app.include_router(settings.router)
-
-# Media World routers (conditionally included)
-if is_feature_enabled("MEDIA_WORLD"):
-    app.include_router(posts.router)
-    app.include_router(sendbird.router)
-    app.include_router(stream_chat.router)
-    app.include_router(stories.router)
-    app.include_router(follows.router)
-    app.include_router(communities.router)
-    app.include_router(messages.router)
-    app.include_router(calls.router)
+app.include_router(settings_router.router)
+app.include_router(calls.router)
+app.include_router(employees.router)
+app.include_router(accounting.router)
+app.include_router(billing_router.router)
+app.include_router(livekit_router.router)
+app.include_router(recruitment.router)
+app.include_router(careers.router)
 
 
 @app.get("/")

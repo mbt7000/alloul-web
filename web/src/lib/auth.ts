@@ -17,6 +17,15 @@ export interface AuthUser {
   following_count?: number;
   posts_count?: number;
   is_admin?: boolean;
+  employee_no?: string | null;
+  i_code?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  plan?: string | null;
+  subscription_status?: string | null;
+  company_role?: string | null;
+  account_type?: string | null;
+  created_at?: string | null;
 }
 
 export function getToken(): string | null {

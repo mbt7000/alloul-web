@@ -31,7 +31,7 @@ class AgentMessageResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[dict]
-    mode: str = "media"
+    mode: str = "company"
 
 
 def _get_anthropic_client():
@@ -42,6 +42,55 @@ def _get_anthropic_client():
         return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     except Exception:
         return None
+
+
+def _call_alloul_agent(question: str) -> str:
+    """Call ALLOUL Agent (private SQL/data agent on the company server)."""
+    import httpx
+
+    url = f"{settings.ALLOUL_AGENT_URL}/ask"
+    headers = {"X-API-Key": settings.ALLOUL_AGENT_KEY, "Content-Type": "application/json"}
+    payload = {"question": question, "explain": False}
+
+    try:
+        resp = httpx.post(url, json=payload, headers=headers, timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Format the response: show data results + SQL if present
+        parts = []
+        if data.get("data"):
+            rows = data["data"]
+            if isinstance(rows, list) and rows:
+                # Build a simple table or summary
+                if len(rows) == 1 and len(rows[0]) == 1:
+                    # Single value result
+                    val = list(rows[0].values())[0]
+                    parts.append(f"**النتيجة:** {val}")
+                else:
+                    # Multiple rows — summarize
+                    parts.append(f"**النتائج ({len(rows)} سجل):**")
+                    for i, row in enumerate(rows[:10]):
+                        line = " | ".join(f"{k}: {v}" for k, v in row.items())
+                        parts.append(f"- {line}")
+                    if len(rows) > 10:
+                        parts.append(f"_(وأكثر من ذلك — {len(rows)} سجل إجمالاً)_")
+            else:
+                parts.append("لا توجد نتائج.")
+
+        if data.get("explanation"):
+            parts.append(f"\n{data['explanation']}")
+        elif data.get("sql"):
+            parts.append(f"\n_استعلام SQL:_ `{data['sql']}`")
+
+        return "\n".join(parts) if parts else "لا توجد بيانات."
+
+    except httpx.ConnectError:
+        raise Exception("ALLOUL Agent غير متاح حالياً. تأكد من تشغيل الخادم.")
+    except httpx.TimeoutException:
+        raise Exception("استغرق ALLOUL Agent وقتاً طويلاً. حاول لاحقاً.")
+    except Exception as e:
+        raise Exception(f"خطأ في ALLOUL Agent: {str(e)}")
 
 
 def _get_deepseek_openai_client():
@@ -58,28 +107,21 @@ def _get_deepseek_openai_client():
         return None
 
 
-def _complete_with_fallback(
+async def _complete_with_fallback(
     system_prompt: str,
     user_prompt: str,
     max_tokens: int = 2048,
     *,
     private: bool = False,
 ) -> str:
-    """Run a single-shot completion with automatic fallback chain.
-
-    Now uses the unified AIServiceProvider which handles:
-      - Private mode: Ollama → Claude → DeepSeek
-      - Public mode: Claude → DeepSeek → Ollama
+    """Async completion via AIService (Ollama → DeepSeek → Claude → Groq).
 
     Raises HTTPException(503) only if NO provider is available.
     """
-    import asyncio
-
     ai_service = get_ai_service()
 
     try:
-        # Use the unified AI service (sync wrapper)
-        result = ai_service.complete(
+        result = await ai_service.complete_async(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=max_tokens,
@@ -102,17 +144,20 @@ def _build_system_prompt(mode: str, user: User, db: Session) -> str:
     Enhanced system prompt builder with richer company context and service awareness.
     """
     base = (
-        "You are Alloul One AI — an intelligent business assistant embedded inside the Alloul One platform. "
-        "You help users manage their work: tasks, projects, deals, meetings, handovers, and team collaboration. "
-        "Be concise, insightful, and professional. Respond in the same language the user writes in (Arabic or English). "
-        "When analyzing data, give specific actionable recommendations, not generic advice. "
-        "When the user mentions a task or request, proactively suggest which services (email, CRM, calendar, etc.) might be helpful."
+        "أنت مساعد ALLOUL&Q الذكي — مساعد أعمال متكامل مدمج في منصة Alloul One.\n"
+        "مهمتك: مساعدة المستخدمين في إدارة أعمالهم — المهام، المشاريع، الصفقات، الاجتماعات، التسليمات، والتعاون.\n"
+        "قواعد الرد:\n"
+        "- **تكلّم دائماً بالعربية** إلا إذا كتب المستخدم بلغة أخرى (إنجليزي، هندي، إلخ) فرد بنفس لغته.\n"
+        "- كن موجزاً وعملياً، أعطِ توصيات محددة وليس نصائح عامة.\n"
+        "- إذا نفّذت إجراءً (إنشاء اجتماع، تلخيص تسليم...) أخبر المستخدم بما تم بالضبط.\n"
+        "- لا ترد كـ bot بأوامر جافة — تكلّم بشكل طبيعي ودود واحترافي.\n"
+        "- إذا لم يكن الطلب واضحاً، اسأل سؤالاً واحداً للتوضيح."
     )
 
     if mode == "company":
         from models import (
             Company, CompanyMember, HandoverRecord, MemoryRecord,
-            Meeting, Project, ProjectTask, Deal, Department,
+            Meeting, Project, ProjectTask, DealRecord as Deal, Department,
         )
 
         member = db.query(CompanyMember).filter(CompanyMember.user_id == user.id).first()
@@ -234,14 +279,6 @@ def _build_system_prompt(mode: str, user: User, db: Session) -> str:
 
         return base + ctx
 
-    elif mode == "media":
-        return (
-            base +
-            "\n\nYou are in Social Media mode. Help users create engaging posts, captions, content ideas, "
-            "and social media strategy. Be creative and adapt to different platforms (LinkedIn, Twitter, Instagram). "
-            "Suggest timing, hashtags, and engagement tactics."
-        )
-
     return base
 
 
@@ -279,87 +316,316 @@ async def chat(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    """Enhanced chat endpoint using unified AI service abstraction."""
+    """
+    Agentic chat endpoint — detects user intent, executes real actions, streams response.
+
+    Intent detection handles:
+    - create_meeting : "اعمل اجتماع بكره الساعة 3" → creates meeting in DB
+    - summarize_handover : "لخّص التسليم" → summarizes and returns handover details
+    - recent_activity : "شو آخر الأشياء" → returns last company activity
+    - general_chat : fallback to AI with full workspace context
+    """
     # Gate company-mode AI behind Pro plan
     if body.mode == "company":
         mem = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
         if mem:
             require_feature(db, mem.company_id, "ai_chat", is_admin=user_is_admin(current_user))
 
-    # Extract user message
+    # Extract the latest user message and build conversation history
     user_msg = ""
+    conv_history: list[dict] = []
     for m in body.messages:
-        if m.get("role") == "user":
-            user_msg = m.get("content", "")
-            break
+        role = m.get("role", "")
+        content = m.get("content", "")
+        if role in ("user", "assistant") and content:
+            conv_history.append({"role": role, "content": content})
+        if role == "user" and content:
+            user_msg = content  # last user message
 
-    # Save user message
+    # Save user message (best-effort)
     if user_msg:
-        db.add(AgentMessageModel(
-            user_id=current_user.id, role="user", content=user_msg, mode=body.mode,
-        ))
-        db.commit()
-
-    # Check provider availability
-    ai_service = get_ai_service()
-    preferred_provider = ai_service.get_preferred_provider(private=(body.mode == "company"))
-
-    if not preferred_provider:
-        reply = (
-            "⚠️ خدمة الذكاء الاصطناعي غير مفعّلة حالياً. "
-            "يرجى إعداد ANTHROPIC_API_KEY أو DEEPSEEK_API_KEY على الخادم.\n\n"
-            f"رسالتك: \"{user_msg[:200]}\""
-        )
-        db.add(AgentMessageModel(
-            user_id=current_user.id, role="assistant", content=reply, mode=body.mode,
-        ))
-        db.commit()
-
-        async def fallback_stream():
-            yield f"data: {json.dumps({'text': reply})}\n\n"
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(fallback_stream(), media_type="text/event-stream")
-
-    # Build system prompt with company context
-    system_prompt = _build_system_prompt(body.mode, current_user, db)
-
-    # Build API messages
-    api_messages = []
-    for m in body.messages:
-        role = m.get("role", "user")
-        if role in ("user", "assistant"):
-            api_messages.append({"role": role, "content": m.get("content", "")})
-    if not api_messages:
-        api_messages = [{"role": "user", "content": user_msg or "مرحباً"}]
-
-    # Streaming response
-    async def stream():
-        full_reply: list[str] = []
         try:
-            # Use unified AI service for streaming
-            async for chunk in ai_service.stream_complete(
-                system_prompt=system_prompt,
-                user_prompt=json.dumps(api_messages),  # Pass full message history
-                max_tokens=4096,
-                temperature=0.3,
-                private=(body.mode == "company"),
-                provider=preferred_provider,
-            ):
-                if chunk:
-                    full_reply.append(chunk)
-                    yield f"data: {json.dumps({'text': chunk})}\n\n"
-        except Exception as e:
-            error_text = f"خطأ: {str(e)}"
-            yield f"data: {json.dumps({'text': error_text})}\n\n"
-            full_reply.append(error_text)
-
-        # Save assistant response
-        final_text = "".join(full_reply)
-        if final_text:
             db.add(AgentMessageModel(
-                user_id=current_user.id, role="assistant", content=final_text, mode=body.mode,
+                user_id=current_user.id, role="user", content=user_msg, mode=body.mode,
             ))
             db.commit()
+        except Exception:
+            db.rollback()
+
+    # ── Intent detection helpers ─────────────────────────────────────────────
+    def _detect_intent(msg: str) -> str:
+        """Simple keyword-based intent detection (Arabic + English)."""
+        msg_lower = msg.lower()
+        meeting_kw = ["اجتماع", "meeting", "اجتمع", "موعد", "schedule", "لقاء"]
+        handover_kw = ["تسليم", "handover", "hand over", "لخّص التسليم", "ملخص التسليم"]
+        activity_kw = ["آخر", "اخر", "recent", "أحدث", "جديد", "ماذا حدث", "شو صار", "شو تم", "آخر الأشياء"]
+        if any(k in msg_lower for k in meeting_kw) and any(
+            k in msg_lower for k in ["اعمل", "أنشئ", "سجّل", "create", "add", "جدّد", "بكره", "اليوم", "غداً", "الساعة", "ساعه", "ساعة"]
+        ):
+            return "create_meeting"
+        if any(k in msg_lower for k in handover_kw):
+            return "summarize_handover"
+        if any(k in msg_lower for k in activity_kw):
+            return "recent_activity"
+        return "general_chat"
+
+    async def _handle_create_meeting() -> str:
+        """Use AI to extract meeting details then create it in DB."""
+        from models import Meeting, CompanyMember as CM
+        member = db.query(CM).filter(CM.user_id == current_user.id).first()
+        if not member:
+            return "❌ أنت لست عضواً في أي شركة حالياً."
+
+        # Ask AI to extract meeting details as JSON
+        extract_prompt = (
+            f"المستخدم يريد إنشاء اجتماع. استخرج التفاصيل من رسالته بصيغة JSON فقط بدون أي نص آخر:\n"
+            f"الرسالة: \"{user_msg}\"\n\n"
+            "الصيغة المطلوبة:\n"
+            "{\"title\": \"...\", \"date\": \"YYYY-MM-DD\", \"time\": \"HH:MM\", \"attendees\": \"...\"}\n"
+            "- إذا لم يحدد التاريخ استخدم غداً\n"
+            "- إذا لم يحدد الوقت استخدم 09:00\n"
+            "- إذا لم يحدد العنوان استخدم 'اجتماع'\n"
+            "أرجع JSON فقط."
+        )
+        try:
+            details_json = await _complete_with_fallback(
+                system_prompt="أنت مساعد لاستخراج المعلومات. أرجع JSON فقط.",
+                user_prompt=extract_prompt,
+                max_tokens=200,
+                private=False,
+            )
+            import re as _re
+            json_match = _re.search(r'\{.*\}', details_json, _re.DOTALL)
+            details = json.loads(json_match.group()) if json_match else {}
+        except Exception:
+            details = {}
+
+        from datetime import date as _date, time as _time
+        import datetime as _dt
+
+        title = details.get("title") or "اجتماع"
+        raw_date = details.get("date") or str((_dt.date.today() + _dt.timedelta(days=1)))
+        raw_time = details.get("time") or "09:00"
+        attendees_txt = details.get("attendees") or ""
+
+        # Parse meeting datetime
+        try:
+            meeting_dt = _dt.datetime.strptime(f"{raw_date} {raw_time}", "%Y-%m-%d %H:%M")
+        except Exception:
+            meeting_dt = _dt.datetime.now() + _dt.timedelta(days=1)
+
+        try:
+            new_meeting = Meeting(
+                title=title,
+                company_id=member.company_id,
+                created_by=current_user.id,
+                meeting_date=meeting_dt,
+                status="scheduled",
+                notes=f"أُنشئ بواسطة المساعد الذكي\nالمدعوون: {attendees_txt}" if attendees_txt else "أُنشئ بواسطة المساعد الذكي",
+            )
+            db.add(new_meeting)
+            db.commit()
+            db.refresh(new_meeting)
+            return (
+                f"✅ **تم إنشاء الاجتماع بنجاح!**\n\n"
+                f"📅 **العنوان:** {title}\n"
+                f"🕐 **التاريخ والوقت:** {meeting_dt.strftime('%Y-%m-%d الساعة %H:%M')}\n"
+                f"{'👥 **المدعوون:** ' + attendees_txt + chr(10) if attendees_txt else ''}"
+                f"\nيمكنك مراجعة الاجتماع في قسم الاجتماعات."
+            )
+        except Exception as e:
+            return f"❌ فشل إنشاء الاجتماع: {str(e)}"
+
+    async def _handle_summarize_handover() -> str:
+        """Fetch latest handover(s) and summarize them."""
+        from models import HandoverRecord
+        handovers = (
+            db.query(HandoverRecord)
+            .filter(HandoverRecord.user_id == current_user.id)
+            .order_by(HandoverRecord.id.desc())
+            .limit(3)
+            .all()
+        )
+        if not handovers:
+            # Try company-wide handovers
+            from models import CompanyMember as CM
+            member = db.query(CM).filter(CM.user_id == current_user.id).first()
+            if member:
+                handovers = (
+                    db.query(HandoverRecord)
+                    .filter(HandoverRecord.company_id == member.company_id)
+                    .order_by(HandoverRecord.id.desc())
+                    .limit(3)
+                    .all()
+                )
+        if not handovers:
+            return "لا توجد تسليمات مسجّلة حتى الآن."
+
+        h = handovers[0]
+        summary_prompt = (
+            f"لخّص تسليم العمل التالي بشكل واضح ومنظّم باللغة العربية:\n\n"
+            f"العنوان: {h.title}\n"
+            f"الحالة: {h.status}\n"
+            f"المحتوى:\n{h.content or '(لا يوجد محتوى)'}\n\n"
+            "أعطِ:\n1. نظرة سريعة\n2. المهام المفتوحة\n3. الخطوات التالية"
+        )
+        try:
+            summary = await _complete_with_fallback(
+                system_prompt="أنت مساعد أعمال. لخّص التسليم بشكل واضح بالعربية.",
+                user_prompt=summary_prompt,
+                max_tokens=1000,
+                private=True,
+            )
+            result = f"📋 **ملخص التسليم: {h.title}**\n\n{summary}"
+            if len(handovers) > 1:
+                result += f"\n\n_(يوجد {len(handovers)} تسليمات — يُعرض الأحدث)_"
+            return result
+        except Exception as e:
+            return f"❌ فشل تلخيص التسليم: {str(e)}"
+
+    async def _handle_recent_activity() -> str:
+        """Return a summary of recent company activity."""
+        from models import CompanyMember as CM, Project, ProjectTask, HandoverRecord, Meeting, DealRecord as Deal
+        member = db.query(CM).filter(CM.user_id == current_user.id).first()
+        if not member:
+            return "أنت لست عضواً في شركة حالياً."
+
+        lines = ["📊 **آخر نشاطات الشركة:**\n"]
+
+        # Recent meetings
+        meetings = (
+            db.query(Meeting)
+            .filter(Meeting.company_id == member.company_id)
+            .order_by(Meeting.id.desc()).limit(3).all()
+        )
+        if meetings:
+            lines.append("**📅 الاجتماعات الأخيرة:**")
+            for m in meetings:
+                lines.append(f"  - {m.title} ({m.status}) — {m.meeting_date}")
+
+        # Recent tasks
+        tasks = (
+            db.query(ProjectTask)
+            .join(Project, ProjectTask.project_id == Project.id)
+            .filter(Project.company_id == member.company_id)
+            .order_by(ProjectTask.id.desc()).limit(5).all()
+        )
+        if tasks:
+            lines.append("\n**✅ المهام الأخيرة:**")
+            for t in tasks:
+                lines.append(f"  - [{t.status}] {t.title}")
+
+        # Recent handovers
+        handovers = (
+            db.query(HandoverRecord)
+            .filter(HandoverRecord.company_id == member.company_id)
+            .order_by(HandoverRecord.id.desc()).limit(3).all()
+        )
+        if handovers:
+            lines.append("\n**🤝 آخر التسليمات:**")
+            for h in handovers:
+                lines.append(f"  - [{h.status}] {h.title}")
+
+        return "\n".join(lines) if len(lines) > 1 else "لا توجد نشاطات مسجّلة حتى الآن."
+
+    # ── Stream response ──────────────────────────────────────────────────────
+    async def stream():
+        full_reply: list[str] = []
+
+        async def _emit(text: str):
+            """Yield text in small chunks for smooth streaming."""
+            chunk_size = 60
+            for i in range(0, len(text), chunk_size):
+                part = text[i:i + chunk_size]
+                full_reply.append(part)
+                yield f"data: {json.dumps({'text': part})}\n\n"
+
+        intent = _detect_intent(user_msg)
+
+        # ── Intent: create meeting ───────────────────────────────────────────
+        if intent == "create_meeting":
+            try:
+                result = await _handle_create_meeting()
+            except Exception as e:
+                result = f"❌ خطأ: {str(e)}"
+            async for chunk in _emit(result):
+                yield chunk
+
+        # ── Intent: summarize handover ───────────────────────────────────────
+        elif intent == "summarize_handover":
+            try:
+                result = await _handle_summarize_handover()
+            except Exception as e:
+                result = f"❌ خطأ: {str(e)}"
+            async for chunk in _emit(result):
+                yield chunk
+
+        # ── Intent: recent activity ──────────────────────────────────────────
+        elif intent == "recent_activity":
+            try:
+                result = await _handle_recent_activity()
+            except Exception as e:
+                result = f"❌ خطأ: {str(e)}"
+            async for chunk in _emit(result):
+                yield chunk
+
+        # ── Intent: general chat (AI with full context) ──────────────────────
+        else:
+            # Build system prompt with workspace context
+            try:
+                system_prompt = _build_system_prompt(body.mode, current_user, db)
+            except Exception:
+                system_prompt = (
+                    "أنت مساعد ALLOUL&Q الذكي. تكلّم دائماً بالعربية إلا إذا كتب المستخدم بلغة أخرى. "
+                    "كن موجزاً، احترافياً، وعملياً."
+                )
+
+            # Last user message as prompt, history as context in system
+            history_text = ""
+            if len(conv_history) > 1:
+                history_lines = []
+                for m in conv_history[:-1]:  # all except last user msg
+                    role_label = "المستخدم" if m["role"] == "user" else "المساعد"
+                    history_lines.append(f"{role_label}: {m['content'][:300]}")
+                history_text = "\n\n--- سياق المحادثة السابقة ---\n" + "\n".join(history_lines[-6:])
+
+            full_system = system_prompt + history_text
+
+            ai_service = get_ai_service()
+            preferred_provider = ai_service.get_preferred_provider(private=(body.mode == "company"))
+
+            if not preferred_provider:
+                msg = "⚠️ خدمة الذكاء الاصطناعي غير متاحة حالياً. تأكد من إعدادات المزوّد."
+                async for chunk in _emit(msg):
+                    yield chunk
+            else:
+                try:
+                    async for chunk in ai_service.stream_complete(
+                        system_prompt=full_system,
+                        user_prompt=user_msg or "مرحباً",
+                        max_tokens=2048,
+                        temperature=0.4,
+                        private=(body.mode == "company"),
+                        provider=preferred_provider,
+                    ):
+                        if chunk:
+                            full_reply.append(chunk)
+                            yield f"data: {json.dumps({'text': chunk})}\n\n"
+                except Exception as e:
+                    error_text = f"❌ خطأ في المساعد: {str(e)}"
+                    async for chunk in _emit(error_text):
+                        yield chunk
+
+        # Save assistant response (best-effort)
+        final_text = "".join(full_reply)
+        if final_text:
+            try:
+                db.add(AgentMessageModel(
+                    user_id=current_user.id, role="assistant", content=final_text, mode=body.mode,
+                ))
+                db.commit()
+            except Exception:
+                db.rollback()
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
@@ -379,7 +645,7 @@ async def analyze(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Generate a focused AI analysis for a specific workspace topic."""
-    from models import Company, CompanyMember, Project, ProjectTask, Deal, Meeting, HandoverRecord
+    from models import Company, CompanyMember, Project, ProjectTask, DealRecord as Deal, Meeting, HandoverRecord
 
     member = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
     if not member:
@@ -481,20 +747,15 @@ async def analyze(
     if body.extra:
         full_prompt += f"\nAdditional context: {body.extra}"
 
-    if not client:
-        summary = f"تحليل {body.topic}:\n\n{topic_ctx}\n\n⚠️ AI غير مفعّل — يرجى إعداد ANTHROPIC_API_KEY."
-        return {"summary": summary, "topic": body.topic}
-
     system = _build_system_prompt("company", current_user, db)
 
     try:
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+        summary = await _complete_with_fallback(
+            system_prompt=system,
+            user_prompt=full_prompt,
             max_tokens=2048,
-            system=system,
-            messages=[{"role": "user", "content": full_prompt}],
+            private=True,
         )
-        summary = msg.content[0].text if msg.content else "No analysis generated."
     except Exception as e:
         summary = f"خطأ في التحليل: {str(e)}"
 
@@ -547,7 +808,7 @@ async def summarize_handover(
     )
 
     # private=True routes through Ollama first for company-data privacy
-    summary = _complete_with_fallback(
+    summary = await _complete_with_fallback(
         system_prompt=_build_system_prompt("company", current_user, db),
         user_prompt=instruction,
         max_tokens=2048,
@@ -607,7 +868,7 @@ async def summarize_tasks(
     )
 
     # private=True routes through Ollama first for company-data privacy
-    summary = _complete_with_fallback(
+    summary = await _complete_with_fallback(
         system_prompt=_build_system_prompt("company", current_user, db),
         user_prompt=instruction,
         max_tokens=2048,
@@ -650,7 +911,7 @@ async def summarize_meeting(
     )
 
     # private=True routes through Ollama first for company-data privacy
-    summary = _complete_with_fallback(
+    summary = await _complete_with_fallback(
         system_prompt=_build_system_prompt("company", current_user, db),
         user_prompt=instruction,
         max_tokens=2048,
@@ -700,7 +961,7 @@ async def company_insights(
     Feature gate: ai_chat
     """
     from models import (
-        Company, CompanyMember, Project, ProjectTask, Deal, Meeting, HandoverRecord,
+        Company, CompanyMember, Project, ProjectTask, DealRecord as Deal, Meeting, HandoverRecord,
     )
 
     member = db.query(CompanyMember).filter(CompanyMember.user_id == current_user.id).first()
@@ -716,9 +977,9 @@ async def company_insights(
     system = _build_system_prompt("company", current_user, db)
     sections: dict[str, dict] = {}
 
-    def _run(key: str, prompt: str, max_tokens: int = 1200) -> None:
+    async def _run(key: str, prompt: str, max_tokens: int = 1200) -> None:
         try:
-            text = _complete_with_fallback(
+            text = await _complete_with_fallback(
                 system_prompt=system,
                 user_prompt=prompt,
                 max_tokens=max_tokens,
@@ -749,7 +1010,7 @@ async def company_insights(
         active_deals = [d for d in deals if d.stage not in ("won", "lost")]
         pipeline = sum(d.value or 0 for d in active_deals)
 
-        _run("performance", (
+        await _run("performance", (
             f"You are analysing the health of {company_name}. Produce a 4-section executive summary in {lang_label}:\n"
             "1. **الأداء العام / Overall health** — one paragraph, with a score /10.\n"
             "2. **نقاط القوة / Strengths** — 2-3 bullets.\n"
@@ -769,7 +1030,7 @@ async def company_insights(
             + (f" (due {t.due_date})" if t.due_date else "")
             for t in tasks[:60]
         ]
-        _run("tasks", (
+        await _run("tasks", (
             f"Produce a smart task summary in {lang_label}:\n"
             "(1) top 3 priorities today with justification, "
             "(2) blockers to unblock, "
@@ -782,7 +1043,7 @@ async def company_insights(
         upcoming = [m for m in meetings if m.status == "scheduled"]
         done_mtgs = [m for m in meetings if m.status == "done"]
         lines = [f"- {m.title} ({m.meeting_date}) — {m.status}" for m in meetings[:20]]
-        _run("meetings", (
+        await _run("meetings", (
             f"Analyse the meeting calendar in {lang_label}:\n"
             f"- Upcoming: {len(upcoming)}\n- Done: {len(done_mtgs)}\n\n"
             "Give: (1) prep tips for next 3 meetings, (2) meetings that need follow-up, "
@@ -797,7 +1058,7 @@ async def company_insights(
             f"- {d.company} | stage={d.stage} | p={d.probability}% | value={d.value}"
             for d in active[:30]
         ]
-        _run("deals", (
+        await _run("deals", (
             f"Sales pipeline briefing in {lang_label}: "
             f"({len(active)} active, {len(stale)} at-risk). "
             "Give: (1) 3 deals to push today, (2) at-risk deals to rescue, "
@@ -807,7 +1068,7 @@ async def company_insights(
 
     if "handovers" in wanted and handovers:
         lines = [f"- [{h.status}] {h.title} (risk={h.risk_level or 'n/a'})" for h in handovers[:15]]
-        _run("handovers", (
+        await _run("handovers", (
             f"Handover briefing for the owner in {lang_label}. "
             "Flag: (1) which handovers need immediate acceptance, "
             "(2) any that look high-risk, (3) suggested next actions.\n\n"
@@ -889,7 +1150,7 @@ Respond in JSON:
 """
 
     try:
-        analysis_json = _complete_with_fallback(
+        analysis_json = await _complete_with_fallback(
             system_prompt="You are a task analysis expert. Return only valid JSON.",
             user_prompt=analysis_prompt,
             max_tokens=1024,

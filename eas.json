@@ -1,6 +1,13 @@
 {
   "build": {
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
     "production": {
+      "channel": "production",
       "ios": {}
     }
   },

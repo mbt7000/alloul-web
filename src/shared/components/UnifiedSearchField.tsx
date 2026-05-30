@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
 import { radii } from "../../theme/radii";
-import { UNIFIED_SEARCH_PLACEHOLDER } from "../../features/discover/types/searchTypes";
+const UNIFIED_SEARCH_PLACEHOLDER = "ابحث...";
 
 type Props = Omit<TextInputProps, "placeholder" | "style"> & {
   value: string;

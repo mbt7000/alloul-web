@@ -1,20 +1,12 @@
 /**
- * ALLOUL&Q AI Chat Screen
- * ========================
- * Smart AI assistant that uses:
- * - Claude for complex conversations
- * - Ollama for quick replies
- * - RAG for workspace context
- *
- * Features:
- * - Real-time AI chat with model selection
- * - Workspace context integration
- * - Message actions (copy, regenerate, translate)
- * - Quick suggestion chips
- * - Dual-mode interface (Media World / Corporate World)
+ * AI Chat Screen — Corporate Workspace Assistant
+ * ================================================
+ * Uses the real /agent/chat SSE streaming endpoint.
+ * Auth token injected automatically via getToken().
+ * History loaded from /agent/history on mount.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -24,652 +16,433 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  StyleSheet,
-  Animated,
-  Dimensions,
-  ScrollView,
-  SafeAreaView,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+  Pressable,
+  I18nManager,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "../../../theme/ThemeContext";
+import { useThemedStyles } from "../../../theme/useThemedStyles";
+import { radii } from "../../../theme/radii";
+import { getToken } from "../../../api/client";
+import { getApiBaseUrl } from "../../../config/env";
+import { apiFetch } from "../../../api/client";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-// Types
 interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
-  timestamp: Date;
-  model?: string;
-  tokens?: number;
-  actions?: 'copy' | 'regenerate' | 'translate';
+  streaming?: boolean;
 }
 
-interface QuickSuggestion {
-  id: string;
-  text: string;
-  textAr: string;
-  emoji: string;
-}
+// ─── Quick Suggestions ────────────────────────────────────────────────────────
 
-
-const { width, height } = Dimensions.get('window');
-
-const COLORS = {
-  dark: '#0F172A',
-  darkGray: '#1E293B',
-  blue: '#1E40AF',
-  lightBlue: '#3B82F6',
-  white: '#FFFFFF',
-  gray: '#64748B',
-  lightGray: '#E2E8F0',
-  success: '#10B981',
-  error: '#EF4444',
-};
-
-const quickSuggestions: QuickSuggestion[] = [
-  {
-    id: '1',
-    text: 'Create Report',
-    textAr: 'أنشئ تقرير',
-    emoji: '📊',
-  },
-  {
-    id: '2',
-    text: 'Summarize Tasks',
-    textAr: 'لخص المهام',
-    emoji: '📋',
-  },
-  {
-    id: '3',
-    text: 'Analyze Data',
-    textAr: 'حلل البيانات',
-    emoji: '📈',
-  },
-  {
-    id: '4',
-    text: 'Suggest Priorities',
-    textAr: 'اقترح أولويات',
-    emoji: '⭐',
-  },
+const QUICK_SUGGESTIONS = [
+  { id: "1", text: "لخّص مهامي الأسبوع الحالي", icon: "list-outline" as const },
+  { id: "2", text: "ما الصفقات التي تحتاج متابعة؟", icon: "briefcase-outline" as const },
+  { id: "3", text: "حضّر تقريراً عن أداء الشركة", icon: "bar-chart-outline" as const },
+  { id: "4", text: "ما الاجتماعات القادمة؟", icon: "calendar-outline" as const },
 ];
 
+// ─── Component ────────────────────────────────────────────────────────────────
 
-const AIChatScreen: React.FC = () => {
+export default function AIChatScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
+  const isRTL = I18nManager.isRTL;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<'auto' | 'claude' | 'ollama'>('auto');
-  const [workspaceContextEnabled, setWorkspaceContextEnabled] = useState(true);
-  const [selectedMode, setSelectedMode] = useState<'media' | 'corporate'>('corporate');
-  const [showModelSelector, setShowModelSelector] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [inputText, setInputText] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const listRef = useRef<FlatList>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Determine which model is being used
-  const getModelLabel = () => {
-    if (selectedModel === 'auto') return 'Auto';
-    if (selectedModel === 'claude') return 'Claude';
-    return 'Ollama';
-  };
+  const styles = useThemedStyles((c) => ({
+    root: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      backgroundColor: c.bgCard,
+    },
+    headerTitle: { flex: 1, fontSize: 17, fontWeight: "700" as const, color: c.textPrimary },
+    headerBadge: {
+      backgroundColor: c.accent + "22",
+      borderRadius: radii.sm,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    headerBadgeText: { fontSize: 11, color: c.accent, fontWeight: "600" as const },
+    list: { paddingHorizontal: 16, paddingVertical: 12 },
+    // Empty state
+    emptyWrap: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 32, paddingTop: 60 },
+    emptyIcon: { marginBottom: 14 },
+    emptyTitle: { fontSize: 20, fontWeight: "700" as const, color: c.textPrimary, textAlign: "center" as const, marginBottom: 6 },
+    emptySubtitle: { fontSize: 14, color: c.textMuted, textAlign: "center" as const, lineHeight: 22, marginBottom: 28 },
+    suggestionsGrid: { width: "100%" as const, gap: 10 },
+    suggestionChip: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: radii.md,
+      backgroundColor: c.bgCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    suggestionText: { flex: 1, fontSize: 14, color: c.textPrimary },
+    // Bubbles
+    bubbleRow: { marginVertical: 5 },
+    userRow: { alignItems: "flex-end" as const },
+    assistantRow: { alignItems: "flex-start" as const },
+    userBubble: {
+      backgroundColor: c.accent,
+      borderRadius: radii.md,
+      borderBottomRightRadius: 4,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      maxWidth: "82%" as const,
+    },
+    assistantBubble: {
+      backgroundColor: c.bgCard,
+      borderRadius: radii.md,
+      borderBottomLeftRadius: 4,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      maxWidth: "88%" as const,
+    },
+    userText: { fontSize: 14, lineHeight: 22, color: "#fff", textAlign: isRTL ? "right" : "left" as const },
+    assistantText: { fontSize: 14, lineHeight: 22, color: c.textPrimary, textAlign: isRTL ? "right" : "left" as const },
+    streamingDots: { flexDirection: "row" as const, gap: 4, paddingVertical: 6 },
+    dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.textMuted },
+    // Input
+    inputArea: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      backgroundColor: c.bgCard,
+      flexDirection: "row" as const,
+      alignItems: "flex-end" as const,
+      gap: 8,
+    },
+    inputWrap: {
+      flex: 1,
+      flexDirection: "row" as const,
+      alignItems: "flex-end" as const,
+      backgroundColor: c.bg,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      gap: 8,
+    },
+    input: { flex: 1, fontSize: 14, color: c.textPrimary, maxHeight: 100, textAlign: isRTL ? "right" : "left" as const },
+    sendBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.accent,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    sendBtnDisabled: { backgroundColor: c.border },
+    clearBtn: { padding: 4 },
+  }));
 
-  const getModelColor = () => {
-    if (selectedModel === 'claude') return COLORS.blue;
-    if (selectedModel === 'ollama') return COLORS.success;
-    return COLORS.gray;
-  };
+  // ─── Load history ──────────────────────────────────────────────────────────
 
-  // Send message to AI
-  const handleSendMessage = useCallback(async () => {
-    if (!inputText.trim()) return;
+  useEffect(() => {
+    apiFetch<{ id: string; role: string; content: string }[]>("/agent/history?mode=company")
+      .then((hist) => {
+        const loaded: ChatMessage[] = hist.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
+        setMessages(loaded);
+      })
+      .catch(() => {/* no history yet */})
+      .finally(() => setHistoryLoaded(true));
+  }, []);
 
-    const userMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      role: 'user',
-      content: inputText,
-      timestamp: new Date(),
+  // ─── Auto-scroll ───────────────────────────────────────────────────────────
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) scrollToBottom();
+  }, [messages.length, scrollToBottom]);
+
+  // ─── Clear history ─────────────────────────────────────────────────────────
+
+  const handleClear = useCallback(async () => {
+    await apiFetch("/agent/history", { method: "DELETE" }).catch(() => {});
+    setMessages([]);
+  }, []);
+
+  // ─── Send message with SSE streaming ──────────────────────────────────────
+
+  const handleSend = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || isStreaming) return;
+
+    const userMsg: ChatMessage = {
+      id: `u_${Date.now()}`,
+      role: "user",
+      content: text,
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-    setIsLoading(true);
+    const assistantId = `a_${Date.now()}`;
+    const assistantMsg: ChatMessage = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      streaming: true,
+    };
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setInputText("");
+    setIsStreaming(true);
+
+    const history = [...messages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
     try {
-      // Call backend API
-      const response = await fetch('https://api.alloul-q.com/ai/chat', {
-        method: 'POST',
+      const token = await getToken();
+      const res = await fetch(`${getApiBaseUrl()}/agent/chat`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          message: inputText,
-          model: selectedModel,
-          workspace_context: workspaceContextEnabled,
-          mode: selectedMode,
-        }),
+        body: JSON.stringify({ messages: history, mode: "company" }),
+        signal: ctrl.signal,
       });
 
-      if (!response.ok) throw new Error('API call failed');
+      if (!res.ok || !res.body) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
-      const data = await response.json();
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulated = "";
 
-      const assistantMessage: ChatMessage = {
-        id: `msg_${Date.now() + 1}`,
-        role: 'assistant',
-        content: data.response || 'I\'m not sure how to respond to that.',
-        timestamp: new Date(),
-        model: data.model || selectedModel,
-        tokens: data.tokens || 0,
-      };
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: ChatMessage = {
-        id: `msg_${Date.now() + 1}`,
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") break;
+          try {
+            const chunk = JSON.parse(payload) as { text?: string };
+            if (chunk.text) {
+              accumulated += chunk.text;
+              const snap = accumulated;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: snap, streaming: true }
+                    : m
+                )
+              );
+            }
+          } catch {/* skip malformed chunk */}
+        }
+      }
+
+      // Mark streaming done
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, streaming: false } : m
+        )
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: m.content || "توقّف.", streaming: false }
+              : m
+          )
+        );
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: "حدث خطأ، يرجى المحاولة مجدداً.", streaming: false }
+              : m
+          )
+        );
+      }
     } finally {
-      setIsLoading(false);
+      setIsStreaming(false);
+      abortRef.current = null;
     }
+  }, [inputText, isStreaming, messages]);
 
-    // Auto-scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [inputText, selectedModel, workspaceContextEnabled, selectedMode]);
+  const handleQuickSuggestion = useCallback((text: string) => {
+    setInputText(text);
+  }, []);
 
-  // Handle quick suggestion click
-  const handleQuickSuggestion = (suggestion: QuickSuggestion) => {
-    setInputText(suggestion.text);
-    setTimeout(() => handleSendMessage(), 100);
-  };
+  // ─── Render helpers ────────────────────────────────────────────────────────
 
-  // Copy message to clipboard
-  const handleCopyMessage = (message: ChatMessage) => {
-    // In real implementation, use react-native-clipboard
-    console.log('Copied:', message.content);
-  };
-
-  // Regenerate assistant message
-  const handleRegenerateMessage = async (messageId: string) => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-  };
-
-  // Message bubble component
-  const MessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
-    const isUser = message.role === 'user';
-
+  const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
+    const isUser = item.role === "user";
     return (
-      <View
-        style={[
-          styles.messageBubbleContainer,
-          isUser ? styles.userBubbleContainer : styles.assistantBubbleContainer,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.assistantBubble,
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              isUser ? styles.userMessageText : styles.assistantMessageText,
-            ]}
-          >
-            {message.content}
-          </Text>
-
-          {!isUser && message.model && (
-            <Text style={styles.modelLabel}>
-              {`${getModelLabel()} • ${new Date(message.timestamp).toLocaleTimeString()}`}
+      <View style={[styles.bubbleRow, isUser ? styles.userRow : styles.assistantRow]}>
+        <View style={isUser ? styles.userBubble : styles.assistantBubble}>
+          {item.streaming && !item.content ? (
+            <View style={styles.streamingDots}>
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+            </View>
+          ) : (
+            <Text style={isUser ? styles.userText : styles.assistantText}>
+              {item.content}
             </Text>
           )}
         </View>
-
-        {!isUser && (
-          <View style={styles.messageActions}>
-            <TouchableOpacity onPress={() => handleCopyMessage(message)}>
-              <Text style={styles.actionIcon}>📋</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleRegenerateMessage(message.id)}>
-              <Text style={styles.actionIcon}>🔄</Text>
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Text style={styles.actionIcon}>🌐</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     );
-  };
+  }, [styles]);
 
-  // Empty state component
-  const EmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <Text style={styles.emptyStateIcon}>🤖</Text>
-      <Text style={styles.emptyStateTitle}>ALLOUL&Q AI Assistant</Text>
-      <Text style={styles.emptyStateSubtitle}>
-        Smart conversations powered by Claude, Ollama & RAG
+  const EmptyState = useCallback(() => (
+    <View style={styles.emptyWrap}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="sparkles" size={48} color={colors.accent} />
+      </View>
+      <Text style={styles.emptyTitle}>مساعد الذكاء الاصطناعي</Text>
+      <Text style={styles.emptySubtitle}>
+        اسألني عن مهامك، مشاريعك، صفقاتك، أو اجتماعاتك
       </Text>
-      <View style={styles.quickSuggestionsContainer}>
-        {quickSuggestions.map(suggestion => (
+      <View style={styles.suggestionsGrid}>
+        {QUICK_SUGGESTIONS.map((s) => (
           <TouchableOpacity
-            key={suggestion.id}
-            style={styles.quickSuggestionChip}
-            onPress={() => handleQuickSuggestion(suggestion)}
+            key={s.id}
+            style={styles.suggestionChip}
+            onPress={() => handleQuickSuggestion(s.text)}
+            activeOpacity={0.7}
           >
-            <Text style={styles.chipEmoji}>{suggestion.emoji}</Text>
-            <Text style={styles.chipText}>{suggestion.textAr}</Text>
+            <Ionicons name={s.icon} size={18} color={colors.accent} />
+            <Text style={styles.suggestionText}>{s.text}</Text>
           </TouchableOpacity>
         ))}
       </View>
     </View>
-  );
+  ), [styles, colors, handleQuickSuggestion]);
+
+  // ─── Loading skeleton ─────────────────────────────────────────────────────
+
+  if (!historyLoaded) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top, alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  const canSend = inputText.trim().length > 0 && !isStreaming;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text style={styles.headerTitle}>AI Assistant</Text>
-            <View style={styles.headerRight}>
-              {/* Workspace Context Toggle */}
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  workspaceContextEnabled && styles.toggleButtonActive,
-                ]}
-                onPress={() => setWorkspaceContextEnabled(!workspaceContextEnabled)}
-              >
-                <Text style={styles.toggleLabel}>
-                  {workspaceContextEnabled ? '🏢' : '📄'}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Model Selector */}
-              <TouchableOpacity
-                style={[styles.modelButton, { borderColor: getModelColor() }]}
-                onPress={() => setShowModelSelector(!showModelSelector)}
-              >
-                <Text style={styles.modelButtonText}>{getModelLabel()}</Text>
-                <Text style={styles.modelButtonIcon}>⚙️</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Model Selector Dropdown */}
-          {showModelSelector && (
-            <View style={styles.modelSelectorDropdown}>
-              {(['auto', 'claude', 'ollama'] as const).map(model => (
-                <TouchableOpacity
-                  key={model}
-                  style={[
-                    styles.modelOption,
-                    selectedModel === model && styles.modelOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedModel(model);
-                    setShowModelSelector(false);
-                  }}
-                >
-                  <Text style={styles.modelOptionText}>
-                    {model === 'auto' && '🔄 Auto'}
-                    {model === 'claude' && '🧠 Claude'}
-                    {model === 'ollama' && '⚡ Ollama'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Mode Tabs */}
-          <View style={styles.modeTabs}>
-            {(['media', 'corporate'] as const).map(mode => (
-              <TouchableOpacity
-                key={mode}
-                style={[
-                  styles.modeTab,
-                  selectedMode === mode && styles.modeTabActive,
-                ]}
-                onPress={() => setSelectedMode(mode)}
-              >
-                <Text
-                  style={[
-                    styles.modeTabText,
-                    selectedMode === mode && styles.modeTabTextActive,
-                  ]}
-                >
-                  {mode === 'media' ? 'Media World' : 'Corporate World'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+    <KeyboardAvoidingView
+      style={[styles.root, { paddingTop: insets.top }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+          <Ionicons
+            name={isRTL ? "chevron-forward" : "chevron-back"}
+            size={24}
+            color={colors.textPrimary}
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>مساعد الذكاء الاصطناعي</Text>
+        <View style={styles.headerBadge}>
+          <Text style={styles.headerBadgeText}>AI</Text>
         </View>
-
-        {/* Messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={({ item }) => <MessageBubble message={item} />}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.messagesList}
-          ListEmptyComponent={<EmptyState />}
-          scrollEnabled={true}
-        />
-
-        {/* Loading Indicator */}
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator color={COLORS.lightBlue} size="small" />
-            <Text style={styles.loadingText}>
-              {selectedModel === 'claude' && 'Claude is thinking...'}
-              {selectedModel === 'ollama' && 'Ollama is responding...'}
-              {selectedModel === 'auto' && 'AI is thinking...'}
-            </Text>
-          </View>
+        {messages.length > 0 && (
+          <Pressable style={styles.clearBtn} onPress={handleClear} hitSlop={10}>
+            <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
+          </Pressable>
         )}
+      </View>
 
-        {/* Input Area */}
-        <View style={styles.inputArea}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Ask anything..."
-              placeholderTextColor={COLORS.gray}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={1000}
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!inputText.trim() || isLoading) && styles.sendButtonDisabled,
-              ]}
-              onPress={handleSendMessage}
-              disabled={!inputText.trim() || isLoading}
-            >
-              <Text style={styles.sendButtonIcon}>➤</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.charCounter}>{inputText.length}/1000</Text>
+      {/* Messages */}
+      <FlatList
+        ref={listRef}
+        data={messages}
+        renderItem={renderMessage}
+        keyExtractor={(m) => m.id}
+        contentContainerStyle={[styles.list, messages.length === 0 && { flex: 1 }]}
+        ListEmptyComponent={<EmptyState />}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
+
+      {/* Input */}
+      <View style={[styles.inputArea, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={styles.inputWrap}>
+          <TextInput
+            style={styles.input}
+            placeholder="اكتب رسالتك..."
+            placeholderTextColor={colors.textMuted}
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={2000}
+            editable={!isStreaming}
+            onSubmitEditing={canSend ? handleSend : undefined}
+            returnKeyType="send"
+          />
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        {isStreaming ? (
+          <TouchableOpacity
+            style={styles.sendBtn}
+            onPress={() => abortRef.current?.abort()}
+          >
+            <Ionicons name="stop" size={16} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={!canSend}
+          >
+            <Ionicons name="send" size={16} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
-};
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.dark,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  header: {
-    backgroundColor: COLORS.darkGray,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  toggleButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#334155',
-  },
-  toggleButtonActive: {
-    backgroundColor: COLORS.blue,
-  },
-  toggleLabel: {
-    fontSize: 16,
-  },
-  modelButton: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    gap: 6,
-  },
-  modelButtonText: {
-    fontSize: 12,
-    color: COLORS.white,
-    fontWeight: '500',
-  },
-  modelButtonIcon: {
-    fontSize: 14,
-  },
-  modelSelectorDropdown: {
-    backgroundColor: '#1E293B',
-    borderRadius: 8,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  modelOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-  },
-  modelOptionSelected: {
-    backgroundColor: '#334155',
-  },
-  modelOptionText: {
-    fontSize: 14,
-    color: COLORS.white,
-  },
-  modeTabs: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#334155',
-    alignItems: 'center',
-  },
-  modeTabActive: {
-    backgroundColor: COLORS.blue,
-  },
-  modeTabText: {
-    fontSize: 12,
-    color: COLORS.gray,
-    fontWeight: '500',
-  },
-  modeTabTextActive: {
-    color: COLORS.white,
-  },
-  messagesList: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  messageBubbleContainer: {
-    marginVertical: 8,
-    alignItems: 'flex-end',
-  },
-  userBubbleContainer: {
-    alignItems: 'flex-end',
-  },
-  assistantBubbleContainer: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  userBubble: {
-    backgroundColor: COLORS.blue,
-  },
-  assistantBubble: {
-    backgroundColor: COLORS.darkGray,
-  },
-  messageText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  userMessageText: {
-    color: COLORS.white,
-    textAlign: 'right',
-  },
-  assistantMessageText: {
-    color: COLORS.lightGray,
-  },
-  modelLabel: {
-    fontSize: 11,
-    color: COLORS.gray,
-    marginTop: 6,
-  },
-  messageActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-    marginLeft: 8,
-  },
-  actionIcon: {
-    fontSize: 16,
-  },
-  emptyStateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.white,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateSubtitle: {
-    fontSize: 14,
-    color: COLORS.gray,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  quickSuggestionsContainer: {
-    width: '100%',
-    gap: 8,
-  },
-  quickSuggestionChip: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: COLORS.darkGray,
-    alignItems: 'center',
-    gap: 8,
-  },
-  chipEmoji: {
-    fontSize: 16,
-  },
-  chipText: {
-    fontSize: 13,
-    color: COLORS.white,
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: COLORS.gray,
-  },
-  inputArea: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.darkGray,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    backgroundColor: COLORS.dark,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.white,
-    maxHeight: 100,
-  },
-  sendButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: COLORS.blue,
-  },
-  sendButtonDisabled: {
-    backgroundColor: COLORS.gray,
-    opacity: 0.5,
-  },
-  sendButtonIcon: {
-    fontSize: 18,
-    color: COLORS.white,
-  },
-  charCounter: {
-    fontSize: 11,
-    color: COLORS.gray,
-    textAlign: 'right',
-    marginTop: 6,
-  },
-});
-
-export default AIChatScreen;
+}

@@ -1,16 +1,13 @@
 import React from "react";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { ActivityIndicator, View } from "react-native";
-import { useHomeMode } from "../../state/mode/HomeModeContext";
 import { ROOT_SHELL_ROUTES } from "../../config/routes";
 import { useAppTheme } from "../../theme/ThemeContext";
 import { useThemedStyles } from "../../theme/useThemedStyles";
-import { FEATURES } from "../../config/features";
 
 export default function SearchGateway() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { mode, canUseCompanyMode } = useHomeMode();
   const params = route.params ?? {};
   const { colors } = useAppTheme();
   const styles = useThemedStyles((c) => ({
@@ -24,15 +21,8 @@ export default function SearchGateway() {
 
   useFocusEffect(
     React.useCallback(() => {
-      const inCompany = mode === "company" && canUseCompanyMode;
-      const targetShell = inCompany ? ROOT_SHELL_ROUTES.company : (FEATURES.MEDIA_WORLD ? ROOT_SHELL_ROUTES.media : ROOT_SHELL_ROUTES.company);
-      navigation.navigate(
-        targetShell,
-        inCompany
-          ? { screen: "InternalSearch", params }
-          : (FEATURES.MEDIA_WORLD ? { screen: "MediaTabs", params: { screen: "Search", params } } : { screen: "InternalSearch", params })
-      );
-    }, [canUseCompanyMode, mode, navigation, params])
+      navigation.navigate(ROOT_SHELL_ROUTES.company, { screen: "InternalSearch", params });
+    }, [navigation, params])
   );
 
   return (

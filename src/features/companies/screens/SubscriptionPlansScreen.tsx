@@ -35,61 +35,62 @@ const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     nameAr: "المبتدئ",
-    price: "$24",
+    price: "$30",
     period: "/شهر",
     employees: "5 أعضاء",
     color: "#60A5FA",
     features: [
       "إدارة الفريق (5 أعضاء)",
-      "3 مشاريع + 30 مهمة",
-      "الاجتماعات (10 اجتماعات)",
+      "المشاريع والمهام",
+      "CRM أساسي",
       "تسليم المهام (Handover)",
       "تجربة 14 يوم مجاناً",
     ],
-    limits: ["بدون CRM", "بدون مساعد ذكي"],
+    limits: ["مساعد AI محدود"],
   },
   {
     id: "pro",
     name: "Pro",
     nameAr: "الاحترافي",
-    price: "$59",
+    price: "$90",
     period: "/شهر",
-    employees: "21 عضواً",
+    employees: "25 عضواً",
     color: "#A78BFA",
     features: [
       "كل ميزات المبتدئ",
-      "21 عضو في الفريق",
+      "25 عضو في الفريق",
       "مشاريع ومهام غير محدودة",
       "CRM والصفقات",
-      "المساعد الذكي (AI)",
-      "اجتماعات غير محدودة",
+      "مساعد AI كامل",
+      "اجتماعات ذكية (LiveKit)",
       "تجربة 14 يوم مجاناً",
     ],
     limits: [],
     popular: true,
   },
   {
-    id: "pro_plus",
-    name: "Pro Plus",
-    nameAr: "الاحترافي المتقدم",
-    price: "$289",
+    id: "business",
+    name: "Business",
+    nameAr: "الأعمال",
+    price: "$210",
     period: "/شهر",
-    employees: "33 عضواً",
-    color: "#FB923C",
+    employees: "100 عضو",
+    color: "#C9A260",
     features: [
-      "كل ميزات الاحترافي",
-      "33 عضو في الفريق",
-      "تحليلات متقدمة",
-      "أولوية في الدعم الفني",
-      "AI مُحسَّن وأسرع",
-      "قاعدة المعرفة المتقدمة",
+      "كل ميزات Pro",
+      "حتى 100 عضو",
+      "AI غير محدود",
+      "Document AI + RAG",
+      "فواتير ZATCA/VAT",
+      "تكامل WhatsApp",
+      "API access",
       "تجربة 14 يوم مجاناً",
     ],
     limits: [],
   },
 ];
 
-const PLAN_RANK: Record<string, number> = { starter: 1, pro: 2, pro_plus: 3, admin: 99 };
+const PLAN_RANK: Record<string, number> = { starter: 1, pro: 2, business: 3, admin: 99 };
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -138,7 +139,10 @@ export default function SubscriptionPlansScreen({ navigation }: { navigation: an
         body: JSON.stringify({ plan_id: planId }),
       });
       if (res.checkout_url) {
-        await Linking.openURL(res.checkout_url);
+        // Only open HTTPS URLs — reject any other scheme
+        const url = res.checkout_url
+        if (!url.startsWith('https://')) throw new Error('Invalid checkout URL scheme')
+        await Linking.openURL(url);
         // Plan will be refreshed when user returns to app via AppState listener
       }
     } catch (err: unknown) {
@@ -146,12 +150,18 @@ export default function SubscriptionPlansScreen({ navigation }: { navigation: an
       const msg = e?.detail || e?.message || "حدث خطأ. أعد المحاولة.";
       if (msg.includes("Stripe not configured") || msg.includes("503")) {
         Alert.alert(
-          "المدفوعات غير مفعّلة",
-          "يرجى التواصل مع الدعم لتفعيل الاشتراك.",
-          [{ text: "حسناً" }]
+          "الاشتراك عبر الموقع",
+          "يمكنك الاشتراك مباشرة عبر موقعنا على الإنترنت.",
+          [
+            { text: "إلغاء", style: "cancel" },
+            { text: "فتح الموقع", onPress: () => void Linking.openURL("https://alloul.app/pricing") },
+          ]
         );
       } else {
-        Alert.alert("خطأ", msg);
+        Alert.alert("خطأ", msg, [
+          { text: "حسناً", style: "cancel" },
+          { text: "اشترك عبر الموقع", onPress: () => void Linking.openURL("https://alloul.app/pricing") },
+        ]);
       }
     }
     setLoading(null);

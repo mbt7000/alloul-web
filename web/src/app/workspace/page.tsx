@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Briefcase, CheckSquare, Calendar, Users, Folder, BookOpen,
   TrendingUp, Video, MessageSquare, Sparkles, ArrowLeft, BarChart3, Loader2,
-  Phone, UserPlus, PieChart,
+  Phone, UserPlus, PieChart, Receipt, FileText, MessageCircle, Zap,
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import {
@@ -27,18 +27,21 @@ const QUICK_ACTIONS = [
 const SERVICES = [
   { icon: Sparkles,    label: 'المساعد الذكي', sub: 'AI للمهام والتسليمات', color: '#8B5CF6', href: '/workspace/ai' },
   { icon: Users,       label: 'الفريق',        sub: 'الموظفون والأدوار',  color: '#A78BFA', href: '/workspace/team' },
-  { icon: Folder,      label: 'المشاريع',      sub: 'كل المشاريع',        color: '#00D4FF', href: '/workspace/tasks' },
+  { icon: Receipt,     label: 'شكرة — محاسب', sub: 'AI محاسب ذكي',       color: '#10B981', href: '/workspace/accounting' },
   { icon: CheckSquare, label: 'المهام',        sub: 'قائمة كاملة',        color: '#2E8BFF', href: '/workspace/tasks' },
   { icon: Calendar,    label: 'الاجتماعات',    sub: 'الجدولة والفريق',    color: '#14E0A4', href: '/workspace/meetings' },
   { icon: Phone,       label: 'المكالمات',     sub: 'صوت وفيديو',         color: '#14E0A4', href: '/workspace/calls' },
   { icon: TrendingUp,  label: 'CRM',           sub: 'إدارة الصفقات',      color: '#FFB24D', href: '/workspace/crm' },
   { icon: MessageSquare, label: 'دردشة الشركة', sub: 'قنوات وشات',        color: '#00D4FF', href: '/workspace/chat' },
   { icon: Briefcase,   label: 'التسليمات',     sub: 'handover ذكي',       color: '#FFB24D', href: '/workspace/handover' },
-  { icon: BookOpen,    label: 'الأخبار',       sub: 'تحديثات الشركة',     color: '#FFB24D', href: '/workspace/news' },
+  { icon: Folder,      label: 'المشاريع',      sub: 'كل المشاريع',        color: '#00D4FF', href: '/workspace/tasks' },
   { icon: BookOpen,    label: 'قاعدة المعرفة', sub: 'مستندات + بحث ذكي',  color: '#8B5CF6', href: '/workspace/knowledge' },
   { icon: UserPlus,    label: 'التوظيف',       sub: 'مرشحون ومقابلات',    color: '#14E0A4', href: '/workspace/hiring' },
   { icon: PieChart,    label: 'التقارير',      sub: 'إحصائيات الشركة',    color: '#00D4FF', href: '/workspace/reports' },
-  { icon: BarChart3,   label: 'الخدمات',       sub: 'كل الخدمات',         color: '#FF4757', href: '/workspace/services' },
+  { icon: BarChart3,      label: 'الخدمات',          sub: 'كل الخدمات',           color: '#FF4757', href: '/workspace/services' },
+  { icon: MessageCircle, label: 'واتساب بيزنس',    sub: 'محادثات العملاء',      color: '#25D366', href: '/workspace/whatsapp' },
+  { icon: Zap,           label: 'اجتماعات ذكية',   sub: 'تسجيل + ملخص AI',     color: '#F59E0B', href: '/workspace/smart-meetings' },
+  { icon: FileText,      label: 'الفواتير',         sub: 'ZATCA / ضريبة القيمة', color: '#06B6D4', href: '/workspace/invoices' },
 ];
 
 export default function WorkspacePage() {
@@ -108,41 +111,48 @@ export default function WorkspacePage() {
         {/* Quick actions */}
         <div className="flex gap-4 overflow-x-auto scrollbar-none">
           {QUICK_ACTIONS.map((a) => (
-            <button key={a.label} className="flex flex-col items-center gap-2 flex-shrink-0 w-[72px]">
+            <Link key={a.label} href={a.href} className="flex flex-col items-center gap-2 flex-shrink-0 w-[72px]">
               <div
-                className="w-[58px] h-[58px] rounded-2xl flex items-center justify-center border"
+                className="w-[58px] h-[58px] rounded-2xl flex items-center justify-center border transition-transform hover:scale-105 active:scale-95"
                 style={{ background: `${a.color}20`, borderColor: `${a.color}44` }}
               >
                 <a.icon size={22} style={{ color: a.color }} />
               </div>
               <span className="text-white text-[11px] font-bold text-center">{a.label}</span>
-            </button>
+            </Link>
           ))}
         </div>
 
         {/* Services grid */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-bold text-base">الخدمات</h3>
-            <button className="text-accent text-xs font-bold">عرض الكل</button>
+            <h3 className="text-white font-black text-base">الخدمات</h3>
+            <Link href="/workspace/services" className="text-primary-400 text-xs font-bold hover:text-primary-300">
+              عرض الكل
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {SERVICES.map((s) => (
-              <button
+            {SERVICES.slice(0, 8).map((s) => (
+              <Link
                 key={s.label}
-                className="p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-primary/30 transition-all text-right min-h-[118px] flex flex-col justify-between"
+                href={s.href}
+                className="group p-4 rounded-2xl border transition-all hover:scale-[1.02] active:scale-[0.97] min-h-[118px] flex flex-col justify-between"
+                style={{
+                  borderColor: `${s.color}22`,
+                  background: `linear-gradient(135deg, ${s.color}0a, rgba(255,255,255,0.015))`,
+                }}
               >
                 <div
-                  className="w-[42px] h-[42px] rounded-xl flex items-center justify-center"
-                  style={{ background: `${s.color}22` }}
+                  className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{ background: `${s.color}22`, border: `1px solid ${s.color}33` }}
                 >
                   <s.icon size={20} style={{ color: s.color }} />
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm">{s.label}</div>
+                  <div className="text-white font-black text-sm">{s.label}</div>
                   <div className="text-white/40 text-[11px] mt-0.5">{s.sub}</div>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
