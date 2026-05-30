@@ -1,130 +1,520 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>غرفة المكالمة</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title>مكالمة</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; background: #070B14; color: #fff; font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:-apple-system,system-ui,sans-serif;color:#fff}
 
-  #status { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 100; }
-  #status.hidden { display: none; }
-  .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .status-text { font-size: 14px; color: rgba(255,255,255,0.5); }
-  .error-box { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 12px; padding: 16px 24px; text-align: center; max-width: 300px; }
-  .error-box h3 { color: #f87171; margin-bottom: 8px; font-size: 15px; }
-  .error-box p { color: rgba(255,255,255,0.5); font-size: 12px; line-height: 1.5; }
-  .retry-btn { margin-top: 12px; padding: 8px 20px; border-radius: 8px; background: #3b82f6; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+/* ── Loading ── */
+#status{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#000;z-index:999}
+#status.hidden{display:none}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.s-text{font-size:13px;color:rgba(255,255,255,.45);letter-spacing:.02em}
+.err-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:18px;padding:22px 28px;text-align:center;max-width:290px}
+.err-box h3{color:#f87171;margin-bottom:8px;font-size:16px;font-weight:700}
+.err-box p{color:rgba(255,255,255,.4);font-size:12px;line-height:1.6}
+.retry-btn{margin-top:14px;padding:10px 26px;border-radius:22px;background:#fff;color:#000;font-size:13px;font-weight:700;cursor:pointer;border:none;letter-spacing:.01em}
 
-  #room { width: 100%; height: 100%; display: none; flex-direction: column; }
-  #room.active { display: flex; }
+/* ── Room shell ── */
+#room{position:fixed;inset:0;display:none}
+#room.active{display:block}
 
-  /* Top bar */
-  #topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #0d1117; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
-  .live-badge { display: flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35); font-size: 11px; font-weight: 700; color: #f87171; }
-  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #f87171; animation: pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-  #room-title { flex: 1; font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #participant-count { font-size: 11px; color: rgba(255,255,255,0.4); }
+/* ── Video grid ── */
+#grid{position:absolute;inset:0;display:grid;background:#0d0d0d}
+#grid.p1{grid-template-columns:1fr;grid-template-rows:1fr}
+#grid.p2{grid-template-columns:1fr;grid-template-rows:1fr}
+#grid.p3,#grid.p4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+#grid.p5,#grid.p6{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr}
 
-  /* Video grid */
-  #video-grid { flex: 1; display: grid; gap: 4px; padding: 4px; overflow: hidden; background: #0a0d16; min-height: 0; }
-  .video-cell { position: relative; background: #111827; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-  .video-cell video { width: 100%; height: 100%; object-fit: cover; }
-  .video-cell .name-tag { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #fff; }
-  .video-cell .avatar { width: 64px; height: 64px; border-radius: 50%; background: rgba(46,139,255,0.2); border: 2px solid rgba(46,139,255,0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #3b82f6; }
-  .muted-icon { position: absolute; top: 8px; right: 8px; background: rgba(239,68,68,0.8); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.vcell{
+  position:relative;overflow:hidden;background:#111;
+  display:flex;align-items:center;justify-content:center;
+}
+.vcell video{width:100%;height:100%;object-fit:cover;display:block;transition:filter .4s ease}
+.vcell .nametag{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:5px 14px;border-radius:22px;font-size:11px;font-weight:700;
+  white-space:nowrap;letter-spacing:.02em;
+  border:1px solid rgba(255,255,255,.08);
+}
+.vcell .av{
+  width:80px;height:80px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:800;
+  box-shadow:0 0 0 3px rgba(255,255,255,.06);
+}
+.vcell .muted-badge{
+  position:absolute;top:10px;right:10px;
+  background:rgba(239,68,68,.82);border-radius:50%;
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
 
-  /* Controls */
-  #controls { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px; background: #0d1117; border-top: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
-  .ctrl-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .ctrl-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
-  .ctrl-circle:active { transform: scale(0.92); }
-  .ctrl-label { font-size: 10px; color: rgba(255,255,255,0.35); }
-  .ctrl-active { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
-  .ctrl-muted  { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); }
-  .ctrl-end    { background: #ef4444; border: none; }
-  svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* ── Signal badge ── */
+.signal-badge{
+  position:absolute;top:10px;left:10px;
+  display:flex;align-items:center;gap:3px;padding:3px 8px;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(6px);
+  border-radius:10px;opacity:0;transition:opacity .3s;
+}
+.signal-badge.show{opacity:1}
+.signal-bar{width:3px;border-radius:2px;background:#22c55e}
+.signal-badge.medium .signal-bar{background:#f59e0b}
+.signal-badge.poor .signal-bar{background:#ef4444}
+
+/* ── PiP ── */
+#pip{
+  position:absolute;
+  top:calc(env(safe-area-inset-top,44px) + 64px);
+  left:14px;
+  width:96px;height:138px;
+  border-radius:18px;overflow:hidden;
+  background:#111;
+  border:2px solid rgba(255,255,255,.2);
+  box-shadow:0 8px 32px rgba(0,0,0,.75);
+  z-index:30;display:none;
+  cursor:pointer;
+  transition:transform .2s;
+}
+#pip.show{display:block}
+#pip:active{transform:scale(.94)}
+/* filter on wrapper, transform on video — separated to avoid iOS WKWebView compositing bug */
+#pip-filter{width:100%;height:100%;transition:filter .3s ease}
+#pip-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#pip .pip-av{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111}
+#pip .pip-name{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;font-weight:700;color:rgba(255,255,255,.65)}
+/* brightness active ring */
+#pip.filtered{border-color:rgba(251,191,36,.7);box-shadow:0 0 0 1px rgba(251,191,36,.4),0 8px 32px rgba(0,0,0,.75)}
+
+/* gradients */
+#room:before{content:'';position:absolute;top:0;left:0;right:0;height:150px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.75),transparent);z-index:10;pointer-events:none}
+#room:after{content:'';position:absolute;bottom:0;left:0;right:0;height:200px;
+  background:linear-gradient(to top,rgba(0,0,0,.85),transparent);z-index:10;pointer-events:none}
+
+/* ── Top bar ── */
+#topbar{
+  position:absolute;top:0;left:0;right:0;z-index:20;
+  padding:calc(env(safe-area-inset-top,44px) + 12px) 18px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#call-name{font-size:17px;font-weight:800;letter-spacing:-.01em}
+#call-status{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;letter-spacing:.01em}
+.live-chip{
+  display:flex;align-items:center;gap:5px;
+  padding:6px 13px;border-radius:22px;
+  background:rgba(255,255,255,.1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.14);
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Controls ── */
+#controls{
+  position:absolute;bottom:0;left:0;right:0;z-index:20;
+  display:flex;align-items:center;justify-content:center;gap:18px;
+  padding:14px 20px calc(env(safe-area-inset-bottom,28px) + 22px);
+}
+.btn{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.circle{
+  width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .12s,background .2s;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+.circle:active{transform:scale(.84)}
+.c-on {background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.2)}
+.c-off{background:rgba(239,68,68,.2);border:1.5px solid rgba(239,68,68,.45)}
+.c-end{background:#ef4444;border:none;width:64px;height:64px;box-shadow:0 4px 20px rgba(239,68,68,.45)}
+.c-flip{background:rgba(255,255,255,.11);border:1.5px solid rgba(255,255,255,.18)}
+.c-filter{background:rgba(251,191,36,.14);border:1.5px solid rgba(251,191,36,.3)}
+.c-filter.active{background:rgba(251,191,36,.3);border-color:rgba(251,191,36,.7);box-shadow:0 0 16px rgba(251,191,36,.25)}
+.blabel{font-size:10px;color:rgba(255,255,255,.42);font-weight:500;letter-spacing:.02em}
+svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Filter panel ── */
+#filter-panel{
+  position:absolute;bottom:0;left:0;right:0;
+  background:rgba(8,8,18,.96);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-top:1px solid rgba(255,255,255,.08);
+  border-radius:32px 32px 0 0;
+  padding:22px 22px calc(env(safe-area-inset-bottom,28px) + 88px);
+  transform:translateY(100%);transition:transform .34s cubic-bezier(.4,0,.2,1);
+  z-index:40;
+}
+#filter-panel.open{transform:translateY(0)}
+
+/* ── Brightness row ── */
+#bri-row{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+#bri-icon{flex-shrink:0;opacity:.7}
+#bri-icon svg{width:20px;height:20px}
+#bri-slider{
+  flex:1;height:36px;display:flex;align-items:center;
+  touch-action:none;cursor:pointer;-webkit-user-select:none;user-select:none;
+}
+#bri-track{
+  width:100%;height:4px;border-radius:2px;
+  background:rgba(255,255,255,.15);position:relative;
+}
+#bri-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(to right,rgba(251,191,36,.5),rgba(251,191,36,1));
+}
+#bri-thumb{
+  width:24px;height:24px;border-radius:50%;background:#fff;
+  box-shadow:0 2px 10px rgba(0,0,0,.6);
+  position:absolute;top:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+
+/* ── Color filter chips ── */
+#color-row{display:flex;gap:10px;justify-content:center}
+.fchip{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  cursor:pointer;-webkit-user-select:none;flex:1;
+}
+.fthumb{
+  width:58px;height:72px;border-radius:16px;
+  border:2px solid rgba(255,255,255,.1);
+  transition:border-color .18s,transform .12s;
+}
+.fchip.sel .fthumb{border-color:rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+.fchip:active .fthumb{transform:scale(.91)}
+.flabel{font-size:11px;font-weight:700;color:rgba(255,255,255,.4);transition:color .18s}
+.fchip.sel .flabel{color:#fff}
+
+/* Thumb color previews */
+.f-natural{background:linear-gradient(160deg,#3a3a4a 0%,#1a1a26 100%)}
+.f-beauty {background:linear-gradient(160deg,#5c3d5c 0%,#2d1a2d 100%);filter:saturate(1.3) brightness(1.15)}
+.f-dark   {background:linear-gradient(160deg,#0d0d12 0%,#1a1a1a 100%)}
+.f-light  {background:linear-gradient(160deg,#c8b8a0 0%,#e8ddd0 100%)}
+
+/* ── Call duration ── */
+#duration{
+  position:absolute;top:calc(env(safe-area-inset-top,44px) + 12px);
+  left:50%;transform:translateX(-50%);
+  font-size:12px;font-weight:700;color:rgba(255,255,255,.7);
+  background:rgba(0,0,0,.35);backdrop-filter:blur(8px);
+  padding:3px 12px;border-radius:12px;z-index:25;
+  display:none;letter-spacing:.05em;
+}
+#duration.show{display:block}
 </style>
 </head>
 <body>
 
-<!-- Loading/Error state -->
 <div id="status">
   <div class="spinner"></div>
-  <p class="status-text" id="status-text">جارٍ الاتصال...</p>
+  <p class="s-text">جارٍ الاتصال...</p>
 </div>
 
-<!-- Room UI -->
 <div id="room">
-  <div id="topbar">
-    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-    <span id="room-title">غرفة المكالمة</span>
-    <span id="participant-count">1</span>
+  <div id="grid" class="p1"></div>
+
+  <!-- PiP: local in 2-person call -->
+  <div id="pip" onclick="movePip()">
+    <div id="pip-filter">
+      <video id="pip-video" autoplay playsinline muted></video>
+    </div>
+    <div class="pip-av" id="pip-av"><div style="font-size:22px;font-weight:800;color:#fff">أن</div></div>
+    <div class="pip-name" id="pip-name">أنت</div>
   </div>
-  <div id="video-grid"></div>
+
+  <!-- Call duration -->
+  <div id="duration">00:00</div>
+
+  <div id="topbar">
+    <div>
+      <div id="call-name">مكالمة</div>
+      <div id="call-status">جارٍ الاتصال...</div>
+    </div>
+    <div class="live-chip"><span class="live-dot"></span>LIVE</div>
+  </div>
+
+  <!-- Filter panel -->
+  <div id="filter-panel">
+
+    <!-- Brightness slider -->
+    <div id="bri-row">
+      <div id="bri-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </div>
+      <div id="bri-slider">
+        <div id="bri-track">
+          <div id="bri-fill"></div>
+          <div id="bri-thumb"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color filters -->
+    <div id="color-row">
+      <div class="fchip sel" data-cf="none" onclick="applyColorFilter(this)">
+        <div class="fthumb f-natural"></div>
+        <span class="flabel">طبيعي</span>
+      </div>
+      <div class="fchip" data-cf="beauty" onclick="applyColorFilter(this)">
+        <div class="fthumb f-beauty"></div>
+        <span class="flabel">جمال</span>
+      </div>
+      <div class="fchip" data-cf="dark" onclick="applyColorFilter(this)">
+        <div class="fthumb f-dark"></div>
+        <span class="flabel">داكن</span>
+      </div>
+      <div class="fchip" data-cf="light" onclick="applyColorFilter(this)">
+        <div class="fthumb f-light"></div>
+        <span class="flabel">فاتح</span>
+      </div>
+    </div>
+
+  </div>
+
   <div id="controls">
-    <div class="ctrl-btn" id="btn-mic" onclick="toggleMic()">
-      <div class="ctrl-circle ctrl-active" id="mic-circle">
-        <svg id="mic-on" color="#e2e8f0" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    <!-- Mic -->
+    <div class="btn" onclick="toggleMic()">
+      <div class="circle c-on" id="mic-c">
+        <svg id="mic-on" color="#fff" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         <svg id="mic-off" color="#f87171" viewBox="0 0 24 24" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </div>
-      <span class="ctrl-label" id="mic-label">كتم</span>
+      <span class="blabel" id="mic-l">صوت</span>
     </div>
-    <div class="ctrl-btn" id="btn-cam" onclick="toggleCam()">
-      <div class="ctrl-circle ctrl-active" id="cam-circle">
-        <svg id="cam-on" color="#e2e8f0" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        <svg id="cam-off" color="#f87171" viewBox="0 0 24 24" style="display:none"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+
+    <!-- Brightness -->
+    <div class="btn" onclick="toggleFilterPanel()">
+      <div class="circle c-filter" id="filter-c">
+        <svg color="rgba(251,191,36,1)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       </div>
-      <span class="ctrl-label" id="cam-label">إيقاف</span>
+      <span class="blabel" id="filter-l">إضاءة</span>
     </div>
-    <div class="ctrl-btn" onclick="leaveRoom()">
-      <div class="ctrl-circle ctrl-end">
+
+    <!-- End call -->
+    <div class="btn" onclick="leaveRoom()">
+      <div class="circle c-end">
         <svg color="#fff" viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07C9.44 17.29 7.76 15.57 6.32 13.47A19.79 19.79 0 0 1 3.25 4.84 2 2 0 0 1 5.24 2.66h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.22 10.47a16 16 0 0 0 1.46 2.84z" style="fill:none"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
       </div>
-      <span class="ctrl-label" style="color:#f87171">إنهاء</span>
+      <span class="blabel" style="color:#f87171">إنهاء</span>
+    </div>
+
+    <!-- Flip camera -->
+    <div class="btn" onclick="flipCam()">
+      <div class="circle c-flip">
+        <svg color="#fff" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+      </div>
+      <span class="blabel">قلب</span>
+    </div>
+
+    <!-- Camera -->
+    <div class="btn" onclick="toggleCam()">
+      <div class="circle c-on" id="cam-c">
+        <svg id="cam-on" color="#fff" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <svg id="cam-off" color="#f87171" viewBox="0 0 24 24" style="display:none"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </div>
+      <span class="blabel" id="cam-l">فيديو</span>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
 <script>
-const params = new URLSearchParams(location.search);
-const WS_URL     = params.get('wsUrl') || 'wss://livekit.alloul.app';
-const TOKEN      = params.get('token') || '';
-const CALL_ID    = params.get('callId') || '';
+const params     = new URLSearchParams(location.search);
+const WS_URL     = params.get('wsUrl')     || 'wss://livekit.alloul.app';
+const TOKEN      = params.get('token')     || '';
+const CALL_ID    = params.get('callId')    || '';
 const AUTH_TOKEN = params.get('authToken') || '';
 const API_BASE   = 'https://api.alloul.app';
 
-let room = null;
-let micEnabled = true;
-let camEnabled = true;
-let callEndedByUs = false;
-const participants = new Map();
+let room = null, micOn = true, camOn = true, callEndedByUs = false;
+let facing = 'user';
+let filterPanelOpen = false;
+let brightness  = 1.0;
+let colorFilter = 'none';
+let callStartTime = null;
+let durationInterval = null;
+let localVideoTrack = null;  // always holds the current local video track
 
+// ─── Pip drag state ────────────────────────────────────────────────────────
+let pipPos = { side: 'left', top: null };
+
+// sid → { cell, videoEl, avatarEl, audioEls[] }
+const peers = new Map();
+
+// ─── Server ────────────────────────────────────────────────────────────────
 async function endCallOnServer() {
   if (!CALL_ID || !AUTH_TOKEN || callEndedByUs) return;
   callEndedByUs = true;
   try {
     await fetch(`${API_BASE}/call/end/${CALL_ID}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+      headers: { Authorization: `Bearer ${AUTH_TOKEN}` }
     });
-  } catch { /* ignore — server will timeout the call anyway */ }
+  } catch {}
 }
 
-function setStatus(text, error) {
+// ─── Duration ──────────────────────────────────────────────────────────────
+function startDuration() {
+  callStartTime = Date.now();
+  const el = document.getElementById('duration');
+  el.classList.add('show');
+  durationInterval = setInterval(() => {
+    const secs = Math.floor((Date.now() - callStartTime) / 1000);
+    const m = String(Math.floor(secs / 60)).padStart(2,'0');
+    const s = String(secs % 60).padStart(2,'0');
+    el.textContent = m + ':' + s;
+  }, 1000);
+}
+
+// ─── Filters ───────────────────────────────────────────────────────────────
+const BRI_MIN = 0.4, BRI_MAX = 1.8;
+const COLOR_FILTERS = {
+  none:   '',
+  beauty: 'contrast(0.82) saturate(1.28) sepia(0.12)',   // ناعم + دافئ + مشرق
+  dark:   'brightness(0.70) contrast(1.32) saturate(0.68)', // داكن + درامي
+  light:  'brightness(1.28) contrast(0.88) saturate(1.12)', // فاتح + هوائي
+};
+
+function buildFilter() {
+  const briVal = brightness.toFixed(2);
+  // For dark/light, brightness is already in color filter — don't double-apply
+  if (colorFilter === 'dark' || colorFilter === 'light') {
+    // Only add brightness modifier if user moved slider from default
+    if (Math.abs(brightness - 1.0) < 0.05) return COLOR_FILTERS[colorFilter];
+    return `brightness(${briVal}) ${COLOR_FILTERS[colorFilter]}`;
+  }
+  const bri = Math.abs(brightness - 1.0) < 0.02 ? '' : `brightness(${briVal})`;
+  const col = COLOR_FILTERS[colorFilter] || '';
+  return [bri, col].filter(Boolean).join(' ') || '';
+}
+
+function applyFilter() {
+  const f = buildFilter();
+  // PiP: filter on wrapper (iOS WKWebView compositing fix — can't combine filter+transform on <video>)
+  document.getElementById('pip-filter').style.filter = f;
+  if (room) {
+    const p = peers.get(room.localParticipant.sid);
+    if (p) p.videoEl.style.filter = f;
+  }
+
+  // Brightness slider UI
+  const pct = (brightness - BRI_MIN) / (BRI_MAX - BRI_MIN);
+  document.getElementById('bri-fill').style.width  = (pct * 100) + '%';
+  document.getElementById('bri-thumb').style.left  = (pct * 100) + '%';
+
+  // Active indicator on PiP + button
+  const changed = Math.abs(brightness - 1.0) > 0.04 || colorFilter !== 'none';
+  document.getElementById('pip').classList.toggle('filtered', changed);
+  document.getElementById('filter-c').classList.toggle('active', changed);
+
+  const labels = { none:'فلاتر', beauty:'جمال', dark:'داكن', light:'فاتح' };
+  document.getElementById('filter-l').textContent = labels[colorFilter] || 'فلاتر';
+}
+
+function applyColorFilter(chip) {
+  colorFilter = chip.dataset.cf;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.remove('sel'));
+  chip.classList.add('sel');
+  applyFilter();
+}
+
+// ── Brightness slider drag ─────────────────────────────────────────────────
+(function () {
+  let dragging = false, startX = 0, startBri = 1.0, trackW = 0;
+
+  function startDrag(clientX) {
+    const track = document.getElementById('bri-track');
+    if (!track) return;
+    trackW   = track.getBoundingClientRect().width;
+    startX   = clientX;
+    startBri = brightness;
+    dragging = true;
+  }
+  function moveDrag(clientX) {
+    if (!dragging) return;
+    const dx   = clientX - startX;
+    const dBri = (dx / trackW) * (BRI_MAX - BRI_MIN);
+    brightness = Math.min(BRI_MAX, Math.max(BRI_MIN, startBri + dBri));
+    brightness = Math.round(brightness * 20) / 20;
+    applyFilter();
+  }
+  function endDrag() { dragging = false; }
+
+  // Also allow tapping anywhere on track to jump
+  function tapTrack(clientX) {
+    const track = document.getElementById('bri-track');
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    brightness = Math.round((BRI_MIN + pct * (BRI_MAX - BRI_MIN)) * 20) / 20;
+    applyFilter();
+  }
+
+  function setup() {
+    const slider = document.getElementById('bri-slider');
+    if (!slider) return;
+
+    slider.addEventListener('touchstart', e => {
+      startDrag(e.touches[0].clientX); e.preventDefault();
+    }, { passive: false });
+    slider.addEventListener('touchmove', e => {
+      moveDrag(e.touches[0].clientX); e.preventDefault();
+    }, { passive: false });
+    slider.addEventListener('touchend', endDrag);
+
+    slider.addEventListener('mousedown', e => startDrag(e.clientX));
+    document.addEventListener('mousemove', e => moveDrag(e.clientX));
+    document.addEventListener('mouseup', endDrag);
+
+    // Tap track
+    document.getElementById('bri-track').addEventListener('click', e => tapTrack(e.clientX));
+  }
+
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+})();
+
+function toggleFilterPanel() {
+  filterPanelOpen = !filterPanelOpen;
+  document.getElementById('filter-panel').classList.toggle('open', filterPanelOpen);
+  document.getElementById('controls').style.opacity      = filterPanelOpen ? '0' : '1';
+  document.getElementById('controls').style.pointerEvents = filterPanelOpen ? 'none' : '';
+  if (filterPanelOpen) applyFilter();
+}
+
+document.addEventListener('click', e => {
+  if (!filterPanelOpen) return;
+  const panel = document.getElementById('filter-panel');
+  if (!panel.contains(e.target) && !e.target.closest('.btn')) toggleFilterPanel();
+});
+
+// ─── UI helpers ────────────────────────────────────────────────────────────
+function initials(n) {
+  return (n||'؟').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '؟';
+}
+function hue(n) {
+  return n ? (n.charCodeAt(0)*47 + n.charCodeAt(n.length-1)*31) % 360 : 220;
+}
+
+function setStatus(txt, isErr) {
   const el = document.getElementById('status');
-  const txt = document.getElementById('status-text');
   el.classList.remove('hidden');
   document.getElementById('room').classList.remove('active');
-  if (error) {
-    el.innerHTML = `<div class="error-box"><h3>فشل الاتصال</h3><p>${text}</p><button class="retry-btn" onclick="location.reload()">إعادة المحاولة</button></div>`;
-  } else {
-    el.innerHTML = `<div class="spinner"></div><p class="status-text">${text}</p>`;
-  }
+  el.innerHTML = isErr
+    ? `<div class="err-box"><h3>فشل الاتصال</h3><p>${txt}</p><button class="retry-btn" onclick="location.reload()">إعادة المحاولة</button></div>`
+    : `<div class="spinner"></div><p class="s-text">${txt}</p>`;
 }
 
 function showRoom() {
@@ -132,177 +522,304 @@ function showRoom() {
   document.getElementById('room').classList.add('active');
 }
 
-function updateGrid() {
-  const grid = document.getElementById('video-grid');
-  const count = participants.size;
-  if (count <= 1) { grid.style.gridTemplateColumns = '1fr'; }
-  else if (count <= 2) { grid.style.gridTemplateColumns = '1fr 1fr'; }
-  else if (count <= 4) { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
-  else { grid.style.gridTemplateColumns = 'repeat(3, 1fr)'; }
-  document.getElementById('participant-count').textContent = count + ' مشاركين';
+// ─── PiP movement ──────────────────────────────────────────────────────────
+function movePip() {
+  const pip = document.getElementById('pip');
+  const w = window.innerWidth;
+  const rect = pip.getBoundingClientRect();
+  const isLeft = rect.left < w / 2;
+  pip.style.transition = 'left .25s,right .25s';
+  if (isLeft) {
+    pip.style.left = 'auto'; pip.style.right = '14px';
+  } else {
+    pip.style.right = 'auto'; pip.style.left = '14px';
+  }
 }
 
-function getInitials(name) {
-  return (name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+// ─── Local video placement ──────────────────────────────────────────────────
+// Called whenever layout changes or local track is (re)published.
+// Ensures local video is always in PiP (2-person) or grid (other).
+function placeLocalVideo() {
+  if (!room || !localVideoTrack) return;
+  const is2 = peers.size === 2;
+  const pipVid = document.getElementById('pip-video');
+
+  if (is2) {
+    localVideoTrack.attach(pipVid);
+    document.getElementById('pip-filter').style.filter = buildFilter();
+    document.getElementById('pip-av').style.display = 'none';
+    // Mirror: front camera yes, back camera no
+    pipVid.style.transform = facing === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  } else {
+    const p = peers.get(room.localParticipant.sid);
+    if (!p) return;
+    localVideoTrack.attach(p.videoEl);
+    p.videoEl.style.display = 'block';
+    p.avatarEl.style.display = 'none';
+    p.videoEl.style.filter = buildFilter();
+    p.videoEl.style.transform = facing === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  }
 }
 
-function addParticipant(participant) {
-  if (participants.has(participant.sid)) return;
+// ─── Grid layout ───────────────────────────────────────────────────────────
+function updateLayout() {
+  const grid = document.getElementById('grid');
+  const n = peers.size;
+  grid.className = 'p' + Math.min(n, 6);
+
+  const is2 = (n === 2);
+  document.getElementById('pip').classList.toggle('show', is2);
+
+  if (is2) {
+    peers.forEach((p, sid) => {
+      const isLocal = room && sid === room.localParticipant.sid;
+      p.cell.style.display = isLocal ? 'none' : '';
+    });
+  } else {
+    peers.forEach(p => { p.cell.style.display = ''; });
+  }
+
+  document.getElementById('call-status').textContent =
+    n > 1 ? `${n} مشاركون • متصل` : 'جارٍ الانتظار...';
+
+  // Re-place local video whenever layout changes (e.g. remote joins/leaves)
+  placeLocalVideo();
+}
+
+// ─── Participant management ─────────────────────────────────────────────────
+function addPeer(participant) {
+  if (peers.has(participant.sid)) return;
+
   const cell = document.createElement('div');
-  cell.className = 'video-cell';
-  cell.id = 'cell-' + participant.sid;
+  cell.className = 'vcell';
+  cell.id = 'c-' + participant.sid;
 
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar';
-  avatar.textContent = getInitials(participant.name || participant.identity);
+  const h = hue(participant.name || participant.identity);
+  const av = document.createElement('div');
+  av.className = 'av';
+  av.style.cssText = `background:hsl(${h},35%,16%);border:2px solid hsl(${h},40%,26%);color:hsl(${h},60%,68%)`;
+  av.textContent = initials(participant.name || participant.identity);
 
-  const video = document.createElement('video');
-  video.autoplay = true;
-  video.playsInline = true;
-  video.muted = participant.isLocal;
-  video.style.display = 'none';
+  const vid = document.createElement('video');
+  vid.autoplay = true; vid.playsInline = true;
+  vid.muted = participant.isLocal;
+  vid.style.display = 'none';
 
   const nameTag = document.createElement('div');
-  nameTag.className = 'name-tag';
+  nameTag.className = 'nametag';
   nameTag.textContent = participant.name || participant.identity || 'مشارك';
 
-  cell.appendChild(video);
-  cell.appendChild(avatar);
-  cell.appendChild(nameTag);
-  document.getElementById('video-grid').appendChild(cell);
-  participants.set(participant.sid, { cell, video, avatar });
-  updateGrid();
+  cell.append(vid, av, nameTag);
+  document.getElementById('grid').appendChild(cell);
+  peers.set(participant.sid, { cell, videoEl: vid, avatarEl: av, audioEls: [] });
+  updateLayout();  // updateLayout calls placeLocalVideo() internally
 
-  // Subscribe to existing tracks
   participant.trackPublications.forEach(pub => {
     if (pub.isSubscribed && pub.track) attachTrack(participant, pub.track);
   });
 }
 
-function removeParticipant(participant) {
-  const p = participants.get(participant.sid);
-  if (p) { p.cell.remove(); participants.delete(participant.sid); updateGrid(); }
+function removePeer(participant) {
+  const p = peers.get(participant.sid);
+  if (!p) return;
+  p.audioEls.forEach(a => a.remove());
+  p.cell.remove();
+  peers.delete(participant.sid);
+  updateLayout();
 }
 
+// ─── Track attachment ───────────────────────────────────────────────────────
 function attachTrack(participant, track) {
-  const p = participants.get(participant.sid);
+  const isLocal = room && participant.sid === room.localParticipant.sid;
+  const p = peers.get(participant.sid);
   if (!p) return;
+
   if (track.kind === 'video') {
-    track.attach(p.video);
-    p.video.style.display = 'block';
-    p.avatar.style.display = 'none';
-  } else if (track.kind === 'audio' && !participant.isLocal) {
-    const audio = track.attach();
-    document.body.appendChild(audio);
+    if (isLocal) {
+      // Store track ref — placeLocalVideo() decides where to show it
+      localVideoTrack = track;
+      placeLocalVideo();
+    } else {
+      track.attach(p.videoEl);
+      p.videoEl.style.display = 'block';
+      p.avatarEl.style.display = 'none';
+    }
+  } else if (track.kind === 'audio' && !isLocal) {
+    const aud = track.attach();
+    aud.autoplay = true;
+    document.body.appendChild(aud);
+    p.audioEls.push(aud);
   }
 }
 
 function detachTrack(participant, track) {
-  const p = participants.get(participant.sid);
+  const p = peers.get(participant.sid);
   if (!p) return;
   if (track.kind === 'video') {
-    track.detach(p.video);
-    p.video.style.display = 'none';
-    p.avatar.style.display = 'flex';
+    track.detach(p.videoEl);
+    p.videoEl.style.display = 'none';
+    p.avatarEl.style.display = 'flex';
   }
 }
 
+// ─── Controls ────────────────────────────────────────────────────────────────
+async function toggleMic() {
+  if (!room) return;
+  micOn = !micOn;
+  await room.localParticipant.setMicrophoneEnabled(micOn);
+  document.getElementById('mic-on').style.display  = micOn ? '' : 'none';
+  document.getElementById('mic-off').style.display = micOn ? 'none' : '';
+  document.getElementById('mic-c').className = 'circle ' + (micOn ? 'c-on' : 'c-off');
+  document.getElementById('mic-l').textContent = micOn ? 'صوت' : 'مكتوم';
+}
+
+async function toggleCam() {
+  if (!room) return;
+  camOn = !camOn;
+  await room.localParticipant.setCameraEnabled(camOn);
+  document.getElementById('cam-on').style.display  = camOn ? '' : 'none';
+  document.getElementById('cam-off').style.display = camOn ? 'none' : '';
+  document.getElementById('cam-c').className = 'circle ' + (camOn ? 'c-on' : 'c-off');
+  document.getElementById('cam-l').textContent = camOn ? 'فيديو' : 'متوقف';
+  if (camOn) {
+    room.localParticipant.trackPublications.forEach(pub => {
+      if (pub.track?.kind === 'video') attachTrack(room.localParticipant, pub.track);
+    });
+  } else {
+    const p = peers.get(room.localParticipant.sid);
+    if (p) { p.videoEl.style.display = 'none'; p.avatarEl.style.display = 'flex'; }
+    document.getElementById('pip-video').srcObject = null;
+    document.getElementById('pip-av').style.display = 'flex';
+  }
+}
+
+async function flipCam() {
+  if (!room) return;
+  facing = facing === 'user' ? 'environment' : 'user';
+  await room.localParticipant.setCameraEnabled(false);
+  await room.localParticipant.setCameraEnabled(true, { facingMode: facing });
+  // placeLocalVideo() will apply the correct mirror per facing
+  room.localParticipant.trackPublications.forEach(pub => {
+    if (pub.track?.kind === 'video') attachTrack(room.localParticipant, pub.track);
+  });
+}
+
+async function leaveRoom() {
+  if (durationInterval) clearInterval(durationInterval);
+  await endCallOnServer();
+  if (room) room.disconnect();
+  window.close();
+  history.back();
+}
+
+// ─── Connect ──────────────────────────────────────────────────────────────────
 async function connect() {
-  if (!TOKEN) { setStatus('رابط المكالمة غير صالح — لا يوجد token', true); return; }
+  if (!TOKEN) { setStatus('رابط المكالمة غير صالح', true); return; }
   setStatus('جارٍ الاتصال...');
 
   room = new LivekitClient.Room({
     adaptiveStream: true,
     dynacast: true,
-    publishDefaults: { simulcast: false },
+    publishDefaults: {
+      simulcast: true,
+      videoEncoding: {
+        maxBitrate: 2_500_000,
+        maxFramerate: 30,
+      },
+      // Simulcast layers: HD + SD fallback
+      videoSimulcastLayers: [
+        { width: 1280, height: 720, encoding: { maxBitrate: 2_000_000, maxFramerate: 30 } },
+        { width: 640,  height: 360, encoding: { maxBitrate:   500_000, maxFramerate: 20 } },
+      ],
+    },
   });
 
   room.on(LivekitClient.RoomEvent.Connected, () => {
     showRoom();
-    // Add local participant first
-    addParticipant(room.localParticipant);
-    // Add existing remote participants
-    room.remoteParticipants.forEach(p => addParticipant(p));
+    startDuration();
+    const localName = room.localParticipant.name || room.localParticipant.identity || 'أنت';
+    document.getElementById('pip-name').textContent = localName;
+    document.getElementById('pip-av').querySelector('div').textContent = initials(localName);
+    document.getElementById('call-name').textContent = localName;
+
+    addPeer(room.localParticipant);
+    room.remoteParticipants.forEach(p => {
+      addPeer(p);
+      document.getElementById('call-name').textContent = p.name || p.identity || 'مكالمة';
+    });
   });
 
-  room.on(LivekitClient.RoomEvent.ParticipantConnected, p => addParticipant(p));
-  room.on(LivekitClient.RoomEvent.ParticipantDisconnected, p => removeParticipant(p));
+  room.on(LivekitClient.RoomEvent.ParticipantConnected, p => {
+    addPeer(p);
+    document.getElementById('call-name').textContent = p.name || p.identity || 'مكالمة';
+    document.getElementById('call-status').textContent = 'متصل';
+  });
 
-  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, participant) => {
-    attachTrack(participant, track);
+  room.on(LivekitClient.RoomEvent.ParticipantDisconnected, p => {
+    removePeer(p);
+    if (peers.size <= 1) setTimeout(leaveRoom, 2000);
   });
-  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
-    detachTrack(participant, track);
-  });
-  room.on(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
+
+  room.on(LivekitClient.RoomEvent.TrackSubscribed,   (track, pub, p) => attachTrack(p, track));
+  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, p) => detachTrack(p, track));
+
+  room.on(LivekitClient.RoomEvent.LocalTrackPublished, pub => {
     if (pub.track) attachTrack(room.localParticipant, pub.track);
   });
 
-  // DisconnectReason enum: 0=UNKNOWN, 1=CLIENT_INITIATED, 2=DUPLICATE_IDENTITY,
-  // 3=SERVER_SHUTDOWN, 4=PARTICIPANT_REMOVED, 6=JOIN_FAILURE, 9=SIGNAL_CLOSE
-  room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
+  room.on(LivekitClient.RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+    // Only show for remote participants
+    if (!room || participant.sid === room.localParticipant.sid) return;
+    const p = peers.get(participant.sid);
+    if (!p) return;
+    let badge = p.cell.querySelector('.signal-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'signal-badge';
+      badge.innerHTML = '<div class="signal-bar" style="height:5px"></div>' +
+                        '<div class="signal-bar" style="height:9px"></div>' +
+                        '<div class="signal-bar" style="height:13px"></div>';
+      p.cell.appendChild(badge);
+    }
+    badge.classList.remove('medium','poor');
+    badge.classList.add('show');
+    const Q = LivekitClient.ConnectionQuality;
+    if (quality === Q.Poor || quality === 'poor') badge.classList.add('poor');
+    else if (quality === Q.Good || quality === 'good') badge.classList.add('medium');
+  });
+
+  room.on(LivekitClient.RoomEvent.Disconnected, reason => {
+    if (durationInterval) clearInterval(durationInterval);
     const DR = LivekitClient.DisconnectReason || {};
-    const clientLeft = reason === 1 || reason === DR.CLIENT_INITIATED;
-    if (clientLeft || reason == null) {
-      window.close();
-      history.back();
-      return;
+    if (reason === 1 || reason === DR.CLIENT_INITIATED || reason == null) {
+      window.close(); history.back(); return;
     }
     if (reason === 2 || reason === DR.DUPLICATE_IDENTITY) {
-      // Another session opened — wait for server cleanup then reload
-      setStatus('يتم الاتصال... جارٍ إعادة المحاولة', false);
-      setTimeout(() => location.reload(), 3000);
-      return;
+      setStatus('إعادة الاتصال...'); setTimeout(() => location.reload(), 3000); return;
     }
-    const msgs = {
-      3: 'أُعيد تشغيل السيرفر — حاول مجدداً',
-      4: 'تمت إزالتك من الغرفة',
-      6: 'فشل الانضمام — تحقق من صلاحية الرابط',
-      9: 'انقطع الاتصال — تحقق من الشبكة',
-    };
-    setStatus(msgs[reason] || 'انقطع الاتصال، أعد المحاولة', true);
+    const m = { 3:'أُعيد تشغيل السيرفر', 4:'تمت إزالتك', 6:'فشل الانضمام', 9:'انقطع الاتصال' };
+    setStatus(m[reason] || 'انقطع الاتصال', true);
   });
 
   try {
     await room.connect(WS_URL, TOKEN, { autoSubscribe: true });
-    await room.localParticipant.enableCameraAndMicrophone();
+    // HD camera: 720p / 30fps
+    await room.localParticipant.enableCameraAndMicrophone({
+      video: {
+        width: { ideal: 1280, min: 640 },
+        height: { ideal: 720, min: 360 },
+        frameRate: { ideal: 30, min: 15 },
+        facingMode: facing,
+      },
+    });
   } catch (e) {
-    console.error('LiveKit connect error:', e);
     const msg = String(e?.message || e || '');
-    if (msg.includes('duplicate') || msg.includes('Duplicate')) {
-      setStatus('يتم الاتصال... جارٍ إعادة المحاولة', false);
-      setTimeout(() => location.reload(), 3000);
+    if (msg.toLowerCase().includes('duplicate')) {
+      setStatus('إعادة الاتصال...'); setTimeout(() => location.reload(), 3000);
     } else {
       setStatus('تعذّر الاتصال: ' + msg, true);
     }
   }
-}
-
-async function toggleMic() {
-  if (!room) return;
-  micEnabled = !micEnabled;
-  await room.localParticipant.setMicrophoneEnabled(micEnabled);
-  document.getElementById('mic-on').style.display  = micEnabled ? '' : 'none';
-  document.getElementById('mic-off').style.display = micEnabled ? 'none' : '';
-  document.getElementById('mic-circle').className = 'ctrl-circle ' + (micEnabled ? 'ctrl-active' : 'ctrl-muted');
-  document.getElementById('mic-label').textContent  = micEnabled ? 'كتم' : 'صوت';
-}
-
-async function toggleCam() {
-  if (!room) return;
-  camEnabled = !camEnabled;
-  await room.localParticipant.setCameraEnabled(camEnabled);
-  document.getElementById('cam-on').style.display  = camEnabled ? '' : 'none';
-  document.getElementById('cam-off').style.display = camEnabled ? 'none' : '';
-  document.getElementById('cam-circle').className = 'ctrl-circle ' + (camEnabled ? 'ctrl-active' : 'ctrl-muted');
-  document.getElementById('cam-label').textContent  = camEnabled ? 'إيقاف' : 'تشغيل';
-}
-
-async function leaveRoom() {
-  await endCallOnServer();
-  if (room) room.disconnect();
-  window.close();
-  history.back();
 }
 
 connect();
