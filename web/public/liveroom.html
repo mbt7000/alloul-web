@@ -721,15 +721,16 @@ async function connect() {
     adaptiveStream: true,
     dynacast: true,
     publishDefaults: {
+      videoCodec: 'h264',        // iOS hardware encode/decode — clearer & less CPU
       simulcast: true,
       videoEncoding: {
-        maxBitrate: 2_500_000,
+        maxBitrate: 3_500_000,
         maxFramerate: 30,
       },
-      // Simulcast layers: HD + SD fallback
+      audioPreset: { maxBitrate: 32_000 },   // clear voice (default is 20kbps)
       videoSimulcastLayers: [
-        { width: 1280, height: 720, encoding: { maxBitrate: 2_000_000, maxFramerate: 30 } },
-        { width: 640,  height: 360, encoding: { maxBitrate:   500_000, maxFramerate: 20 } },
+        { width: 1280, height: 720, encoding: { maxBitrate: 3_000_000, maxFramerate: 30 } },
+        { width: 640,  height: 360, encoding: { maxBitrate:   600_000, maxFramerate: 20 } },
       ],
     },
   });
@@ -810,6 +811,12 @@ async function connect() {
         height: { ideal: 720, min: 360 },
         frameRate: { ideal: 30, min: 15 },
         facingMode: facing,
+      },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
       },
     });
   } catch (e) {
